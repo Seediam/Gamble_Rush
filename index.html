@@ -14,7 +14,7 @@
         }
 
         body {
-            font-family: 'Consolas', 'Courier New', monospace; /* Estilo terminal/sistema */
+            font-family: 'Consolas', 'Courier New', monospace;
             background-color: var(--bg-dark);
             color: var(--text-main);
             display: flex;
@@ -59,9 +59,21 @@
             background: rgba(255, 42, 95, 0.05);
         }
 
-        .input-section { margin-bottom: 30px; text-align: center; }
+        .input-section { 
+            margin-bottom: 30px; 
+            text-align: center; 
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
 
-        input[type="text"] {
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"], input[type="number"] {
             padding: 12px;
             font-size: 16px;
             background: #1a1a24;
@@ -69,13 +81,13 @@
             border: 1px solid var(--accent-blue);
             border-radius: 4px;
             outline: none;
-            width: 250px;
             font-family: inherit;
         }
 
-        input[type="text"]:focus {
-            box-shadow: 0 0 8px rgba(0, 210, 255, 0.5);
-        }
+        input[type="text"] { width: 200px; }
+        input[type="number"] { width: 120px; }
+
+        input:focus { box-shadow: 0 0 8px rgba(0, 210, 255, 0.5); }
 
         button {
             padding: 12px 24px;
@@ -149,8 +161,8 @@
 
         .god-list-container {
             width: 100%;
-            max-width: 800px;
-            margin-top: 40px;
+            max-width: 900px;
+            margin-top: 20px;
             background: var(--panel-bg);
             padding: 20px;
             border: 1px solid #333;
@@ -159,21 +171,44 @@
 
         .god-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 15px;
             margin-top: 15px;
         }
 
-        .god-badge {
+        details.god-badge {
             background: #1a1a24;
-            padding: 10px;
+            padding: 12px;
             border-radius: 4px;
-            text-align: center;
-            font-size: 14px;
             border: 1px solid #333;
+            transition: border-color 0.3s;
         }
-        
-        .god-badge span { color: var(--accent-blue); font-weight: bold;}
+
+        details.god-badge:hover {
+            border-color: var(--accent-blue);
+        }
+
+        details.god-badge summary {
+            color: var(--accent-blue);
+            font-weight: bold;
+            font-size: 15px;
+            cursor: pointer;
+            outline: none;
+            user-select: none;
+        }
+
+        details.god-badge summary::marker {
+            color: var(--accent-red);
+        }
+
+        .passive-desc {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #aaa;
+            border-top: 1px dashed #333;
+            padding-top: 10px;
+            line-height: 1.5;
+        }
 
     </style>
 </head>
@@ -183,12 +218,14 @@
         <h1>Seleção de Patrono</h1>
         
         <div class="system-notice">
-            [SISTEMA]: CUSTO POR GIRO = 500 YENES
+            [SISTEMA]: TAXA DE ROLAGEM = 500 YENES
         </div>
         
         <div class="input-section">
-            <input type="text" id="playerName" placeholder="Insira seu Codinome" autocomplete="off">
-            <br>
+            <div class="input-group">
+                <input type="text" id="playerName" placeholder="Seu Codinome" autocomplete="off">
+                <input type="number" id="playerWallet" placeholder="Carteira (¥)" min="0" step="100">
+            </div>
             <button id="spinBtn" onclick="girarRoleta()">Girar (-500 ¥)</button>
         </div>
 
@@ -207,24 +244,24 @@
         <div class="god-list-container">
             <h2>Panteão Disponível no Distrito</h2>
             <div class="god-grid">
-                <div class="god-badge"><span>Oizus</span><br>Miséria</div>
-                <div class="god-badge"><span>Afrodite</span><br>Desejo</div>
-                <div class="god-badge"><span>Athena</span><br>Estratégia</div>
-                <div class="god-badge"><span>Hades</span><br>Submundo</div>
-                <div class="god-badge"><span>Hermes</span><br>Tráfico</div>
-                <div class="god-badge"><span>Gaia</span><br>Território</div>
-                <div class="god-badge"><span>Zeus</span><br>Autoridade</div>
-                <div class="god-badge"><span>Diogenes</span><br>Cinismo</div>
-                <div class="god-badge"><span>Ares</span><br>Violência</div>
-                <div class="god-badge"><span>Poseidon</span><br>Maré</div>
-                <div class="god-badge"><span>Apolo</span><br>Verdade</div>
-                <div class="god-badge"><span>Ártemis</span><br>Caçada</div>
+                <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc"><strong>Risco Assimétrico:</strong> Dobra o risco de Yenes do adversário em uma aposta e reduz o seu próprio pela metade.</div></details>
+                <details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc"><strong>Fascínio Ilícito:</strong> Força um acordo não-letal irresistível; o alvo não pode revelar quantos Yenes possui.</div></details>
+                <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc"><strong>Leitura Tática:</strong> Em confrontos, recebe do Mestre uma pista dedutiva vital sobre a carta/objetivo do oponente.</div></details>
+                <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc"><strong>Agiotagem:</strong> Empresta Yenes com juros. Se o devedor morrer, herda automaticamente todos os Yenes do cadáver.</div></details>
+                <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc"><strong>Interceptação:</strong> Uma vez por noite, garante fuga perfeita de perseguições ou intercepta mensagens de outros jogadores.</div></details>
+                <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc"><strong>Planta Baixa:</strong> Ao entrar num local fechado, mapeia instantaneamente saídas, pontos cegos e câmeras de segurança.</div></details>
+                <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc"><strong>Decreto Imperial:</strong> Força uma aposta pública; recusar causa multa imediata de 10% da carteira do alvo.</div></details>
+                <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc"><strong>Desapego:</strong> Imune a manipulações de apostas (como Oizus/Zeus) e à leitura corporal; seus blefes são perfeitos.</div></details>
+                <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc"><strong>Instinto Assassino:</strong> Ignora dor leve e descobre exatamente onde inimigos escondem armas ocultas no corpo.</div></details>
+                <details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc"><strong>Virada de Mesa:</strong> Uma vez por sessão, pode anular completamente a última transação ou acordo recém-firmado.</div></details>
+                <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc"><strong>Luz de Interrogatório:</strong> Força o alvo a responder com verdade uma pergunta de "Sim ou Não", sob pena de perder Yenes.</div></details>
+                <details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc"><strong>Marca da Predadora:</strong> Rastreio infalível de um alvo na multidão; vantagens extremas em emboscadas e furtividade.</div></details>
             </div>
         </div>
     </div>
 
     <div class="sidebar">
-        <h2>Histórico do Sistema</h2>
+        <h2>Registros</h2>
         <div class="history-list" id="historyLog"></div>
         <button onclick="limparHistorico()" style="font-size: 12px; padding: 8px; border-color: #555; color: #888;">Purgar Registros</button>
     </div>
@@ -236,27 +273,37 @@
             "Ares", "Poseidon", "Apolo", "Ártemis"
         ];
 
-        let girosAtuais = 0;
         let yenesGastos = 0;
         let deusesSorteados = [];
         let jogadorAtual = "";
 
-        // Inicialização segura
         window.addEventListener('DOMContentLoaded', (event) => {
             atualizarSidebar();
         });
 
         function girarRoleta() {
             const inputNome = document.getElementById("playerName");
+            const inputCarteira = document.getElementById("playerWallet");
+            
             jogadorAtual = inputNome.value.trim();
+            let carteiraAtual = parseInt(inputCarteira.value);
 
             if (!jogadorAtual) {
                 alert("ACESSO NEGADO: Codinome necessário.");
                 return;
             }
 
+            if (isNaN(carteiraAtual) || carteiraAtual < 500) {
+                alert("ACESSO NEGADO: Fundos insuficientes. São necessários 500 Yenes.");
+                return;
+            }
+
+            // Desconta da carteira e atualiza o campo
+            carteiraAtual -= 500;
+            inputCarteira.value = carteiraAtual;
+            
+            // Trava o nome (mas deixa a carteira editável caso ele ganhe dinheiro depois)
             inputNome.disabled = true;
-            girosAtuais++;
             yenesGastos += 500;
 
             let deusesEmbalhados = [...deuses].sort(() => 0.5 - Math.random());
@@ -293,7 +340,6 @@
                 data: new Date().toLocaleTimeString()
             };
             
-            // Tenta salvar no LocalStorage (ignora erro se o navegador bloquear)
             try {
                 let historico = JSON.parse(localStorage.getItem("tokyoRpgHistory")) || [];
                 historico.push(novoRegistro);
@@ -302,19 +348,19 @@
                 console.warn("LocalStorage bloqueado. Atualizando apenas a tela.");
             }
 
-            // Atualiza a tela diretamente (Garante que vai aparecer)
             adicionarNaTela(novoRegistro);
 
             // Reseta a interface
             document.getElementById("playerName").value = "";
             document.getElementById("playerName").disabled = false;
+            // Não resetamos a carteira de propósito para o jogador ver quanto sobrou
+            
             document.getElementById("card1").classList.add("face-down");
             document.getElementById("card2").classList.add("face-down");
             document.getElementById("card1").innerText = "?";
             document.getElementById("card2").innerText = "?";
             document.getElementById("actionButtons").style.display = "none";
             
-            girosAtuais = 0;
             yenesGastos = 0;
             
             alert(`SISTEMA: Vínculo estabelecido. ${jogadorAtual} agora é protegido por ${deusEscolhido}.`);
@@ -327,8 +373,7 @@
             div.innerHTML = `<span style="color: #00d2ff;">[${item.data}]</span><br>
                              Agente: <strong>${item.jogador}</strong><br>
                              Patrono: <strong>${item.deus}</strong><br>
-                             <span style="color: #ff2a5f; font-size: 12px;">Custo: -${item.custo}¥</span>`;
-            // Adiciona no topo
+                             <span style="color: #ff2a5f; font-size: 12px;">Gastos na Roleta: -${item.custo}¥</span>`;
             logDiv.prepend(div);
         }
 
@@ -338,13 +383,10 @@
             
             try {
                 let historico = JSON.parse(localStorage.getItem("tokyoRpgHistory")) || [];
-                // Reverte para mostrar do mais novo para o mais velho
                 historico.slice().reverse().forEach(item => {
                     adicionarNaTela(item);
                 });
-            } catch(e) {
-                // Se der erro, a tela fica vazia até o primeiro giro
-            }
+            } catch(e) {}
         }
 
         function limparHistorico() {
