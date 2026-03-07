@@ -3,20 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema do Distrito - WebApp V4.1</title>
-    <link rel="stylesheet" href="style.css?v=V4.1">
+    <title>Sistema do Distrito - WebApp V4.2</title>
+    <link rel="stylesheet" href="style.css?v=V4.2">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
 <body>
 
     <nav class="nav-bar">
-        <button class="nav-btn active" onclick="window.mudarAba('tab-mapa', this)">Mapa (Distrito)</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-principal', this)">Notícias</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-igamble', this)">IGamble</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-roleta', this)">Panteão</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-loja', this)">Mercado</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-mochila', this)">Mochila/Casa</button>
+        <button class="nav-btn active" onclick="mudarAba('tab-mapa', this)">Mapa (Distrito)</button>
+        <button class="nav-btn" onclick="mudarAba('tab-principal', this)">Notícias</button>
+        <button class="nav-btn" onclick="mudarAba('tab-igamble', this)">IGamble</button>
+        <button class="nav-btn" onclick="mudarAba('tab-roleta', this)">Panteão</button>
+        <button class="nav-btn" onclick="mudarAba('tab-loja', this)">Mercado</button>
+        <button class="nav-btn" onclick="mudarAba('tab-mochila', this)">Mochila/Casa</button>
     </nav>
 
     <div class="top-bar">
@@ -24,7 +24,7 @@
             <div id="clockDate" style="font-size: 10px; color: #aaa;">07/03/2026</div>
             <div id="clockTime">20:00</div>
         </div>
-        <div class="user-btn" id="userBtn" onclick="window.abrirModal()">👤</div>
+        <div class="user-btn" id="userBtn" onclick="abrirModal()">👤</div>
     </div>
 
     <div class="modal-overlay" id="loginModal">
@@ -32,11 +32,11 @@
             <h3>Autenticação do Distrito</h3>
             <input type="text" id="loginName" placeholder="Codinome" autocomplete="off">
             <input type="password" id="loginPass" placeholder="Senha" autocomplete="off">
-            <button onclick="window.logarComSenha()">Entrar / Registrar</button>
+            <button onclick="logarComSenha()">Entrar / Registrar</button>
             <div style="margin: 15px 0; color: #555;">OU</div>
             <input type="text" id="loginSerial" placeholder="Autenticador Mestre/Agente" autocomplete="off">
-            <button onclick="window.logarComSerial()" style="border-color: #00d2ff; color: #00d2ff;">Acesso Direto</button>
-            <br><span class="close-modal" onclick="window.fecharModal()">Cancelar</span>
+            <button onclick="logarComSerial()" style="border-color: #00d2ff; color: #00d2ff;">Acesso Direto</button>
+            <br><span class="close-modal" onclick="fecharModal()">Cancelar</span>
         </div>
 
         <div class="modal-content" id="profileScreen" style="display: none;">
@@ -49,11 +49,11 @@
                     <span style="color: #ffaa00; font-size: 12px;">Pts Livres: <strong id="lblPts">0</strong></span>
                 </div>
                 
-                <div class="attr-row"><span>Força [F]</span> <div class="attr-controls"><span id="valFor">1</span> <div class="btn-attr" onclick="window.distribuirPonto('for')">+</div></div></div>
-                <div class="attr-row"><span>Agilidade [A]</span> <div class="attr-controls"><span id="valAgi">1</span> <div class="btn-attr" onclick="window.distribuirPonto('agi')">+</div></div></div>
-                <div class="attr-row"><span>Manuseio [M]</span> <div class="attr-controls"><span id="valMan">1</span> <div class="btn-attr" onclick="window.distribuirPonto('man')">+</div></div></div>
-                <div class="attr-row"><span>Vigor [V]</span> <div class="attr-controls"><span id="valVig">1</span> <div class="btn-attr" onclick="window.distribuirPonto('vig')">+</div></div></div>
-                <div class="attr-row"><span>Inteligência [I]</span> <div class="attr-controls"><span id="valInt">1</span> <div class="btn-attr" onclick="window.distribuirPonto('int')">+</div></div></div>
+                <div class="attr-row"><span>Força [F]</span> <div class="attr-controls"><span id="valFor">1</span> <div class="btn-attr" onclick="distribuirPonto('for')">+</div></div></div>
+                <div class="attr-row"><span>Agilidade [A]</span> <div class="attr-controls"><span id="valAgi">1</span> <div class="btn-attr" onclick="distribuirPonto('agi')">+</div></div></div>
+                <div class="attr-row"><span>Manuseio [M]</span> <div class="attr-controls"><span id="valMan">1</span> <div class="btn-attr" onclick="distribuirPonto('man')">+</div></div></div>
+                <div class="attr-row"><span>Vigor [V]</span> <div class="attr-controls"><span id="valVig">1</span> <div class="btn-attr" onclick="distribuirPonto('vig')">+</div></div></div>
+                <div class="attr-row"><span>Inteligência [I]</span> <div class="attr-controls"><span id="valInt">1</span> <div class="btn-attr" onclick="distribuirPonto('int')">+</div></div></div>
                 
                 <div style="margin-top: 10px; font-size: 12px; color: #ccc;">
                     Integridade (Saturação): <span id="lblIntegVal">100%</span>
@@ -61,9 +61,21 @@
                 </div>
             </div>
 
-            <div class="wallet-box"><p style="margin: 0; font-size: 12px; color: #aaa;">Fundos:</p><h2 id="profileWallet">0 ¥</h2></div>
-            <button onclick="window.deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
-            <br><span class="close-modal" onclick="window.fecharModal()">Fechar</span>
+            <div class="wallet-box">
+                <p style="margin: 0; font-size: 12px; color: #aaa;">Fundos Disponíveis:</p>
+                <h2 id="profileWallet">0 ¥</h2>
+            </div>
+            
+            <input type="text" id="sponsorCode" placeholder="Código de Patrocinador" autocomplete="off">
+            <button onclick="resgatarCodigo()" style="background: #00d2ff; color: #000; border: none; margin-bottom: 15px;">Resgatar Fundos</button>
+
+            <div style="background: #1a1a24; padding: 10px; border: 1px dashed var(--accent-red); margin-bottom: 15px;">
+                <p style="margin: 0; font-size: 11px; color: #aaa;">Seu Autenticador:</p>
+                <h3 style="margin: 5px 0; color: #fff; letter-spacing: 2px;" id="profileSerial">XXXX-DC1</h3>
+            </div>
+            
+            <button onclick="deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
+            <br><span class="close-modal" onclick="fecharModal()">Fechar</span>
         </div>
     </div>
 
@@ -74,18 +86,19 @@
         <div class="center-panel">
             
             <div id="tab-mapa" class="tab-content active" style="padding: 10px;">
-                <h1 style="margin-top: 0; font-size: 1.3rem;">Morioh Tactical Blueprint V4.1</h1>
+                <h1 style="margin-top: 0; font-size: 1.3rem;">Distrito de Morioh</h1>
                 
                 <div class="map-wrapper">
                     <div class="map-canvas" id="mapCanvas">
-                        </div>
+                        <div class="map-overlay-grid"></div>
+                    </div>
                     
                     <div class="dice-panel">
-                        <div style="background:#1a1a24; padding:8px; text-align:center; font-weight:bold; color:var(--accent-blue);">Map Dados (1d20+1)</div>
+                        <div style="background:#1a1a24; padding:10px; text-align:center; font-weight:bold; color:var(--accent-blue); border-bottom:1px solid #333;">Map Dados</div>
                         <div class="dice-log" id="diceLog"></div>
                         <div class="dice-input">
-                            <input type="text" id="diceInput" placeholder="Formula..." onkeypress="if(event.key === 'Enter') window.lancarDado()">
-                            <button onclick="window.lancarDado()">Rolar</button>
+                            <input type="text" id="diceInput" placeholder="Ex: 1d20+1" onkeypress="if(event.key === 'Enter') lancarDado()">
+                            <button onclick="lancarDado()">Rolar</button>
                         </div>
                     </div>
                 </div>
@@ -94,28 +107,41 @@
             <div id="tab-principal" class="tab-content">
                 <h1 class="blink-text">Notícias do Distrito</h1>
                 <div id="masterHomePanel" class="master-panel" style="display:none;">
-                    <h3>[ MASTER ] EMBATE</h3>
-                    <input type="text" id="embLocal" placeholder="Local" style="width:48%;">
-                    <input type="number" id="embAposta" placeholder="¥ Aposta" style="width:48%;">
-                    <button class="action-btn" onclick="window.iniciarEmbateMap()" style="font-size:12px; padding:8px;">⚔️ Iniciar Combate (Mapa)</button>
-                    <div style="margin-top:10px;">
-                        <input type="text" id="embVencedor" placeholder="Vencedor" style="width:48%;">
-                        <input type="text" id="embPerdedor" placeholder="Perdedor" style="width:48%;">
-                        <button class="action-btn" onclick="window.processarEmbate()" style="font-size:12px; padding:8px; border-color:var(--accent-blue); color:var(--accent-blue);">Resolve Embate</button>
+                    <h3>[ MASTER ] GERENCIAR EMBATES</h3>
+                    
+                    <div style="border: 1px solid var(--accent-blue); padding: 15px; margin-bottom: 15px; border-radius: 4px;">
+                        <h4 style="color:var(--accent-blue); margin:0 0 10px 0;">1. Iniciar Combate (Pisca no Mapa)</h4>
+                        <input type="text" id="embLocal" placeholder="Local (Ex: Bar do Submundo)" style="width: 48%;">
+                        <input type="number" id="embAposta" placeholder="Aposta Base (¥)" style="width: 48%;">
+                        <button class="action-btn" onclick="iniciarEmbateMap()" style="font-size: 12px; padding: 8px;">Declarar Embate</button>
+                    </div>
+
+                    <div style="border: 1px solid var(--accent-red); padding: 15px; border-radius: 4px;">
+                        <h4 style="color:var(--accent-red); margin:0 0 10px 0;">2. Resolver Combate</h4>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px;">
+                            <input type="text" id="embVencedor" placeholder="Vencedor" style="width: 48%;">
+                            <input type="text" id="embPerdedor" placeholder="Perdedor" style="width: 48%;">
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: center;">
+                            <input type="text" id="embMorteDesc" placeholder="Causa Mortis (Opcional)" style="width: 48%; border-color:#ffaa00;">
+                            <input type="text" id="embMorteImg" placeholder="Link Imagem Morte" style="width: 48%; border-color:#ffaa00;">
+                        </div>
+                        <button class="action-btn" onclick="processarEmbate()" style="margin-top:10px;">Finalizar e Noticiar</button>
                     </div>
                 </div>
                 <div id="newsFeed" class="news-container"></div>
             </div>
 
             <div id="tab-igamble" class="tab-content">
-                <h1 style="color: #00d2ff;">I-Gamble</h1>
+                <h1 style="color: #00d2ff; margin-bottom: 5px;">I-Gamble</h1>
+                <p style="color: #aaa; margin-top: 0; font-size: 12px;">Rede de Comunicação do Submundo</p>
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages"></div>
                     <div class="chat-input-area">
                         <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
-                        <button onclick="document.getElementById('chatImageFile').click()" style="background:#333; color:#fff; border-radius:4px;">📎</button>
-                        <input type="text" id="chatInput" placeholder="Mensagem..." maxlength="200" onkeypress="if(event.key === 'Enter') window.prepararEnvioMensagem()">
-                        <button onclick="window.prepararEnvioMensagem()">ENVIAR</button>
+                        <button class="btn-attach" onclick="document.getElementById('chatImageFile').click()" title="Anexar">📎</button>
+                        <input type="text" id="chatInput" placeholder="Sua mensagem ou link de imagem..." maxlength="200" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
+                        <button class="btn-send" onclick="prepararEnvioMensagem()">ENVIAR</button>
                     </div>
                 </div>
             </div>
@@ -123,119 +149,161 @@
             <div id="tab-roleta" class="tab-content">
                 <h1>Seleção de Patrono</h1>
                 <div class="system-notice">[MÁQUINA DO DISTRITO]: TAXA = 500 YENES</div>
-                <button class="action-btn" id="spinBtn" onclick="window.tentarGirar()">Girar (-500 ¥)</button>
-                <div class="cards-container"><div class="card face-down" id="card1">?</div><div class="card face-down" id="card2">?</div></div>
-                <div class="god-grid">
-                    <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra risco do adversário.</div></details>
-                    <details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc">Acordo irresistível.</div></details>
-                    <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc">Pista dedutiva.</div></details>
-                    <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Herda Yenes de mortos.</div></details>
-                    <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Intercepta mensagens.</div></details>
-                    <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Mapeia instantaneamente.</div></details>
-                    <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Aposta pública ou multa.</div></details>
-                    <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a manipulações.</div></details>
+                <div class="input-section">
+                    <p id="statusJogador" style="color: #555; margin-top: 0;">Nenhum agente conectado na máquina.</p>
+                    <button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar (-500 ¥)</button>
+                </div>
+                <div class="cards-container">
+                    <div class="card face-down" id="card1">?</div><div class="card face-down" id="card2">?</div>
+                </div>
+                <div class="actions" id="actionButtons" style="display: none; text-align: center; width: 100%;">
+                    <button class="action-btn" onclick="escolherDeus(0)" id="btnGod1">Aceitar 1</button>
+                    <button class="action-btn" onclick="escolherDeus(1)" id="btnGod2">Aceitar 2</button>
+                    <br><button class="action-btn" onclick="realizarGiroVisual()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
+                </div>
+                
+                <div class="god-list-container">
+                    <h2>Panteão Disponível no Distrito</h2>
+                    <div class="god-grid">
+                        <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra risco do adversário.</div></details>
+                        <details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc">Força acordo não-letal.</div></details>
+                        <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc">Pista dedutiva sobre oponente.</div></details>
+                        <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Herda Yenes de devedores mortos.</div></details>
+                        <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Garante fuga ou intercepta msg.</div></details>
+                        <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Mapeia instantaneamente saídas.</div></details>
+                        <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Força aposta ou causa multa.</div></details>
+                        <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a manipulações de apostas.</div></details>
+                        <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc">Ignora dor leve e descobre armas.</div></details>
+                        <details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc">Anula última transação.</div></details>
+                        <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc">Força alvo a dizer a verdade.</div></details>
+                        <details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc">Rastreio infalível.</div></details>
+                    </div>
                 </div>
             </div>
 
+            <div id="tab-loja" class="tab-content">
+                <h1>Mercado Negro</h1>
+                <div id="masterShopPanel" class="master-panel" style="display:none;">
+                    <h3>[ MASTER ] ADICIONAR ITEM</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                        <select id="newItemType"><option>Arma</option><option>Escudo</option><option>Roupa</option><option>Comida</option></select>
+                        <input type="text" id="newItemName" placeholder="Nome do Item">
+                        <input type="text" id="newItemDesc" placeholder="Dano/Efeito">
+                        <input type="number" id="newItemPrice" placeholder="Valor (¥)" style="width: 100px;">
+                    </div>
+                    <button class="action-btn" onclick="criarItemLoja()" style="margin-top: 15px;">+ Criar e Publicar</button>
+                </div>
+                <div id="shopGrid" style="width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;"></div>
             </div>
 
-        <div class="sidebar"><h2>Online</h2><div class="user-list" id="userLog"></div></div>
+            <div id="tab-mochila" class="tab-content">
+                <h1 style="color: #00ff00;">Inventário e Safehouse</h1>
+                <p style="color: #aaa; text-align: center;">Clique em alimentos para recuperar Integridade. Use equipamentos com sabedoria.</p>
+                <div id="mochilaGrid" class="inv-grid">
+                    <p style="text-align: center; color: #555; width: 100%;">Autentique-se para ver sua mochila.</p>
+                </div>
+            </div>
+            
+        </div>
+
+        <div class="sidebar">
+            <h2>Agentes Online</h2>
+            <div class="user-list" id="userLog"></div>
+        </div>
+        
+        <div class="ad-space"><img src="anuncio2.png" class="ad-image" onerror="this.style.display='none'"></div>
     </div>
 
-    <div class="version-tag">Versão do Sistema: V4.1</div>
+    <div class="version-tag">Versão do Sistema: V4.2</div>
 
     <script>
-        // --- CONFIG FIREBASE GERAL ---
         const firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
         let db; let usersGlobais = {}; let presenceGlobal = {};
         let jogadorAtual = ""; let serialAtual = ""; let connectionRef = null; let isMaster = false; const MASTER_SERIAL = "4053-DC1";
         
+        const codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
+        const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
+        let yenesGastos = 0; let deusesSorteados = [];
+
         try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch (error) { console.error(error); }
 
-        // --- ENGENHARIA DO MAPA V4.1 (15 PONTOS E CONEXÕES) ---
-        // Coordenadas táticas (X, Y percentuais no grid neon)
+        // --- SISTEMA DE ABAS (CORRIGIDO PARA NÃO TRAVAR) ---
+        function mudarAba(idAba, btnElemento) {
+            let abas = document.querySelectorAll('.tab-content');
+            abas.forEach(t => t.classList.remove('active'));
+            
+            let botoes = document.querySelectorAll('.nav-btn');
+            botoes.forEach(b => b.classList.remove('active'));
+            
+            let alvo = document.getElementById(idAba);
+            if(alvo) alvo.classList.add('active');
+            if(btnElemento) btnElemento.classList.add('active');
+
+            if(idAba === 'tab-mapa') drawMapVisuals(); // Redesenha o mapa ao abrir a aba
+        }
+
+        // --- MAPA (15 LOCAIS E RUAS) ---
         const locaisMapa = {
-            "p1": { nome: "Praça Principal", x: 50, y: 50, tipo: "praca" },
-            "p2": { nome: "Ghost Ramen", x: 40, y: 70, tipo: "bar" },
-            "p3": { nome: "Ramen Street (Viela)", x: 25, y: 70, tipo: "viela" },
-            "p4": { nome: "Club Electric", x: 50, y: 90, tipo: "bar" },
-            "p5": { nome: "Billionaire Avenue", x: 30, y: 40, tipo: "rua" },
-            "p6": { nome: "Bar do Submundo", x: 15, y: 30, tipo: "bar" },
-            "p7": { nome: "Ghost Valley (Viela)", x: 15, y: 55, tipo: "viela" },
-            "p8": { nome: "Hideout A (Viela)", x: 15, y: 70, tipo: "casa" },
-            "p9": { nome: "Shadow Lane", x: 60, y: 40, tipo: "rua" },
-            "p10": { nome: "Safehouse APTS", x: 80, y: 25, tipo: "casa" },
-            "p11": { nome: "Hacker Den (Viela)", x: 80, y: 45, tipo: "shop" },
-            "p12": { nome: "Mercado Negro (Armas)", x: 85, y: 65, tipo: "loja" },
-            "p13": { nome: "Yakuza HQ", x: 70, y: 70, tipo: "casa" },
-            "p14": { nome: "Park of Whispers", x: 80, y: 85, tipo: "parque" },
-            "p15": { nome: "Cemetery", x: 15, y: 85, tipo: "viela" }
+            "p1": { nome: "Praça Central", x: 50, y: 50, tipo: "praca" },
+            "p2": { nome: "Ghost Ramen", x: 35, y: 65, tipo: "bar" },
+            "p3": { nome: "Viela da Fome", x: 20, y: 55, tipo: "viela" },
+            "p4": { nome: "Club Neon", x: 50, y: 85, tipo: "bar" },
+            "p5": { nome: "Avenida Ouro", x: 30, y: 35, tipo: "rua" },
+            "p6": { nome: "Bar do Submundo", x: 15, y: 25, tipo: "bar" },
+            "p7": { nome: "Beco Sombrio", x: 10, y: 45, tipo: "viela" },
+            "p8": { nome: "Hideout Alfa", x: 15, y: 80, tipo: "casa" },
+            "p9": { nome: "Shadow Lane", x: 65, y: 35, tipo: "rua" },
+            "p10": { nome: "Safehouse APTS", x: 85, y: 20, tipo: "casa" },
+            "p11": { nome: "Hacker Den", x: 80, y: 50, tipo: "viela" },
+            "p12": { nome: "Mercado Negro", x: 85, y: 70, tipo: "loja" },
+            "p13": { nome: "Yakuza HQ", x: 70, y: 80, tipo: "casa" },
+            "p14": { nome: "Parque Sombrio", x: 80, y: 90, tipo: "praca" },
+            "p15": { nome: "Cemitério", x: 35, y: 85, tipo: "viela" }
         };
 
-        // As vielas e ruas neon que conectam os pontos (Nomes para o RP)
         const conexoesMapa = [
-            { de: "p1", para: "p2", nome: "Alameda das Lanternas" }, { de: "p2", para: "p3", nome: "Rua do Ramen" },
-            { de: "p1", para: "p4", nome: "Viela Neon" }, { de: "p1", para: "p5", nome: "Avenida da Sorte" },
-            { de: "p5", para: "p6", nome: "Beco do Corvo" }, { de: "p1", para: "p9", nome: "Rua das Sombras" },
-            { de: "p9", para: "p10", nome: "Via Silenciosa" }, { de: "p10", para: "p11", nome: "Viela do Código" },
-            { de: "p11", para: "p12", nome: "Caminho do Contrabando" }, { de: "p2", para: "p13", nome: "Viela Tatuada" },
-            { de: "p13", para: "p14", nome: "Beco sussurrante" }, { de: "p3", para: "p8", nome: "Viela Segura" },
-            { de: "p7", para: "p6", nome: "Viela da Névoa" }, { de: "p3", para: "p15", nome: "Rua do Silêncio" }
+            { de: "p1", para: "p2" }, { de: "p2", para: "p3" }, { de: "p1", para: "p4" }, { de: "p1", para: "p5" },
+            { de: "p5", para: "p6" }, { de: "p1", para: "p9" }, { de: "p9", para: "p10" }, { de: "p10", para: "p11" },
+            { de: "p11", para: "p12" }, { de: "p2", para: "p13" }, { de: "p13", para: "p14" }, { de: "p3", para: "p8" },
+            { de: "p7", para: "p6" }, { de: "p3", para: "p7" }, { de: "p2", para: "p15" }, { de: "p4", para: "p13"}
         ];
 
-        // --- ENGENHARIA DO RELÓGIO V4.1 (2 min por segundo real) ---
-        let clockTime = new Date('2026-03-07T20:00:00');
-        setInterval(() => {
-            clockTime.setMinutes(clockTime.getMinutes() + 2); // Tempo acelerado
-            let hh = String(clockTime.getHours()).padStart(2, '0');
-            let mm = String(clockTime.getMinutes()).padStart(2, '0');
-            document.getElementById("clockTime").innerText = `${hh}:${mm}`;
-            document.getElementById("clockTime").style.color = (clockTime.getHours() >= 18 || clockTime.getHours() < 6) ? "#ff2a5f" : "#00d2ff"; // Noite fica vermelha
-        }, 1000);
-
-        // --- RENDER DO MAPA V4.1 (Locais, Ruas, Vielas e Elementos Visuais) ---
         function drawMapVisuals() {
             const canvas = document.getElementById("mapCanvas");
-            canvas.innerHTML = "";
+            if(!canvas) return;
+            // Limpa tudo menos a grid base
+            canvas.innerHTML = '<div class="map-overlay-grid"></div>';
             
-            // 1. Desenha Vielas e Ruas Neon
+            // Desenha Ruas
             conexoesMapa.forEach(con => {
                 let pDe = locaisMapa[con.de]; let pPara = locaisMapa[con.para];
                 let isViela = (pDe.tipo === "viela" || pPara.tipo === "viela");
-                
-                // Matemática para traçar linha entre pontos percentuais
                 let angle = Math.atan2(pPara.y - pDe.y, pPara.x - pDe.x) * 180 / Math.PI;
                 let dist = Math.sqrt(Math.pow(pPara.x - pDe.x, 2) + Math.pow(pPara.y - pDe.y, 2));
 
                 let line = document.createElement("div");
                 line.className = `map-street ${isViela?'viela':''}`;
                 line.style.left = pDe.x + "%"; line.style.top = pDe.y + "%";
-                line.style.width = dist + "%";
-                line.style.transform = `rotate(${angle}deg)`;
-                line.title = `${con.nome} (${isViela?'Viela':'Rua'})`;
+                line.style.width = dist + "%"; line.style.transform = `rotate(${angle}deg)`;
                 canvas.appendChild(line);
             });
 
-            // 2. Elementos Visuais (Casas, Árvores) para ocupar espaço
-            for(let i=0; i<30; i++) { // Casas genéricas
-                canvas.innerHTML += `<div class="map-house-box" style="left:${Math.random()*90}%; top:${Math.random()*90}%; width:${Math.random()*20+10}px; height:${Math.random()*15+10}px;"></div>`;
-            }
-            let parque = locaisMapa["p14"]; // Árvores perto do parque
-            for(let i=0; i<15; i++) {
-                canvas.innerHTML += `<div class="map-tree" style="left:${parque.x + (Math.random()*15-7.5)}%; top:${parque.y + (Math.random()*15-7.5)}%;"></div>`;
+            // Decorativos (Casinhas)
+            for(let i=0; i<30; i++) { 
+                canvas.innerHTML += `<div class="map-house-box" style="left:${Math.random()*90}%; top:${Math.random()*90}%; width:${Math.random()*25+10}px; height:${Math.random()*20+10}px;"></div>`;
             }
 
-            // 3. Pontos Táticos
+            // Pontos Locais e Embates
             db.ref('tokyoRpg/mapEmbates').once('value').then(snap => {
-                let embatesActivos = snap.val();
+                let embates = snap.val() || {};
                 Object.keys(locaisMapa).forEach(k => {
                     let loc = locaisMapa[k];
-                    let temLuta = embatesActivos && Object.values(embatesActivos).some(e => e.localKey === k);
-                    canvas.innerHTML += `<div class="map-node ${temLuta?'danger':''}" style="left:${loc.x}%; top:${loc.y}%;" onclick="window.viajarPara('${k}')"><div class="node-label">${temLuta?'⚔️':''} ${loc.nome}</div></div>`;
+                    let temLuta = Object.values(embates).some(e => e.localKey === k);
+                    canvas.innerHTML += `<div class="map-node ${temLuta?'danger':''}" style="left:${loc.x}%; top:${loc.y}%;" onclick="viajarPara('${k}')"><div class="node-label">${temLuta?'⚔️':''} ${loc.nome}</div></div>`;
                 });
             });
 
-            // 4. Avatares
+            // Avatares dos Jogadores
             Object.keys(usersGlobais).forEach(n => {
                 let u = usersGlobais[n];
                 if(n !== "MESTRE" && u.status !== "morto" && presenceGlobal[n] === true && u.local) {
@@ -248,79 +316,185 @@
             });
         }
 
-        // --- FUNÇÕES BASE (LOGIN, CHAT, ROLETA - RECUPERADAS) ---
-        // Funções mantidas do V2.0 e V3.0 para garantir o funcionamento...
-        window.mudarAba = function(id, btn) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(id).classList.add('active'); btn.classList.add('active');
-            if(id === 'tab-mapa') drawMapVisuals(); // Recarrega mapa ao abrir
-        };
-        window.abrirModal = () => { document.getElementById("loginModal").style.display = "flex"; document.getElementById(jogadorAtual ? "profileScreen" : "loginScreen").style.display = "block"; document.getElementById(jogadorAtual ? "loginScreen" : "profileScreen").style.display = "none"; };
-        window.fecharModal = () => document.getElementById("loginModal").style.display = "none";
-        
-        // RPG LOGIC
+        // --- RELÓGIO (10 minutos fictícios por segundo) ---
+        let clockTime = new Date('2026-03-07T20:00:00');
+        setInterval(() => {
+            clockTime.setMinutes(clockTime.getMinutes() + 10); 
+            let hh = String(clockTime.getHours()).padStart(2, '0');
+            let mm = String(clockTime.getMinutes()).padStart(2, '0');
+            document.getElementById("clockTime").innerText = `${hh}:${mm}`;
+            document.getElementById("clockTime").style.color = (clockTime.getHours() >= 18 || clockTime.getHours() < 6) ? "#ff2a5f" : "#00d2ff"; 
+        }, 1000);
+
+        // --- SISTEMA DE LOGIN E RPG ---
         function defaultStats() { return { for: 1, agi: 1, man: 1, vig: 1, int: 1, pontosLivres: 3, nivel: 1, integridade: 100, defesa: 0 }; }
+
         function renderizarFicha() {
-            if(!jogadorAtual || !usersGlobais[jogadorAtual] || !usersGlobais[jogadorAtual].rpg) return;
-            let r = usersGlobais[jogadorAtual].rpg;
-            document.getElementById("lblNivel").innerText = `[ Embate Lvl ${r.nivel} ]`;
-            document.getElementById("lblPts").innerText = r.pontosLivres; document.getElementById("lblDef").innerText = r.defesa;
-            document.getElementById("valFor").innerText = r.for; document.getElementById("valAgi").innerText = r.agi; document.getElementById("valMan").innerText = r.man; document.getElementById("valVig").innerText = r.vig; document.getElementById("valInt").innerText = r.int;
-            document.getElementById("lblIntegVal").innerText = r.integridade + "%";
-            document.getElementById("integrityBar").style.width = r.integridade + "%";
-            document.getElementById("integrityBar").style.background = r.integridade < 30 ? "#ff0000" : "#00ff00";
+            if(!jogadorAtual || !usersGlobais[jogadorAtual]) return;
+            let u = usersGlobais[jogadorAtual];
+            if(!u.rpg) u.rpg = defaultStats(); 
+
+            document.getElementById("lblNivel").innerText = `[ Embate Nv. ${u.rpg.nivel} ]`;
+            document.getElementById("lblDef").innerText = u.rpg.defesa;
+            document.getElementById("lblPts").innerText = u.rpg.pontosLivres;
+            document.getElementById("valFor").innerText = u.rpg.for; document.getElementById("valAgi").innerText = u.rpg.agi;
+            document.getElementById("valMan").innerText = u.rpg.man; document.getElementById("valVig").innerText = u.rpg.vig;
+            document.getElementById("valInt").innerText = u.rpg.int;
+            
+            let integ = u.rpg.integridade;
+            document.getElementById("lblIntegVal").innerText = integ + "%";
+            document.getElementById("integrityBar").style.width = integ + "%";
+            document.getElementById("integrityBar").style.background = integ > 60 ? "#00ff00" : (integ > 30 ? "#ffaa00" : "#ff0000");
         }
-        window.distribuirPonto = function(attr) {
-            let r = usersGlobais[jogadorAtual].rpg;
-            if(r.pontosLivres > 0 && r[attr] < 3) db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(r[attr] + 1).then(()=>db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres - 1));
-        };
 
-        // MOVIMENTAÇÃO E DADOS
-        window.viajarPara = (k) => {
-            if(!jogadorAtual || isMaster) return;
-            let r = usersGlobais[jogadorAtual].rpg;
-            if(r.integridade <= 5) { alert("Sem energia."); return; }
-            db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/integridade`).set(r.integridade - 5);
-            db.ref(`tokyoRpg/users/${jogadorAtual}/local`).set(k);
-        };
-        window.lancarDado = function() {
-            let formula = document.getElementById("diceInput").value.trim().toLowerCase();
-            if(!formula.includes('d')) return;
-            let partes = formula.split('d'); let faces = parseInt(partes[1].split('+')[0]); let r = Math.floor(Math.random() * faces) + 1;
-            db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `${formula} ➔ ${r}` });
-            document.getElementById("diceInput").value = "";
-        };
+        function distribuirPonto(attr) {
+            if(!jogadorAtual) return; let u = usersGlobais[jogadorAtual];
+            if(u.rpg.pontosLivres > 0 && u.rpg[attr] < 3) {
+                db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(u.rpg[attr] + 1);
+                db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(u.rpg.pontosLivres - 1);
+            } else { alert("Sem pontos livres ou atributo no máximo (3)."); }
+        }
 
-        // MESTRE E LOGIN
-        window.logarSucesso = function(nome, serial) {
+        function abrirModal() { document.getElementById("loginModal").style.display = "flex"; if(jogadorAtual){document.getElementById("loginScreen").style.display="none"; document.getElementById("profileScreen").style.display="block";}else{document.getElementById("loginScreen").style.display="block"; document.getElementById("profileScreen").style.display="none";} }
+        function fecharModal() { document.getElementById("loginModal").style.display = "none"; }
+        function gerarSerial() { let c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let k=''; for(let i=0;i<4;i++) k+=c.charAt(Math.floor(Math.random()*c.length)); return k+"-DC1"; }
+
+        function setarOnline() {
+            if(!db || !jogadorAtual) return;
+            db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { connectionRef = db.ref('tokyoRpg/presence/' + jogadorAtual); connectionRef.onDisconnect().set(false).then(() => { connectionRef.set(true); }); }});
+        }
+
+        function logarSucesso(nome, serial) {
             jogadorAtual = nome; serialAtual = serial; isMaster = (serial === MASTER_SERIAL);
             document.getElementById("userBtn").classList.add("logged");
-            if(!usersGlobais[nome] || usersGlobais[nome].rpg === undefined) db.ref('tokyoRpg/users/' + nome).update({ carteira: 0, rpg: defaultStats(), local: "p1" });
-            db.ref('.info/connected').on('value', s => { if(s.val()) { connectionRef = db.ref('tokyoRpg/presence/'+nome); connectionRef.onDisconnect().set(false).then(()=>connectionRef.set(true));}});
+            document.getElementById("statusJogador").innerHTML = `Conectado: <strong style="color: #00d2ff">${nome}</strong>`;
+            document.getElementById("profileName").innerText = nome; document.getElementById("profileSerial").innerText = serial;
+            
+            if(!usersGlobais[nome] || usersGlobais[nome].carteira === undefined) db.ref('tokyoRpg/users/' + nome).update({ carteira: 0, rpg: defaultStats(), local: "p1" });
+            
             document.getElementById('masterHomePanel').style.display = isMaster ? 'block' : 'none';
-            drawMapVisuals(); window.fecharModal();
-        };
-        //...outras funções base (logarComSenha, etc) mantidas...
+            document.getElementById('masterShopPanel').style.display = isMaster ? 'block' : 'none';
+            
+            setarOnline(); renderizarFicha(); drawMapVisuals(); fecharModal();
+        }
 
-        // --- LISTENERS GERAIS (FIREBASE) ---
+        function deslogar() {
+            if(connectionRef) connectionRef.set(false);
+            jogadorAtual = ""; serialAtual = ""; isMaster = false;
+            document.getElementById("userBtn").classList.remove("logged");
+            document.getElementById("statusJogador").innerHTML = `Nenhum agente conectado.`;
+            document.getElementById("loginName").value = ""; document.getElementById("loginPass").value = ""; document.getElementById("loginSerial").value = "";
+            document.getElementById('masterHomePanel').style.display = 'none'; document.getElementById('masterShopPanel').style.display = 'none';
+            fecharModal(); drawMapVisuals();
+        }
+
+        function logarComSenha() {
+            const nome = document.getElementById("loginName").value.trim().toUpperCase(); const senha = document.getElementById("loginPass").value;
+            if (!nome || !senha) { alert("Preencha codinome e senha."); return; }
+            db.ref('tokyoRpg/users/' + nome).once('value').then((snap) => {
+                let ud = snap.val();
+                if(ud) { if (ud.senha !== senha) { alert("Senha incorreta."); return; } logarSucesso(nome, ud.serial); } 
+                else { let ns = gerarSerial(); db.ref('tokyoRpg/users/' + nome).set({ senha: senha, serial: ns, carteira: 0, rpg: defaultStats(), local: "p1" }); logarSucesso(nome, ns); alert(`Criado. Guarde seu Autenticador.`); }
+            });
+        }
+
+        function logarComSerial() {
+            const s = document.getElementById("loginSerial").value.trim().toUpperCase();
+            if(!s) { alert("Digite o serial."); return; }
+            if(s === MASTER_SERIAL) { db.ref('tokyoRpg/users/MESTRE').update({ serial: MASTER_SERIAL, carteira: 999999 }); logarSucesso("MESTRE", MASTER_SERIAL); return; }
+            let achou = false; Object.keys(usersGlobais).forEach(n => { if(usersGlobais[n].serial === s) { achou = true; logarSucesso(n, s); }});
+            if(!achou) alert("Não encontrado.");
+        }
+
+        // --- MAPA E DADOS FUNÇÕES ---
+        function viajarPara(k) {
+            if(!jogadorAtual || isMaster) { alert(isMaster?"Mestre é onipresente.":"Autentique-se."); return; }
+            let r = usersGlobais[jogadorAtual].rpg;
+            if(r.integridade <= 5) { alert("Sua integridade é muito baixa (Fome/Sede). Coma algo da mochila."); return; }
+            db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/integridade`).set(r.integridade - 5);
+            db.ref(`tokyoRpg/users/${jogadorAtual}/local`).set(k);
+        }
+
+        function lancarDado() {
+            if(!jogadorAtual) { alert("Autentique-se."); return; }
+            let exp = document.getElementById("diceInput").value.trim().toLowerCase();
+            if(!exp.includes('d')) return; 
+            let p = exp.split('d'); let qtd = parseInt(p[0]) || 1; let r = p[1].split('+'); let faces = parseInt(r[0]); let mod = r[1]?parseInt(r[1]):0;
+            let tot = 0; let rol = [];
+            for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random() * faces) + 1; rol.push(d); tot += d; }
+            tot += mod;
+            db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `${qtd}d${faces}${mod>0?'+'+mod:''} ➔ [${rol.join(',')}] = ${tot}` });
+            document.getElementById("diceInput").value = "";
+        }
+
+        function iniciarEmbateMap() {
+            if(!isMaster) return;
+            let locStr = document.getElementById("embLocal").value.trim(); let ap = document.getElementById("embAposta").value;
+            let kAchou = Object.keys(locaisMapa).find(k => locaisMapa[k].nome.toLowerCase().includes(locStr.toLowerCase()));
+            if(!kAchou) { alert("Local não existe no mapa."); return; }
+            db.ref('tokyoRpg/mapEmbates').push({ localKey: kAchou, aposta: ap });
+            document.getElementById("embLocal").value = ""; document.getElementById("embAposta").value = "";
+        }
+
+        function processarEmbate() {
+            if(!isMaster) return;
+            let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase();
+            let ap = parseInt(document.getElementById("embAposta").value || "0"); // Mestre pode definir Yenes depois
+            let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value;
+            if(!v || !p) { alert("Preencha Vencedor e Perdedor."); return; }
+            
+            let cVenc = usersGlobais[v] ? usersGlobais[v].carteira || 0 : 0;
+            let cPerd = usersGlobais[p] ? usersGlobais[p].carteira || 0 : 0;
+            cVenc += ap; cPerd -= ap; let isMorte = (cPerd <= 0);
+            
+            if(usersGlobais[v]) db.ref(`tokyoRpg/users/${v}`).update({ carteira: cVenc, "rpg/nivel": (usersGlobais[v].rpg?.nivel||1)+1, "rpg/pontosLivres": (usersGlobais[v].rpg?.pontosLivres||0)+1 });
+            if(usersGlobais[p]) {
+                if(isMorte) db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" });
+                else db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd });
+            }
+            db.ref('tokyoRpg/mapEmbates').remove(); // Limpa ícones do mapa
+            db.ref('tokyoRpg/news').push({ tipo: isMorte?"MORTE":"EMBATE", vencedor: v, perdedor: p, aposta: ap, saldoVencedor: cVenc, saldoPerdedor: cPerd, data: new Date().toLocaleTimeString(), descMorte: mDesc, imgMorte: mImg });
+            alert("Embate Registrado!");
+        }
+
+        // --- CHAT, ROLETA E LOJA ---
+        function prepararEnvioMensagem() {
+            if(!jogadorAtual) return; let t = document.getElementById("chatInput").value.trim(); let i = document.getElementById("chatImageFile");
+            if(!t && i.files.length === 0) return;
+            if(i.files.length > 0) {
+                let f = i.files[0]; if(f.size > 2000000) { alert("Máx 2MB"); return; }
+                let r = new FileReader(); r.onload = (e) => { db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: e.target.result, data: new Date().toLocaleTimeString() }); i.value = ""; document.getElementById("chatInput").value = ""; }; r.readAsDataURL(f);
+            } else {
+                let iLink = null; if(t.match(/\.(jpeg|jpg|gif|png)$/) && t.startsWith("http")) { iLink = t; t = ""; }
+                db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); document.getElementById("chatInput").value = "";
+            }
+        }
+        
+        function tentarGirar() { if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<500){alert("Sem grana.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-500); realizarGiroVisual(); }
+        function realizarGiroVisual() { yenesGastos+=500; deusesSorteados = [...deuses].sort(()=>0.5-Math.random()); document.getElementById("card1").innerText=deusesSorteados[0]; document.getElementById("card2").innerText=deusesSorteados[1]; document.getElementById("btnGod1").innerText=`Aceitar ${deusesSorteados[0]}`; document.getElementById("btnGod2").innerText=`Aceitar ${deusesSorteados[1]}`; document.getElementById("actionButtons").style.display="block"; }
+        function escolherDeus(i) { db.ref(`tokyoRpg/users/${jogadorAtual}/deus`).set(deusesSorteados[i]); document.getElementById("actionButtons").style.display="none"; alert(`Patrono: ${deusesSorteados[i]}`); }
+        
+        function criarItemLoja() {
+            if(!isMaster) return; let t=document.getElementById("newItemType").value; let n=document.getElementById("newItemName").value.trim(); let d=document.getElementById("newItemDesc").value.trim(); let p=parseInt(document.getElementById("newItemPrice").value);
+            if(n && d && p) { db.ref('tokyoRpg/loja').push({ tipo: t, nome: n, desc: d, preco: p }); document.getElementById("newItemName").value=""; document.getElementById("newItemDesc").value=""; document.getElementById("newItemPrice").value=""; alert("Criado!"); }
+        }
+        function comprarItem(id, n, p, t, d) {
+            if(!jogadorAtual || isMaster) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<p) {alert("Sem grana."); return;}
+            db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-p); db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d }); alert("Comprado!");
+        }
+
+        // --- LISTENERS ---
         if (db) {
-            db.ref('tokyoRpg/users').on('value', snap => { usersGlobais = snap.val() || {}; renderizarFicha(); drawMapVisuals(); if(jogadorAtual) document.getElementById("profileWallet").innerText = (usersGlobais[jogadorAtual].carteira || 0) + " ¥";});
-            db.ref('tokyoRpg/presence').on('value', snap => { presenceGlobal = snap.val() || {}; drawMapVisuals(); });
-            db.ref('tokyoRpg/chat').limitToLast(30).on('value', snap => {
-                let b = document.getElementById("chatMessages"); b.innerHTML = "";
-                let msgs = snap.val();
-                if(msgs) { Object.values(msgs).forEach(m => {
-                    b.innerHTML += `<div class="msg-box"><img src="${m.avatarUrl}" class="msg-avatar"><div class="msg-content"><div style="color:#00d2ff;font-size:11px;">${m.nome}</div>${m.texto?`<p style="margin:5px 0;">${m.texto}</p>`:''}${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}</div></div>`;
-                }); b.scrollTop = b.scrollHeight; }
+            db.ref('tokyoRpg/users').on('value', s => { usersGlobais = s.val()||{}; renderizarFicha(); drawMapVisuals(); if(jogadorAtual && usersGlobais[jogadorAtual]) document.getElementById("profileWallet").innerText = (usersGlobais[jogadorAtual].carteira||0)+" ¥"; });
+            db.ref('tokyoRpg/presence').on('value', s => { presenceGlobal = s.val()||{}; drawMapVisuals(); 
+                let b = document.getElementById("userLog"); b.innerHTML = "";
+                Object.keys(usersGlobais).forEach(n => { if(n!=="MESTRE"){ let u=usersGlobais[n]; let isD=(u.status==="morto"); let isO=presenceGlobal[n]===true&&!isD; b.innerHTML += `<div class="user-item ${isD?'is-dead':''}"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong>${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span></div>`; } });
             });
-            db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', snap => {
-                let b = document.getElementById("diceLog"); b.innerHTML = "";
-                let logs = snap.val();
-                if(logs) { Object.values(logs).forEach(l => b.innerHTML += `<div class="dice-msg"><strong style="color:#00ff00">${l.nome}:</strong> ${l.texto}</div>`); b.scrollTop = b.scrollHeight; }
-            });
-            db.ref('tokyoRpg/mapEmbates').on('value', snap => drawMapVisuals()); // Alerta de luta
-            //...listeners de Loja, Notícias mantidos...
+            db.ref('tokyoRpg/mapDados').limitToLast(8).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div class="dice-msg"><strong style="color:#00d2ff">${x.nome}:</strong> <span style="color:#00ff00">${x.texto}</span></div>`); b.scrollTop = b.scrollHeight; }});
+            db.ref('tokyoRpg/chat').limitToLast(30).on('value', s => { let d = s.val(); let b = document.getElementById("chatMessages"); b.innerHTML=""; if(d){ Object.values(d).forEach(m => b.innerHTML += `<div class="msg-box"><div class="msg-content"><div class="msg-header">${m.nome} <span style="color:#555;font-size:10px">${m.data}</span></div><p class="msg-text">${m.texto||''}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}</div></div>`); b.scrollTop = b.scrollHeight; }});
+            db.ref('tokyoRpg/loja').on('value', s => { let d = s.val(); let b = document.getElementById("shopGrid"); b.innerHTML=""; if(d){ Object.keys(d).forEach(k => { let i = d[k]; b.innerHTML += `<div class="shop-item"><div><span class="shop-type">${i.tipo}</span><h3 style="color:#00d2ff;margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#aaa;">${i.desc}</p></div><div><h2 style="color:#00ff00;margin:10px 0;">${i.preco}¥</h2><button class="action-btn" onclick="comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}')">Comprar</button></div></div>`; });}});
+            db.ref('tokyoRpg/news').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("newsFeed"); b.innerHTML=""; if(d){ Object.values(d).reverse().forEach(n => { b.innerHTML += `<div class="news-item ${n.tipo==='MORTE'?'news-death':''}"><p style="color:${n.tipo==='MORTE'?'#ff2a5f':'#00d2ff'};margin:0;font-size:12px;">${n.data}</p><h3 style="color:#fff;margin:5px 0;">${n.tipo==='MORTE'?'🚨 ÓBITO NO DISTRITO 🚨':'Confronto Concluído'}</h3><p style="color:#ccc;">${n.vencedor} vs ${n.perdedor}. ${n.tipo==='MORTE'?'Perdedor Eliminado.':'Aposta: '+n.aposta+'¥'}</p>${n.imgMorte?`<img src="${n.imgMorte}" class="death-img">`:''}</div>`; }); }});
+            db.ref('tokyoRpg/mapEmbates').on('value', s => drawMapVisuals());
         }
     </script>
 </body>
