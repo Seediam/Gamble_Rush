@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff2a5f">
     
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=6">
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
@@ -69,16 +69,16 @@
         </div>
     </div>
 
-    <div class="ad-space">
-        <a href="#" class="ad-link" onclick="alert('Prepare-se. O embate está próximo.'); return false;">
-            <img src="anuncio2.png" alt="Gumble Duel" class="ad-image">
-        </a>
-    </div>
-
     <div class="sidebar">
         <h2>Registros Oficiais</h2>
         <div class="history-list" id="historyLog"></div>
         <button onclick="limparHistorico()" style="font-size: 12px; padding: 8px; border-color: #555; color: #888; width: auto;">Purgar Registros</button>
+    </div>
+
+    <div class="ad-space">
+        <a href="#" class="ad-link" onclick="alert('Prepare-se. O embate está próximo.'); return false;">
+            <img src="anuncio2.png" alt="Gumble Duel" class="ad-image">
+        </a>
     </div>
 
     <script>
@@ -94,6 +94,7 @@
         };
         
         let db;
+        let historicoDadosGlobais = null; // Guarda os dados para atualizar a tela sem precisar reler o banco
 
         try {
             firebase.initializeApp(firebaseConfig);
@@ -105,28 +106,39 @@
         const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
         let yenesGastos = 0;
         let deusesSorteados = [];
-        let jogadorAtual = "";
+        let jogadorAtual = ""; // Fica vazio até a pessoa logar
         let senhaAtual = "";
         let serialAtual = "";
 
+        // Função que desenha o histórico na tela e decide quem vê o que
+        function atualizarTelaHistorico() {
+            const logDiv = document.getElementById("historyLog");
+            logDiv.innerHTML = "";
+            
+            if (historicoDadosGlobais) {
+                const historico = Object.values(historicoDadosGlobais).filter(item => item && item.data).reverse();
+                historico.forEach(item => {
+                    let div = document.createElement("div");
+                    div.className = "history-item";
+
+                    // Regra de Criptografia: Só mostra o Deus se o jogador atual for o dono daquele registro
+                    let ehDonoDaRolagem = (jogadorAtual.toUpperCase() === item.jogador.toUpperCase());
+                    let deusVisual = ehDonoDaRolagem ? item.deus : "[ DADO PROTEGIDO ]";
+                    let corTexto = ehDonoDaRolagem ? "#fff" : "#555"; // Fica cinza se estiver protegido
+
+                    div.innerHTML = `<span style="color: #00d2ff;">[${item.data}]</span><br>
+                                     Agente: <strong>${item.jogador}</strong> <span class="serial-code">(${item.serial})</span><br>
+                                     Patrono: <strong style="color: ${corTexto};">${deusVisual}</strong><br>
+                                     <span style="color: #ff2a5f; font-size: 12px;">Gastos: -${item.custo}¥</span>`;
+                    logDiv.appendChild(div);
+                });
+            }
+        }
+
         if (db) {
             db.ref('tokyoRpg/history').on('value', (snapshot) => {
-                const logDiv = document.getElementById("historyLog");
-                logDiv.innerHTML = "";
-                const dados = snapshot.val();
-                
-                if (dados) {
-                    const historico = Object.values(dados).filter(item => item && item.data).reverse();
-                    historico.forEach(item => {
-                        let div = document.createElement("div");
-                        div.className = "history-item";
-                        div.innerHTML = `<span style="color: #00d2ff;">[${item.data}]</span><br>
-                                         Agente: <strong>${item.jogador}</strong> <span class="serial-code">(${item.serial})</span><br>
-                                         Patrono: <strong>${item.deus}</strong><br>
-                                         <span style="color: #ff2a5f; font-size: 12px;">Gastos: -${item.custo}¥</span>`;
-                        logDiv.appendChild(div);
-                    });
-                }
+                historicoDadosGlobais = snapshot.val();
+                atualizarTelaHistorico();
             });
         }
 
@@ -180,7 +192,12 @@
                     });
                 }
 
+                // Autenticação foi um sucesso! Define quem está jogando
                 jogadorAtual = nomeDigitado;
+                
+                // Atualiza a tela de histórico imediatamente para revelar as informações protegidas dele
+                atualizarTelaHistorico();
+
                 carteiraAtual -= 500;
                 inputCarteira.value = carteiraAtual;
                 
@@ -242,6 +259,12 @@
             document.getElementById("actionButtons").style.display = "none";
             
             yenesGastos = 0;
+            
+            // Depois que o cara finaliza a escolha, a gente "desloga" a tela para que o próximo jogador
+            // ou pessoa que abrir o PC dele não veja as informações.
+            jogadorAtual = "";
+            atualizarTelaHistorico();
+            
             alert(`Vínculo central estabelecido. Agente [${serialAtual}] registrado.`);
         };
 
