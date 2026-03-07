@@ -7,13 +7,46 @@
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff2a5f">
-    
-    <link rel="stylesheet" href="style.css?v=6">
-    
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <link rel="stylesheet" href="style.css?v=7"> <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
 <body>
+
+    <div class="top-bar">
+        <div class="user-btn" id="userBtn" onclick="abrirModal()">👤</div>
+    </div>
+
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-content" id="loginScreen">
+            <h3>Autenticação do Distrito</h3>
+            <p style="font-size: 12px; color: #aaa; margin-bottom: 20px;">Insira suas credenciais ou crie um novo codinome.</p>
+            
+            <input type="text" id="loginName" placeholder="Codinome" autocomplete="off">
+            <input type="password" id="loginPass" placeholder="Senha" autocomplete="off">
+            <button onclick="logarComSenha()">Entrar / Registrar</button>
+            
+            <div class="modal-divider"><span>OU</span></div>
+            
+            <input type="text" id="loginSerial" placeholder="Autenticador (Ex: M05U-DC1)" autocomplete="off">
+            <button onclick="logarComSerial()" style="border-color: #00d2ff; color: #00d2ff;">Acesso Direto</button>
+            
+            <br>
+            <span class="close-modal" onclick="fecharModal()">Cancelar</span>
+        </div>
+
+        <div class="modal-content" id="profileScreen" style="display: none;">
+            <h3>Seu Terminal</h3>
+            <p style="color: #00d2ff;">Agente: <strong id="profileName">---</strong></p>
+            <div style="background: #1a1a24; padding: 15px; border: 1px dashed var(--accent-red); margin: 20px 0;">
+                <p style="margin: 0; font-size: 12px; color: #aaa;">Seu Autenticador Secreto:</p>
+                <h2 style="margin: 10px 0; color: #fff; letter-spacing: 2px;" id="profileSerial">XXXX-DC1</h2>
+                <p style="margin: 0; font-size: 11px; color: #ff2a5f;">Guarde este código. Ele ignora a senha.</p>
+            </div>
+            <button onclick="deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
+            <br>
+            <span class="close-modal" onclick="fecharModal()">Fechar</span>
+        </div>
+    </div>
 
     <div class="ad-space">
         <a href="#" class="ad-link" onclick="alert('Redirecionando para download de GambleDouble...'); return false;">
@@ -25,17 +58,15 @@
         <h1>Seleção de Patrono</h1>
         
         <div class="system-notice">
-            [SISTEMA CONECTADO AO DISTRITO]: TAXA DE ROLAGEM = 500 YENES<br>
-            <span style="font-size: 12px; color: #aaa;">Credenciais necessárias para operar a máquina.</span>
+            [MÁQUINA DO DISTRITO]: TAXA DE ROLAGEM = 500 YENES
         </div>
         
         <div class="input-section">
+            <p id="statusJogador" style="color: #555; margin-top: 0;">Nenhum agente conectado na máquina.</p>
             <div class="input-group">
-                <input type="text" id="playerName" placeholder="Codinome" autocomplete="off">
-                <input type="password" id="playerPass" placeholder="Senha" autocomplete="off">
-                <input type="number" id="playerWallet" placeholder="Carteira (¥)" min="0" step="100">
+                <input type="number" id="playerWallet" placeholder="Carteira de Yenes (¥)" min="0" step="100">
             </div>
-            <button id="spinBtn" onclick="tentarGirar()">Autenticar & Girar (-500 ¥)</button>
+            <button id="spinBtn" onclick="tentarGirar()">Girar (-500 ¥)</button>
         </div>
 
         <div class="cards-container">
@@ -70,10 +101,9 @@
     </div>
 
     <div class="sidebar">
-        <h2>Registros Oficiais</h2>
-        <div class="history-list" id="historyLog"></div>
-        <button onclick="limparHistorico()" style="font-size: 12px; padding: 8px; border-color: #555; color: #888; width: auto;">Purgar Registros</button>
-    </div>
+        <h2>Usuários Conectados</h2>
+        <div class="user-list" id="userLog"></div>
+        </div>
 
     <div class="ad-space">
         <a href="#" class="ad-link" onclick="alert('Prepare-se. O embate está próximo.'); return false;">
@@ -94,7 +124,16 @@
         };
         
         let db;
-        let historicoDadosGlobais = null; // Guarda os dados para atualizar a tela sem precisar reler o banco
+        let usersGlobais = {}; 
+        let presenceGlobal = {};
+        
+        let jogadorAtual = ""; 
+        let serialAtual = "";
+        let connectionRef = null; // Guarda a rota de conexão do jogador para desligar quando ele sair
+
+        const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
+        let yenesGastos = 0;
+        let deusesSorteados = [];
 
         try {
             firebase.initializeApp(firebaseConfig);
@@ -103,45 +142,80 @@
             console.error("ERRO FIREBASE:", error);
         }
 
-        const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
-        let yenesGastos = 0;
-        let deusesSorteados = [];
-        let jogadorAtual = ""; // Fica vazio até a pessoa logar
-        let senhaAtual = "";
-        let serialAtual = "";
-
-        // Função que desenha o histórico na tela e decide quem vê o que
-        function atualizarTelaHistorico() {
-            const logDiv = document.getElementById("historyLog");
+        // ==========================================
+        // 1. INTELIGÊNCIA DE LISTA DE USUÁRIOS E PRESENÇA
+        // ==========================================
+        function desenharListaUsuarios() {
+            const logDiv = document.getElementById("userLog");
             logDiv.innerHTML = "";
             
-            if (historicoDadosGlobais) {
-                const historico = Object.values(historicoDadosGlobais).filter(item => item && item.data).reverse();
-                historico.forEach(item => {
-                    let div = document.createElement("div");
-                    div.className = "history-item";
+            // Pega todos os usuários que já se registraram
+            Object.keys(usersGlobais).forEach(nomeUsuario => {
+                let user = usersGlobais[nomeUsuario];
+                
+                // Verifica na tabela de Presença se ele está online agora
+                let isOnline = presenceGlobal[nomeUsuario] === true;
+                let dotClass = isOnline ? "online" : "offline";
+                let boxClass = isOnline ? "is-online" : "";
+                
+                // Oculta o Deus dos outros jogadores
+                let ehODono = (jogadorAtual.toUpperCase() === nomeUsuario.toUpperCase());
+                let deusMostrado = user.deus ? user.deus : "Nenhum";
+                if(!ehODono && user.deus) {
+                    deusMostrado = "[ DADO PROTEGIDO ]";
+                }
+                let corDeus = ehODono ? "#fff" : "#555";
 
-                    // Regra de Criptografia: Só mostra o Deus se o jogador atual for o dono daquele registro
-                    let ehDonoDaRolagem = (jogadorAtual.toUpperCase() === item.jogador.toUpperCase());
-                    let deusVisual = ehDonoDaRolagem ? item.deus : "[ DADO PROTEGIDO ]";
-                    let corTexto = ehDonoDaRolagem ? "#fff" : "#555"; // Fica cinza se estiver protegido
+                let gasto = user.gastoTotal || 0;
 
-                    div.innerHTML = `<span style="color: #00d2ff;">[${item.data}]</span><br>
-                                     Agente: <strong>${item.jogador}</strong> <span class="serial-code">(${item.serial})</span><br>
-                                     Patrono: <strong style="color: ${corTexto};">${deusVisual}</strong><br>
-                                     <span style="color: #ff2a5f; font-size: 12px;">Gastos: -${item.custo}¥</span>`;
-                    logDiv.appendChild(div);
-                });
-            }
-        }
-
-        if (db) {
-            db.ref('tokyoRpg/history').on('value', (snapshot) => {
-                historicoDadosGlobais = snapshot.val();
-                atualizarTelaHistorico();
+                let div = document.createElement("div");
+                div.className = `user-item ${boxClass}`;
+                div.innerHTML = `<span class="status-dot ${dotClass}"></span>
+                                 <strong>${nomeUsuario}</strong><br>
+                                 Patrono: <span style="color:${corDeus}">${deusMostrado}</span><br>
+                                 <span style="color: #ff2a5f; font-size: 11px;">Yenes Gastos: ${gasto}¥</span>`;
+                
+                // Coloca os online no topo da lista
+                if(isOnline) logDiv.prepend(div);
+                else logDiv.appendChild(div);
             });
         }
 
+        if (db) {
+            // Escuta a tabela de Usuários (para ver os deuses e gastos)
+            db.ref('tokyoRpg/users').on('value', (snapshot) => {
+                usersGlobais = snapshot.val() || {};
+                desenharListaUsuarios();
+            });
+
+            // Escuta a tabela de Presença (para ver as bolinhas verde/preta)
+            db.ref('tokyoRpg/presence').on('value', (snapshot) => {
+                presenceGlobal = snapshot.val() || {};
+                desenharListaUsuarios();
+            });
+        }
+
+        // Define o jogador como ONLINE no Firebase
+        function setarOnline() {
+            if(!db || !jogadorAtual) return;
+            
+            // O Firebase avisa sozinho quando a internet cai ou a aba fecha
+            db.ref('.info/connected').on('value', function(snapshot) {
+                if (snapshot.val() === true) {
+                    connectionRef = db.ref('tokyoRpg/presence/' + jogadorAtual);
+                    
+                    // Se a aba for fechada, escreve "false" no banco de dados sozinho
+                    connectionRef.onDisconnect().set(false).then(() => {
+                        // Se conectou, escreve "true"
+                        connectionRef.set(true);
+                    });
+                }
+            });
+        }
+
+        // ==========================================
+        // 2. SISTEMA DE LOGIN E MODAL
+        // ==========================================
         function gerarSerial() {
             const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
             let codigo = '';
@@ -151,64 +225,113 @@
             return codigo + "-DC1";
         }
 
-        window.tentarGirar = function() {
-            if (!db) {
-                alert("O banco de dados não conectou. Veja o F12.");
-                return;
+        function abrirModal() {
+            document.getElementById("loginModal").style.display = "flex";
+            if(jogadorAtual) {
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("profileScreen").style.display = "block";
+            } else {
+                document.getElementById("loginScreen").style.display = "block";
+                document.getElementById("profileScreen").style.display = "none";
             }
+        }
 
-            const inputNome = document.getElementById("playerName");
-            const inputSenha = document.getElementById("playerPass");
-            const inputCarteira = document.getElementById("playerWallet");
+        function fecharModal() {
+            document.getElementById("loginModal").style.display = "none";
+        }
+
+        function logarSucesso(nome, serial) {
+            jogadorAtual = nome;
+            serialAtual = serial;
             
-            const nomeDigitado = inputNome.value.trim().toUpperCase();
-            const senhaDigitada = inputSenha.value;
-            let carteiraAtual = parseInt(inputCarteira.value);
+            document.getElementById("userBtn").classList.add("logged");
+            document.getElementById("statusJogador").innerHTML = `Máquina liberada para: <strong style="color: #00d2ff">${nome}</strong>`;
+            document.getElementById("profileName").innerText = nome;
+            document.getElementById("profileSerial").innerText = serial;
+            
+            setarOnline();
+            desenharListaUsuarios(); // Atualiza a tela para descriptografar o Deus dele
+            fecharModal();
+        }
 
-            if (!nomeDigitado || !senhaDigitada) {
-                alert("Codinome e Senha obrigatórios.");
-                return;
-            }
+        function deslogar() {
+            if(connectionRef) connectionRef.set(false); // Fica offline
+            jogadorAtual = "";
+            serialAtual = "";
+            document.getElementById("userBtn").classList.remove("logged");
+            document.getElementById("statusJogador").innerHTML = `Nenhum agente conectado na máquina.`;
+            
+            // Limpa os campos
+            document.getElementById("loginName").value = "";
+            document.getElementById("loginPass").value = "";
+            document.getElementById("loginSerial").value = "";
+            
+            desenharListaUsuarios(); // Criptografa o Deus novamente
+            fecharModal();
+        }
 
-            if (isNaN(carteiraAtual) || carteiraAtual < 500) {
-                alert("Fundos insuficientes.");
-                return;
-            }
+        window.logarComSenha = function() {
+            const nomeDigitado = document.getElementById("loginName").value.trim().toUpperCase();
+            const senhaDigitada = document.getElementById("loginPass").value;
+
+            if (!nomeDigitado || !senhaDigitada) { alert("Preencha codinome e senha."); return; }
 
             db.ref('tokyoRpg/users/' + nomeDigitado).once('value').then((snapshot) => {
                 const userData = snapshot.val();
-                
                 if (userData) {
-                    if (userData.senha !== senhaDigitada) {
-                        alert("Senha incorreta.");
-                        return;
-                    }
-                    serialAtual = userData.serial;
+                    if (userData.senha !== senhaDigitada) { alert("Senha incorreta."); return; }
+                    logarSucesso(nomeDigitado, userData.serial);
                 } else {
-                    serialAtual = gerarSerial();
+                    // Novo Registro
+                    let novoSerial = gerarSerial();
                     db.ref('tokyoRpg/users/' + nomeDigitado).set({
                         senha: senhaDigitada,
-                        serial: serialAtual
+                        serial: novoSerial,
+                        gastoTotal: 0
                     });
+                    logarSucesso(nomeDigitado, novoSerial);
+                    alert(`SISTEMA: Vínculo criado. Clique no botão de Usuário novamente para ver e guardar seu Autenticador Secreto.`);
                 }
-
-                // Autenticação foi um sucesso! Define quem está jogando
-                jogadorAtual = nomeDigitado;
-                
-                // Atualiza a tela de histórico imediatamente para revelar as informações protegidas dele
-                atualizarTelaHistorico();
-
-                carteiraAtual -= 500;
-                inputCarteira.value = carteiraAtual;
-                
-                inputNome.disabled = true;
-                inputSenha.disabled = true;
-                realizarGiroVisual();
-                
-            }).catch((error) => {
-                console.error("Erro no DB:", error);
-                alert("Falha: " + error.message);
             });
+        };
+
+        window.logarComSerial = function() {
+            const serialDigitado = document.getElementById("loginSerial").value.trim().toUpperCase();
+            if(!serialDigitado) { alert("Digite um serial válido."); return; }
+
+            // Procura quem tem esse serial
+            let achou = false;
+            Object.keys(usersGlobais).forEach(nome => {
+                if(usersGlobais[nome].serial === serialDigitado) {
+                    achou = true;
+                    logarSucesso(nome, serialDigitado);
+                }
+            });
+
+            if(!achou) alert("Autenticador não encontrado na rede.");
+        };
+
+
+        // ==========================================
+        // 3. ROLETA
+        // ==========================================
+        window.tentarGirar = function() {
+            if(!jogadorAtual) {
+                alert("SISTEMA BLOQUEADO. Clique no ícone superior direito para autenticar-se na máquina.");
+                return;
+            }
+
+            const inputCarteira = document.getElementById("playerWallet");
+            let carteiraAtual = parseInt(inputCarteira.value);
+
+            if (isNaN(carteiraAtual) || carteiraAtual < 500) {
+                alert("Fundos insuficientes. São necessários 500 Yenes.");
+                return;
+            }
+
+            carteiraAtual -= 500;
+            inputCarteira.value = carteiraAtual;
+            realizarGiroVisual();
         };
 
         window.realizarGiroVisual = function() {
@@ -237,21 +360,17 @@
 
         window.escolherDeus = function(index) {
             const deusEscolhido = deusesSorteados[index];
-            const novoRegistro = {
-                jogador: jogadorAtual,
-                serial: serialAtual,
-                deus: deusEscolhido,
-                custo: yenesGastos,
-                data: new Date().toLocaleTimeString()
-            };
             
-            db.ref('tokyoRpg/history').push(novoRegistro);
+            // Atualiza direto o usuário no Firebase (Patrono e soma os gastos)
+            const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
+            refUser.once('value').then(snap => {
+                let gastoAntigo = snap.val().gastoTotal || 0;
+                refUser.update({
+                    deus: deusEscolhido,
+                    gastoTotal: gastoAntigo + yenesGastos
+                });
+            });
 
-            document.getElementById("playerName").value = "";
-            document.getElementById("playerPass").value = "";
-            document.getElementById("playerName").disabled = false;
-            document.getElementById("playerPass").disabled = false;
-            
             document.getElementById("card1").classList.add("face-down");
             document.getElementById("card2").classList.add("face-down");
             document.getElementById("card1").innerText = "?";
@@ -259,24 +378,8 @@
             document.getElementById("actionButtons").style.display = "none";
             
             yenesGastos = 0;
-            
-            // Depois que o cara finaliza a escolha, a gente "desloga" a tela para que o próximo jogador
-            // ou pessoa que abrir o PC dele não veja as informações.
-            jogadorAtual = "";
-            atualizarTelaHistorico();
-            
-            alert(`Vínculo central estabelecido. Agente [${serialAtual}] registrado.`);
+            alert(`Vínculo central atualizado. Você agora segue as diretrizes de ${deusEscolhido}.`);
         };
-
-        window.limparHistorico = function() {
-            if(confirm("Deseja apagar os registros online e limpar os usuários?")) {
-                if(db) {
-                    db.ref('tokyoRpg/history').remove();
-                    db.ref('tokyoRpg/users').remove();
-                    alert("Formatado.");
-                }
-            }
-        }
     </script>
 </body>
 </html>
