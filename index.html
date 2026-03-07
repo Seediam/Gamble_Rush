@@ -3,14 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema do Distrito - Seleção Divina</title>
-    
+    <title>Sistema do Distrito - WebApp</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff2a5f">
-    <link rel="stylesheet" href="style.css?v=7"> <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <link rel="stylesheet" href="style.css?v=8">
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
 <body>
+
+    <nav class="nav-bar">
+        <button class="nav-btn active" onclick="mudarAba('tab-principal', this)">Principal</button>
+        <button class="nav-btn" onclick="mudarAba('tab-roleta', this)">God Roulette</button>
+        <button class="nav-btn" onclick="mudarAba('tab-igamble', this)">IGamble</button>
+        <button class="nav-btn" onclick="mudarAba('tab-loja', this)">Loja</button>
+        <button class="nav-btn" onclick="mudarAba('tab-mochila', this)">Mochila</button>
+    </nav>
 
     <div class="top-bar">
         <div class="user-btn" id="userBtn" onclick="abrirModal()">👤</div>
@@ -19,99 +27,134 @@
     <div class="modal-overlay" id="loginModal">
         <div class="modal-content" id="loginScreen">
             <h3>Autenticação do Distrito</h3>
-            <p style="font-size: 12px; color: #aaa; margin-bottom: 20px;">Insira suas credenciais ou crie um novo codinome.</p>
-            
             <input type="text" id="loginName" placeholder="Codinome" autocomplete="off">
             <input type="password" id="loginPass" placeholder="Senha" autocomplete="off">
             <button onclick="logarComSenha()">Entrar / Registrar</button>
-            
-            <div class="modal-divider"><span>OU</span></div>
-            
+            <div style="margin: 15px 0; color: #555;">OU</div>
             <input type="text" id="loginSerial" placeholder="Autenticador (Ex: M05U-DC1)" autocomplete="off">
             <button onclick="logarComSerial()" style="border-color: #00d2ff; color: #00d2ff;">Acesso Direto</button>
-            
-            <br>
-            <span class="close-modal" onclick="fecharModal()">Cancelar</span>
+            <br><span class="close-modal" onclick="fecharModal()">Cancelar</span>
         </div>
 
         <div class="modal-content" id="profileScreen" style="display: none;">
             <h3>Seu Terminal</h3>
             <p style="color: #00d2ff;">Agente: <strong id="profileName">---</strong></p>
-            <div style="background: #1a1a24; padding: 15px; border: 1px dashed var(--accent-red); margin: 20px 0;">
-                <p style="margin: 0; font-size: 12px; color: #aaa;">Seu Autenticador Secreto:</p>
-                <h2 style="margin: 10px 0; color: #fff; letter-spacing: 2px;" id="profileSerial">XXXX-DC1</h2>
-                <p style="margin: 0; font-size: 11px; color: #ff2a5f;">Guarde este código. Ele ignora a senha.</p>
+            
+            <div class="wallet-box">
+                <p style="margin: 0; font-size: 12px; color: #aaa;">Fundos Disponíveis:</p>
+                <h2 id="profileWallet">0 ¥</h2>
             </div>
+            
+            <input type="text" id="sponsorCode" placeholder="Código de Patrocinador" autocomplete="off">
+            <button onclick="resgatarCodigo()" style="background: #00d2ff; color: #000; border: none; margin-bottom: 15px;">Resgatar Fundos</button>
+
+            <div style="background: #1a1a24; padding: 10px; border: 1px dashed var(--accent-red); margin-bottom: 15px;">
+                <p style="margin: 0; font-size: 11px; color: #aaa;">Seu Autenticador (Não perca):</p>
+                <h3 style="margin: 5px 0; color: #fff; letter-spacing: 2px;" id="profileSerial">XXXX-DC1</h3>
+            </div>
+            
             <button onclick="deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
-            <br>
-            <span class="close-modal" onclick="fecharModal()">Fechar</span>
+            <br><span class="close-modal" onclick="fecharModal()">Fechar</span>
         </div>
     </div>
 
-    <div class="ad-space">
-        <a href="#" class="ad-link" onclick="alert('Redirecionando para download de GambleDouble...'); return false;">
-            <img src="anuncio1.png" alt="GambleDouble App" class="ad-image">
-        </a>
-    </div>
-
-    <div class="main-content">
-        <h1>Seleção de Patrono</h1>
+    <div id="tab-principal" class="tab-content active">
+        <h1 class="blink-text">O Próximo Embate está Próximo</h1>
         
-        <div class="system-notice">
-            [MÁQUINA DO DISTRITO]: TAXA DE ROLAGEM = 500 YENES
-        </div>
-        
-        <div class="input-section">
-            <p id="statusJogador" style="color: #555; margin-top: 0;">Nenhum agente conectado na máquina.</p>
-            <div class="input-group">
-                <input type="number" id="playerWallet" placeholder="Carteira de Yenes (¥)" min="0" step="100">
+        <div id="masterHomePanel" class="master-panel">
+            <h3>[ ACESSO MASTER ] GERAR EMBATE</h3>
+            <p style="color:#aaa; font-size: 12px;">Selecione os agentes que irão para o confronto.</p>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <input type="text" placeholder="Codinome Agente 1" style="padding: 10px; background: #000; color: #fff; border: 1px solid #ff2a5f;">
+                <span style="color: #ff2a5f; align-self: center; font-weight: bold;">VS</span>
+                <input type="text" placeholder="Codinome Agente 2" style="padding: 10px; background: #000; color: #fff; border: 1px solid #00d2ff;">
             </div>
-            <button id="spinBtn" onclick="tentarGirar()">Girar (-500 ¥)</button>
+            <button class="action-btn" style="margin-top: 15px;">Registrar na Tela Central</button>
         </div>
 
-        <div class="cards-container">
-            <div class="card face-down" id="card1">?</div>
-            <div class="card face-down" id="card2">?</div>
+        <div style="width: 100%; max-width: 800px; text-align: center; color: #aaa;">
+            <p>Nenhum embate registrado no momento.</p>
+            <p>Aguardando diretrizes do Distrito...</p>
         </div>
+    </div>
 
-        <div class="actions" id="actionButtons">
-            <button onclick="escolherDeus(0)" id="btnGod1">Aceitar Patrono 1</button>
-            <button onclick="escolherDeus(1)" id="btnGod2">Aceitar Patrono 2</button>
-            <br>
-            <button onclick="realizarGiroVisual()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
-        </div>
+    <div id="tab-roleta" class="tab-content">
+        <div class="main-area">
+            <div class="ad-space">
+                <a href="#" class="ad-link"><img src="anuncio1.png" alt="GambleDouble App" class="ad-image"></a>
+            </div>
 
-        <div class="god-list-container">
-            <h2>Panteão Disponível no Distrito</h2>
-            <div class="god-grid">
-                <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra o risco de Yenes do adversário e reduz o seu pela metade.</div></details>
-                <details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc">Força acordo não-letal; o alvo não pode revelar quantos Yenes possui.</div></details>
-                <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc">Recebe pista dedutiva sobre a carta/objetivo do oponente.</div></details>
-                <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Empresta Yenes. Herda automaticamente Yenes de devedores mortos.</div></details>
-                <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Garante fuga perfeita ou intercepta mensagens de outros jogadores.</div></details>
-                <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Mapeia instantaneamente saídas, pontos cegos e câmeras.</div></details>
-                <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Força aposta pública; recusar causa multa de 10% da carteira.</div></details>
-                <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a manipulações de apostas; blefes perfeitos.</div></details>
-                <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc">Ignora dor leve e descobre armas ocultas no corpo dos alvos.</div></details>
-                <details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc">Pode anular completamente a última transação ou acordo.</div></details>
-                <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc">Força o alvo a responder com verdade uma pergunta de Sim/Não.</div></details>
-                <details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc">Rastreio infalível; vantagens em emboscadas e furtividade.</div></details>
+            <div class="center-panel">
+                <h1>Seleção de Patrono</h1>
+                <div class="system-notice">[MÁQUINA DO DISTRITO]: TAXA = 500 YENES</div>
+                
+                <div class="input-section">
+                    <p id="statusJogador" style="color: #555; margin-top: 0;">Nenhum agente conectado na máquina.</p>
+                    <button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar (-500 ¥)</button>
+                </div>
+
+                <div class="cards-container">
+                    <div class="card face-down" id="card1">?</div>
+                    <div class="card face-down" id="card2">?</div>
+                </div>
+
+                <div class="actions" id="actionButtons" style="display: none; text-align: center; width: 100%;">
+                    <button class="action-btn" onclick="escolherDeus(0)" id="btnGod1">Aceitar 1</button>
+                    <button class="action-btn" onclick="escolherDeus(1)" id="btnGod2">Aceitar 2</button>
+                    <br><button class="action-btn" onclick="realizarGiroVisual()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <h2>Agentes Online</h2>
+                <div class="user-list" id="userLog"></div>
+            </div>
+            
+            <div class="ad-space">
+                <a href="#" class="ad-link"><img src="anuncio2.png" alt="Gumble Duel" class="ad-image"></a>
             </div>
         </div>
     </div>
 
-    <div class="sidebar">
-        <h2>Usuários Conectados</h2>
-        <div class="user-list" id="userLog"></div>
+    <div id="tab-igamble" class="tab-content">
+        <h1 style="color: #00d2ff;">I-Gamble: Rede de Agentes</h1>
+        <p style="color: #555;">[ Sistema em Criptografia... Aguarde a Fase 2 para iniciar comunicação. ]</p>
+    </div>
+
+    <div id="tab-mochila" class="tab-content">
+        <h1 style="color: #00ff00;">Inventário Pessoal</h1>
+        <p style="color: #555;">[ Módulos de armazenamento offline... Aguarde a Fase 2. ]</p>
+    </div>
+
+    <div id="tab-loja" class="tab-content">
+        <h1>Mercado Negro</h1>
+
+        <div id="masterShopPanel" class="master-panel">
+            <h3>[ ACESSO MASTER ] ADICIONAR ITEM</h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                <select style="padding: 10px; background: #000; color: #fff; border: 1px solid #555;">
+                    <option>Arma</option><option>Escudo</option><option>Roupa</option>
+                </select>
+                <input type="text" placeholder="Nome do Item" style="padding: 10px; background: #000; color: #fff; border: 1px solid #555;">
+                <input type="text" placeholder="Dano (ex: 1d6)" style="padding: 10px; background: #000; color: #fff; border: 1px solid #555;">
+                <input type="number" placeholder="Valor (¥)" style="padding: 10px; background: #000; color: #fff; border: 1px solid #555;">
+            </div>
+            <button class="action-btn" style="margin-top: 15px;">+ Criar e Publicar</button>
         </div>
 
-    <div class="ad-space">
-        <a href="#" class="ad-link" onclick="alert('Prepare-se. O embate está próximo.'); return false;">
-            <img src="anuncio2.png" alt="Gumble Duel" class="ad-image">
-        </a>
+        <div style="width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">
+            <div style="background: #1a1a24; border: 1px solid #333; padding: 15px; border-radius: 5px; text-align: center;">
+                <h3 style="color: #00d2ff; margin: 0;">Pistola Calibre .38</h3>
+                <p style="font-size: 12px; color: #aaa;">Arma de Fogo Leve. Dano: 1d6</p>
+                <h2 style="color: #00ff00; margin: 10px 0;">2500 ¥</h2>
+                <button class="action-btn" style="width: 100%; border-color: #00ff00; color: #00ff00;">Comprar</button>
+            </div>
+        </div>
     </div>
+
 
     <script>
+        // CONFIGURAÇÃO FIREBASE MANTIDA
         const firebaseConfig = {
           apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw",
           authDomain: "gumble-rush.firebaseapp.com",
@@ -129,99 +172,98 @@
         
         let jogadorAtual = ""; 
         let serialAtual = "";
-        let connectionRef = null; // Guarda a rota de conexão do jogador para desligar quando ele sair
+        let connectionRef = null; 
+        
+        // VARIÁVEL DO MESTRE
+        let isMaster = false;
+        const MASTER_SERIAL = "4053-DC1";
+
+        // CÓDIGOS DE PATROCINADOR
+        const codigosPromocionais = {
+            "Plebe": 15000,
+            "Jobber": 25000,
+            "Nobless": 50000
+        };
 
         const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
         let yenesGastos = 0;
         let deusesSorteados = [];
 
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-        } catch (error) {
-            console.error("ERRO FIREBASE:", error);
+        try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } 
+        catch (error) { console.error("ERRO FIREBASE:", error); }
+
+        // --- NAVEGAÇÃO POR ABAS ---
+        function mudarAba(idAba, btnElemento) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(idAba).classList.add('active');
+            btnElemento.classList.add('active');
         }
 
-        // ==========================================
-        // 1. INTELIGÊNCIA DE LISTA DE USUÁRIOS E PRESENÇA
-        // ==========================================
+        // --- VERIFICA SE É O MESTRE ---
+        function verificarPoderesDeMestre() {
+            if (serialAtual === MASTER_SERIAL) {
+                isMaster = true;
+                document.getElementById('masterHomePanel').style.display = 'block';
+                document.getElementById('masterShopPanel').style.display = 'block';
+            } else {
+                isMaster = false;
+                document.getElementById('masterHomePanel').style.display = 'none';
+                document.getElementById('masterShopPanel').style.display = 'none';
+            }
+        }
+
+        // --- LISTA DE USUARIOS E PRESENÇA (MANTIDA) ---
         function desenharListaUsuarios() {
             const logDiv = document.getElementById("userLog");
             logDiv.innerHTML = "";
-            
-            // Pega todos os usuários que já se registraram
             Object.keys(usersGlobais).forEach(nomeUsuario => {
                 let user = usersGlobais[nomeUsuario];
-                
-                // Verifica na tabela de Presença se ele está online agora
                 let isOnline = presenceGlobal[nomeUsuario] === true;
                 let dotClass = isOnline ? "online" : "offline";
                 let boxClass = isOnline ? "is-online" : "";
-                
-                // Oculta o Deus dos outros jogadores
-                let ehODono = (jogadorAtual.toUpperCase() === nomeUsuario.toUpperCase());
+                let ehODono = (jogadorAtual.toUpperCase() === nomeUsuario.toUpperCase()) || isMaster; // Mestre vê tudo!
                 let deusMostrado = user.deus ? user.deus : "Nenhum";
-                if(!ehODono && user.deus) {
-                    deusMostrado = "[ DADO PROTEGIDO ]";
-                }
+                if(!ehODono && user.deus) deusMostrado = "[ DADO PROTEGIDO ]";
                 let corDeus = ehODono ? "#fff" : "#555";
-
                 let gasto = user.gastoTotal || 0;
 
                 let div = document.createElement("div");
                 div.className = `user-item ${boxClass}`;
-                div.innerHTML = `<span class="status-dot ${dotClass}"></span>
-                                 <strong>${nomeUsuario}</strong><br>
+                div.innerHTML = `<span class="status-dot ${dotClass}"></span><strong>${nomeUsuario}</strong><br>
                                  Patrono: <span style="color:${corDeus}">${deusMostrado}</span><br>
                                  <span style="color: #ff2a5f; font-size: 11px;">Yenes Gastos: ${gasto}¥</span>`;
-                
-                // Coloca os online no topo da lista
-                if(isOnline) logDiv.prepend(div);
-                else logDiv.appendChild(div);
+                if(isOnline) logDiv.prepend(div); else logDiv.appendChild(div);
             });
         }
 
         if (db) {
-            // Escuta a tabela de Usuários (para ver os deuses e gastos)
             db.ref('tokyoRpg/users').on('value', (snapshot) => {
                 usersGlobais = snapshot.val() || {};
                 desenharListaUsuarios();
+                
+                // Atualiza a carteira na tela de perfil em tempo real se o jogador estiver logado
+                if(jogadorAtual && usersGlobais[jogadorAtual]) {
+                    document.getElementById("profileWallet").innerText = (usersGlobais[jogadorAtual].carteira || 0) + " ¥";
+                }
             });
-
-            // Escuta a tabela de Presença (para ver as bolinhas verde/preta)
-            db.ref('tokyoRpg/presence').on('value', (snapshot) => {
-                presenceGlobal = snapshot.val() || {};
-                desenharListaUsuarios();
-            });
+            db.ref('tokyoRpg/presence').on('value', (snapshot) => { presenceGlobal = snapshot.val() || {}; desenharListaUsuarios(); });
         }
 
-        // Define o jogador como ONLINE no Firebase
         function setarOnline() {
             if(!db || !jogadorAtual) return;
-            
-            // O Firebase avisa sozinho quando a internet cai ou a aba fecha
             db.ref('.info/connected').on('value', function(snapshot) {
                 if (snapshot.val() === true) {
                     connectionRef = db.ref('tokyoRpg/presence/' + jogadorAtual);
-                    
-                    // Se a aba for fechada, escreve "false" no banco de dados sozinho
-                    connectionRef.onDisconnect().set(false).then(() => {
-                        // Se conectou, escreve "true"
-                        connectionRef.set(true);
-                    });
+                    connectionRef.onDisconnect().set(false).then(() => { connectionRef.set(true); });
                 }
             });
         }
 
-        // ==========================================
-        // 2. SISTEMA DE LOGIN E MODAL
-        // ==========================================
+        // --- MODAL, LOGIN E CARTEIRA (ATUALIZADO) ---
         function gerarSerial() {
-            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let codigo = '';
-            for (let i = 0; i < 4; i++) {
-                codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
-            }
+            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let codigo = '';
+            for (let i = 0; i < 4; i++) codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
             return codigo + "-DC1";
         }
 
@@ -235,45 +277,40 @@
                 document.getElementById("profileScreen").style.display = "none";
             }
         }
-
-        function fecharModal() {
-            document.getElementById("loginModal").style.display = "none";
-        }
+        function fecharModal() { document.getElementById("loginModal").style.display = "none"; }
 
         function logarSucesso(nome, serial) {
-            jogadorAtual = nome;
-            serialAtual = serial;
-            
+            jogadorAtual = nome; serialAtual = serial;
             document.getElementById("userBtn").classList.add("logged");
-            document.getElementById("statusJogador").innerHTML = `Máquina liberada para: <strong style="color: #00d2ff">${nome}</strong>`;
+            
+            let masterBadge = (serial === MASTER_SERIAL) ? " <span style='color:#ff2a5f'>[MESTRE]</span>" : "";
+            document.getElementById("statusJogador").innerHTML = `Conectado: <strong style="color: #00d2ff">${nome}</strong>${masterBadge}`;
             document.getElementById("profileName").innerText = nome;
             document.getElementById("profileSerial").innerText = serial;
             
-            setarOnline();
-            desenharListaUsuarios(); // Atualiza a tela para descriptografar o Deus dele
-            fecharModal();
+            // Garante que a carteira do usuário existe no BD
+            if(usersGlobais[nome] && usersGlobais[nome].carteira !== undefined) {
+                document.getElementById("profileWallet").innerText = usersGlobais[nome].carteira + " ¥";
+            } else {
+                db.ref('tokyoRpg/users/' + nome).update({ carteira: 0 });
+                document.getElementById("profileWallet").innerText = "0 ¥";
+            }
+
+            setarOnline(); verificarPoderesDeMestre(); desenharListaUsuarios(); fecharModal();
         }
 
         function deslogar() {
-            if(connectionRef) connectionRef.set(false); // Fica offline
-            jogadorAtual = "";
-            serialAtual = "";
+            if(connectionRef) connectionRef.set(false);
+            jogadorAtual = ""; serialAtual = ""; isMaster = false;
             document.getElementById("userBtn").classList.remove("logged");
             document.getElementById("statusJogador").innerHTML = `Nenhum agente conectado na máquina.`;
-            
-            // Limpa os campos
-            document.getElementById("loginName").value = "";
-            document.getElementById("loginPass").value = "";
-            document.getElementById("loginSerial").value = "";
-            
-            desenharListaUsuarios(); // Criptografa o Deus novamente
-            fecharModal();
+            document.getElementById("loginName").value = ""; document.getElementById("loginPass").value = ""; document.getElementById("loginSerial").value = "";
+            verificarPoderesDeMestre(); desenharListaUsuarios(); fecharModal();
         }
 
         window.logarComSenha = function() {
             const nomeDigitado = document.getElementById("loginName").value.trim().toUpperCase();
             const senhaDigitada = document.getElementById("loginPass").value;
-
             if (!nomeDigitado || !senhaDigitada) { alert("Preencha codinome e senha."); return; }
 
             db.ref('tokyoRpg/users/' + nomeDigitado).once('value').then((snapshot) => {
@@ -282,15 +319,10 @@
                     if (userData.senha !== senhaDigitada) { alert("Senha incorreta."); return; }
                     logarSucesso(nomeDigitado, userData.serial);
                 } else {
-                    // Novo Registro
                     let novoSerial = gerarSerial();
-                    db.ref('tokyoRpg/users/' + nomeDigitado).set({
-                        senha: senhaDigitada,
-                        serial: novoSerial,
-                        gastoTotal: 0
-                    });
+                    db.ref('tokyoRpg/users/' + nomeDigitado).set({ senha: senhaDigitada, serial: novoSerial, gastoTotal: 0, carteira: 0 });
                     logarSucesso(nomeDigitado, novoSerial);
-                    alert(`SISTEMA: Vínculo criado. Clique no botão de Usuário novamente para ver e guardar seu Autenticador Secreto.`);
+                    alert(`Vínculo criado. Guarde seu Autenticador Secreto.`);
                 }
             });
         };
@@ -298,87 +330,84 @@
         window.logarComSerial = function() {
             const serialDigitado = document.getElementById("loginSerial").value.trim().toUpperCase();
             if(!serialDigitado) { alert("Digite um serial válido."); return; }
-
-            // Procura quem tem esse serial
             let achou = false;
-            Object.keys(usersGlobais).forEach(nome => {
-                if(usersGlobais[nome].serial === serialDigitado) {
-                    achou = true;
-                    logarSucesso(nome, serialDigitado);
-                }
-            });
-
-            if(!achou) alert("Autenticador não encontrado na rede.");
+            Object.keys(usersGlobais).forEach(nome => { if(usersGlobais[nome].serial === serialDigitado) { achou = true; logarSucesso(nome, serialDigitado); }});
+            if(!achou) alert("Autenticador não encontrado.");
         };
 
+        // --- SISTEMA DE PATROCINADOR (CARTEIRA) ---
+        window.resgatarCodigo = function() {
+            const codigoDigitado = document.getElementById("sponsorCode").value.trim();
+            if(!codigoDigitado) return;
 
-        // ==========================================
-        // 3. ROLETA
-        // ==========================================
+            if(codigosPromocionais[codigoDigitado]) {
+                const valor = codigosPromocionais[codigoDigitado];
+                const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
+                
+                refUser.once('value').then(snap => {
+                    let user = snap.val();
+                    // Verifica se o jogador já usou ESSE código específico (para não gerar dinheiro infinito)
+                    if(user.codigosUsados && user.codigosUsados[codigoDigitado]) {
+                        alert("Você já resgatou os fundos deste Patrocinador.");
+                    } else {
+                        let saldoAtual = user.carteira || 0;
+                        refUser.child('codigosUsados').update({ [codigoDigitado]: true });
+                        refUser.update({ carteira: saldoAtual + valor });
+                        alert(`SUCESSO: Transferência de ${valor}¥ recebida.`);
+                        document.getElementById("sponsorCode").value = ""; // Limpa o campo
+                    }
+                });
+            } else {
+                alert("Código de Patrocinador inválido ou expirado.");
+            }
+        };
+
+        // --- ROLETA (INTEGRADA COM NOVA CARTEIRA NO BANCO) ---
         window.tentarGirar = function() {
-            if(!jogadorAtual) {
-                alert("SISTEMA BLOQUEADO. Clique no ícone superior direito para autenticar-se na máquina.");
-                return;
-            }
+            if(!jogadorAtual) { alert("SISTEMA BLOQUEADO. Autentique-se."); return; }
 
-            const inputCarteira = document.getElementById("playerWallet");
-            let carteiraAtual = parseInt(inputCarteira.value);
-
-            if (isNaN(carteiraAtual) || carteiraAtual < 500) {
-                alert("Fundos insuficientes. São necessários 500 Yenes.");
-                return;
-            }
-
-            carteiraAtual -= 500;
-            inputCarteira.value = carteiraAtual;
-            realizarGiroVisual();
+            const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
+            refUser.once('value').then(snap => {
+                let carteiraAtual = snap.val().carteira || 0;
+                if(carteiraAtual < 500) {
+                    alert("Fundos insuficientes. Acesse seu Terminal para adicionar fundos.");
+                    return;
+                }
+                // Desconta do Firebase
+                refUser.update({ carteira: carteiraAtual - 500 });
+                realizarGiroVisual();
+            });
         };
 
         window.realizarGiroVisual = function() {
             yenesGastos += 500;
             let deusesEmbalhados = [...deuses].sort(() => 0.5 - Math.random());
             deusesSorteados = [deusesEmbalhados[0], deusesEmbalhados[1]];
-
-            const card1 = document.getElementById("card1");
-            const card2 = document.getElementById("card2");
+            const card1 = document.getElementById("card1"); const card2 = document.getElementById("card2");
             const actionButtons = document.getElementById("actionButtons");
 
-            card1.classList.add("face-down");
-            card2.classList.add("face-down");
-            actionButtons.style.display = "none";
-
+            card1.classList.add("face-down"); card2.classList.add("face-down"); actionButtons.style.display = "none";
             setTimeout(() => {
-                card1.classList.remove("face-down");
-                card2.classList.remove("face-down");
-                card1.innerText = deusesSorteados[0];
-                card2.innerText = deusesSorteados[1];
-                document.getElementById("btnGod1").innerText = `Aceitar ${deusesSorteados[0]}`;
-                document.getElementById("btnGod2").innerText = `Aceitar ${deusesSorteados[1]}`;
+                card1.classList.remove("face-down"); card2.classList.remove("face-down");
+                card1.innerText = deusesSorteados[0]; card2.innerText = deusesSorteados[1];
+                document.getElementById("btnGod1").innerText = `Aceitar ${deusesSorteados[0]}`; document.getElementById("btnGod2").innerText = `Aceitar ${deusesSorteados[1]}`;
                 actionButtons.style.display = "block";
             }, 500);
         };
 
         window.escolherDeus = function(index) {
             const deusEscolhido = deusesSorteados[index];
-            
-            // Atualiza direto o usuário no Firebase (Patrono e soma os gastos)
             const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
             refUser.once('value').then(snap => {
                 let gastoAntigo = snap.val().gastoTotal || 0;
-                refUser.update({
-                    deus: deusEscolhido,
-                    gastoTotal: gastoAntigo + yenesGastos
-                });
+                refUser.update({ deus: deusEscolhido, gastoTotal: gastoAntigo + yenesGastos });
             });
 
-            document.getElementById("card1").classList.add("face-down");
-            document.getElementById("card2").classList.add("face-down");
-            document.getElementById("card1").innerText = "?";
-            document.getElementById("card2").innerText = "?";
+            document.getElementById("card1").classList.add("face-down"); document.getElementById("card2").classList.add("face-down");
+            document.getElementById("card1").innerText = "?"; document.getElementById("card2").innerText = "?";
             document.getElementById("actionButtons").style.display = "none";
-            
             yenesGastos = 0;
-            alert(`Vínculo central atualizado. Você agora segue as diretrizes de ${deusEscolhido}.`);
+            alert(`Vínculo atualizado. Você segue ${deusEscolhido}.`);
         };
     </script>
 </body>
