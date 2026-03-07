@@ -6,7 +6,7 @@
     <title>Sistema do Distrito - WebApp</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff2a5f">
-    <link rel="stylesheet" href="style.css?v=V2.0">
+    <link rel="stylesheet" href="style.css?v=V2.2">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
@@ -25,6 +25,7 @@
     </div>
 
     <div class="modal-overlay" id="loginModal">
+        
         <div class="modal-content" id="loginScreen">
             <h3>Autenticação do Distrito</h3>
             <input type="text" id="loginName" placeholder="Codinome" autocomplete="off">
@@ -39,16 +40,26 @@
         <div class="modal-content" id="profileScreen" style="display: none;">
             <h3>Seu Terminal</h3>
             <p style="color: #00d2ff;">Agente: <strong id="profileName">---</strong></p>
+            
             <div class="wallet-box">
                 <p style="margin: 0; font-size: 12px; color: #aaa;">Fundos Disponíveis:</p>
                 <h2 id="profileWallet">0 ¥</h2>
             </div>
+            
             <input type="text" id="sponsorCode" placeholder="Código de Patrocinador" autocomplete="off">
             <button onclick="window.resgatarCodigo()" style="background: #00d2ff; color: #000; border: none; margin-bottom: 15px;">Resgatar Fundos</button>
+
+            <div style="background: #1a1a24; padding: 10px; border: 1px dashed var(--accent-blue); margin-bottom: 15px;">
+                <p style="margin: 0 0 10px 0; font-size: 11px; color: #aaa;">Deseja corrigir ou alterar seu Codinome?</p>
+                <input type="text" id="novoNomeInput" placeholder="Novo Codinome" autocomplete="off" style="margin-bottom: 5px;">
+                <button onclick="window.mudarNome()" style="border-color: #00d2ff; color: #00d2ff; padding: 8px; font-size: 14px;">Atualizar Nome</button>
+            </div>
+
             <div style="background: #1a1a24; padding: 10px; border: 1px dashed var(--accent-red); margin-bottom: 15px;">
                 <p style="margin: 0; font-size: 11px; color: #aaa;">Seu Autenticador (Não perca):</p>
                 <h3 style="margin: 5px 0; color: #fff; letter-spacing: 2px;" id="profileSerial">XXXX-DC1</h3>
             </div>
+            
             <button onclick="window.deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
             <br><span class="close-modal" onclick="window.fecharModal()">Fechar</span>
         </div>
@@ -97,6 +108,24 @@
                     <button class="action-btn" onclick="window.escolherDeus(0)" id="btnGod1">Aceitar 1</button>
                     <button class="action-btn" onclick="window.escolherDeus(1)" id="btnGod2">Aceitar 2</button>
                     <br><button class="action-btn" onclick="window.realizarGiroVisual()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
+                </div>
+                
+                <div class="god-list-container">
+                    <h2>Panteão Disponível no Distrito</h2>
+                    <div class="god-grid">
+                        <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra o risco de Yenes do adversário e reduz o seu pela metade.</div></details>
+                        <details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc">Força acordo não-letal; o alvo não pode revelar quantos Yenes possui.</div></details>
+                        <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc">Recebe pista dedutiva sobre a carta/objetivo do oponente.</div></details>
+                        <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Empresta Yenes. Herda automaticamente Yenes de devedores mortos.</div></details>
+                        <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Garante fuga perfeita ou intercepta mensagens de outros jogadores.</div></details>
+                        <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Mapeia instantaneamente saídas, pontos cegos e câmeras.</div></details>
+                        <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Força aposta pública; recusar causa multa de 10% da carteira.</div></details>
+                        <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a manipulações de apostas; blefes perfeitos.</div></details>
+                        <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc">Ignora dor leve e descobre armas ocultas no corpo dos alvos.</div></details>
+                        <details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc">Pode anular completamente a última transação ou acordo.</div></details>
+                        <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc">Força o alvo a responder com verdade uma pergunta de Sim/Não.</div></details>
+                        <details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc">Rastreio infalível; vantagens em emboscadas e furtividade.</div></details>
+                    </div>
                 </div>
             </div>
 
@@ -167,7 +196,7 @@
         </div>
     </div>
 
-    <div class="version-tag">Versão do Sistema: V2.0</div>
+    <div class="version-tag">Versão do Sistema: V2.2</div>
 
     <script>
         const firebaseConfig = {
@@ -183,7 +212,10 @@
         let db; let usersGlobais = {}; let presenceGlobal = {};
         let jogadorAtual = ""; let serialAtual = ""; let connectionRef = null; 
         let isMaster = false; const MASTER_SERIAL = "4053-DC1";
-        const codigosPromocionais = { "Plebe": 15000, "Jobber": 25000, "Nobless": 50000 };
+        
+        // Os códigos agora ficam todos em maiúsculo aqui no JavaScript
+        const codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
+        
         const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
         let yenesGastos = 0; let deusesSorteados = [];
 
@@ -242,7 +274,6 @@
             });
         };
 
-        // RENDERIZA MOCHILA
         window.renderizarMochila = function() {
             let box = document.getElementById("mochilaGrid");
             if(!jogadorAtual) { box.innerHTML = "<p style='text-align:center; color:#555;'>Autentique-se para ver sua mochila.</p>"; return; }
@@ -305,6 +336,46 @@
             window.verificarPoderesDeMestre(); window.desenharListaUsuarios(); window.renderizarMochila(); window.fecharModal();
         };
 
+        // --- NOVA FUNÇÃO: MUDAR NOME ---
+        window.mudarNome = function() {
+            if(!jogadorAtual) return;
+            // Pega o nome e já converte pra maiúsculo
+            let novoNome = document.getElementById("novoNomeInput").value.trim().toUpperCase();
+            
+            if(!novoNome) { alert("Digite um novo codinome válido."); return; }
+            if(novoNome === jogadorAtual) { alert("Este já é o seu codinome atual."); return; }
+            
+            // Verifica se o nome já não foi pego por outro jogador
+            db.ref('tokyoRpg/users/' + novoNome).once('value').then(snap => {
+                if(snap.exists()) {
+                    alert("Este codinome já está em uso por outro Agente do Distrito.");
+                    return;
+                }
+                
+                // Copia os dados do nome velho para o nome novo no banco de dados
+                let oldRef = db.ref('tokyoRpg/users/' + jogadorAtual);
+                let newRef = db.ref('tokyoRpg/users/' + novoNome);
+
+                oldRef.once('value').then(oldSnap => {
+                    let dadosAtuais = oldSnap.val();
+                    if(dadosAtuais) {
+                        newRef.set(dadosAtuais).then(() => {
+                            // Deleta o status online do nome velho
+                            if(connectionRef) connectionRef.remove();
+                            // Apaga a pasta do nome velho do banco
+                            oldRef.remove(); 
+
+                            alert(`Seu codinome foi alterado com sucesso para: ${novoNome}`);
+                            
+                            // Loga o jogador com o nome novo automaticamente
+                            window.logarSucesso(novoNome, serialAtual);
+                            document.getElementById("novoNomeInput").value = "";
+                        });
+                    }
+                });
+            });
+        };
+
         window.logarComSenha = function() {
             const nome = document.getElementById("loginName").value.trim().toUpperCase(); const senha = document.getElementById("loginPass").value;
             if (!nome || !senha) { alert("Preencha codinome e senha."); return; }
@@ -331,14 +402,25 @@
         };
 
         window.resgatarCodigo = function() {
-            const codigo = document.getElementById("sponsorCode").value.trim();
-            if(!codigo) return;
-            if(codigosPromocionais[codigo]) {
-                const valor = codigosPromocionais[codigo]; const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
+            // Converte tudo que o cara digitar para MAIÚSCULO para bater com o banco de dados
+            const codigoDigitado = document.getElementById("sponsorCode").value.trim().toUpperCase();
+            
+            if(!codigoDigitado) return;
+            if(codigosPromocionais[codigoDigitado]) {
+                const valor = codigosPromocionais[codigoDigitado]; 
+                const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
+                
                 refUser.once('value').then(snap => {
                     let user = snap.val();
-                    if(user.codigosUsados && user.codigosUsados[codigo]) { alert("Você já resgatou os fundos deste Patrocinador."); } 
-                    else { refUser.child('codigosUsados').update({ [codigo]: true }); refUser.update({ carteira: (user.carteira || 0) + valor }); alert(`SUCESSO: ${valor}¥ recebidos.`); document.getElementById("sponsorCode").value = ""; }
+                    if(user.codigosUsados && user.codigosUsados[codigoDigitado]) { 
+                        alert("Você já resgatou os fundos deste Patrocinador."); 
+                    } 
+                    else { 
+                        refUser.child('codigosUsados').update({ [codigoDigitado]: true }); 
+                        refUser.update({ carteira: (user.carteira || 0) + valor }); 
+                        alert(`SUCESSO: Transferência de ${valor}¥ recebida.`); 
+                        document.getElementById("sponsorCode").value = ""; 
+                    }
                 });
             } else { alert("Código de Patrocinador inválido ou expirado."); }
         };
@@ -370,7 +452,6 @@
             yenesGastos = 0; alert(`Vínculo atualizado. Você segue ${deusEscolhido}.`);
         };
 
-        // --- SISTEMA DE EMBATE E MORTE ---
         window.processarEmbate = function() {
             if(!isMaster) return;
             const vencedor = document.getElementById("embVencedor").value.trim().toUpperCase();
@@ -426,11 +507,9 @@
             });
         };
 
-        // --- SISTEMA DE CHAT (IGAMBLE) ---
         window.escolherAvatar = function(url) {
             if(!jogadorAtual) { alert("Autentique-se primeiro."); return; }
             db.ref('tokyoRpg/users/' + jogadorAtual).update({ avatarUrl: url });
-            // Adiciona efeito visual na seleção
             document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
         };
@@ -469,7 +548,6 @@
             document.getElementById("chatInput").value = "";
         };
 
-        // LISTENERS
         if (db) {
             db.ref('tokyoRpg/users').on('value', (snapshot) => {
                 usersGlobais = snapshot.val() || {};
@@ -533,7 +611,6 @@
                 } else { feed.innerHTML = "<p style='text-align: center; color: #aaa;'>A calmaria antecede a tempestade...</p>"; }
             });
 
-            // Listener do Chat
             db.ref('tokyoRpg/chat').limitToLast(50).on('value', snap => {
                 let box = document.getElementById("chatMessages"); box.innerHTML = "";
                 let msgs = snap.val();
