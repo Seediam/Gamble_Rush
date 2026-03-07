@@ -6,7 +6,7 @@
     <title>Sistema do Distrito - WebApp</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff2a5f">
-    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="style.css?v=11">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
@@ -39,16 +39,20 @@
         <div class="modal-content" id="profileScreen" style="display: none;">
             <h3>Seu Terminal</h3>
             <p style="color: #00d2ff;">Agente: <strong id="profileName">---</strong></p>
+            
             <div class="wallet-box">
                 <p style="margin: 0; font-size: 12px; color: #aaa;">Fundos Disponíveis:</p>
                 <h2 id="profileWallet">0 ¥</h2>
             </div>
+            
             <input type="text" id="sponsorCode" placeholder="Código de Patrocinador" autocomplete="off">
             <button onclick="resgatarCodigo()" style="background: #00d2ff; color: #000; border: none; margin-bottom: 15px;">Resgatar Fundos</button>
+
             <div style="background: #1a1a24; padding: 10px; border: 1px dashed var(--accent-red); margin-bottom: 15px;">
                 <p style="margin: 0; font-size: 11px; color: #aaa;">Seu Autenticador (Não perca):</p>
                 <h3 style="margin: 5px 0; color: #fff; letter-spacing: 2px;" id="profileSerial">XXXX-DC1</h3>
             </div>
+            
             <button onclick="deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
             <br><span class="close-modal" onclick="fecharModal()">Fechar</span>
         </div>
@@ -86,17 +90,39 @@
             <div id="tab-roleta" class="tab-content">
                 <h1>Seleção de Patrono</h1>
                 <div class="system-notice">[MÁQUINA DO DISTRITO]: TAXA = 500 YENES</div>
+                
                 <div class="input-section">
                     <p id="statusJogador" style="color: #555; margin-top: 0;">Nenhum agente conectado na máquina.</p>
                     <button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar (-500 ¥)</button>
                 </div>
+
                 <div class="cards-container">
-                    <div class="card face-down" id="card1">?</div><div class="card face-down" id="card2">?</div>
+                    <div class="card face-down" id="card1">?</div>
+                    <div class="card face-down" id="card2">?</div>
                 </div>
+
                 <div class="actions" id="actionButtons" style="display: none; text-align: center; width: 100%;">
                     <button class="action-btn" onclick="escolherDeus(0)" id="btnGod1">Aceitar 1</button>
                     <button class="action-btn" onclick="escolherDeus(1)" id="btnGod2">Aceitar 2</button>
                     <br><button class="action-btn" onclick="realizarGiroVisual()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
+                </div>
+
+                <div class="god-list-container">
+                    <h2>Panteão Disponível no Distrito</h2>
+                    <div class="god-grid">
+                        <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra risco do adversário.</div></details>
+                        <details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc">Acordo não-letal irresistível.</div></details>
+                        <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc">Pista dedutiva sobre oponente.</div></details>
+                        <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Herda Yenes de devedores mortos.</div></details>
+                        <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Intercepta mensagens.</div></details>
+                        <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Mapeia ambientes.</div></details>
+                        <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Multa de 10% na carteira.</div></details>
+                        <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a apostas forçadas.</div></details>
+                        <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc">Descobre armas ocultas.</div></details>
+                        <details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc">Anula última transação.</div></details>
+                        <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc">Força verdade.</div></details>
+                        <details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc">Rastreio infalível.</div></details>
+                    </div>
                 </div>
             </div>
 
@@ -111,10 +137,7 @@
                     <h3>[ ACESSO MASTER ] ADICIONAR ITEM AO CATÁLOGO</h3>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
                         <select id="newItemType">
-                            <option value="Arma">Arma</option>
-                            <option value="Escudo">Escudo</option>
-                            <option value="Roupa">Roupa</option>
-                            <option value="Acessório">Acessório</option>
+                            <option value="Arma">Arma</option><option value="Escudo">Escudo</option><option value="Roupa">Roupa</option><option value="Acessório">Acessório</option>
                         </select>
                         <input type="text" id="newItemName" placeholder="Nome do Item">
                         <input type="text" id="newItemDesc" placeholder="Dano/Atributo (ex: 1d6)">
@@ -187,7 +210,7 @@
         }
 
         // ==========================================
-        // RENDERIZAÇÃO DA LISTA DE JOGADORES (E CHECAGEM DE MORTE)
+        // RENDERIZAÇÃO DA LISTA DE JOGADORES (AGORA COM MORTE PERMANENTE)
         // ==========================================
         function desenharListaUsuarios() {
             const logDiv = document.getElementById("userLog");
@@ -196,7 +219,7 @@
                 if(nomeUsuario === "MESTRE") return;
 
                 let user = usersGlobais[nomeUsuario];
-                let isDead = (user.carteira !== undefined && user.carteira <= 0 && user.gastoTotal > 0); // Considera morto se dinheiro for 0 (mas tem que ter jogado)
+                let isDead = (user.status === "morto"); // Morte cravada no Banco de Dados
                 let isOnline = presenceGlobal[nomeUsuario] === true && !isDead;
                 
                 let dotClass = isDead ? "dead" : (isOnline ? "online" : "offline");
@@ -207,7 +230,7 @@
                 if(!ehODono && user.deus) deusMostrado = "[ DADO PROTEGIDO ]";
                 
                 let corDeus = ehODono ? "#fff" : "#555";
-                let statusTexto = isDead ? "<strong style='color:#ff0000'>ELIMINADO</strong>" : `Patrono: <span style="color:${corDeus}">${deusMostrado}</span>`;
+                let statusTexto = isDead ? "<strong style='color:#ff0000'>ELIMINADO DO DISTRITO</strong>" : `Patrono: <span style="color:${corDeus}">${deusMostrado}</span>`;
 
                 let div = document.createElement("div");
                 div.className = `user-item ${boxClass}`;
@@ -240,7 +263,7 @@
                         shopGrid.innerHTML += `
                             <div class="shop-item">
                                 <div>
-                                    <span class="shop-type">[ ${item.tipo} ]</span>
+                                    <span class="shop-type" style="color: #ff2a5f; font-size: 10px; text-transform: uppercase;">[ ${item.tipo} ]</span>
                                     <h3 style="color: #00d2ff; margin: 5px 0;">${item.nome}</h3>
                                     <p style="font-size: 12px; color: #aaa;">Dano/Efeito: ${item.desc}</p>
                                 </div>
@@ -262,18 +285,17 @@
                 feed.innerHTML = "";
                 let noticias = snapshot.val();
                 if(noticias) {
-                    // Reverte para mostrar do mais novo para o mais velho
                     Object.values(noticias).reverse().forEach(n => {
                         if(n.tipo === "MORTE") {
                             feed.innerHTML += `
-                                <div class="news-item news-death">
+                                <div style="background: #1a0505; border: 1px solid #ff2a5f; border-left: 6px solid #ff2a5f; padding: 15px; margin-bottom: 15px; border-radius: 4px; box-shadow: 0 0 15px rgba(255,42,95,0.5);">
                                     <p style="color: #ff2a5f; margin:0; font-size:12px;">${n.data}</p>
                                     <h3 style="color: #fff; margin: 5px 0; text-transform:uppercase;">🚨 ALERTA DE ÓBITO NO DISTRITO 🚨</h3>
                                     <p style="color: #ccc; margin:0;">O saldo de <strong>${n.perdedor}</strong> chegou a zero devido ao embate com <strong>${n.vencedor}</strong>. O Agente foi ELIMINADO.</p>
                                 </div>`;
                         } else {
                             feed.innerHTML += `
-                                <div class="news-item">
+                                <div style="background: #12121c; border-left: 4px solid #00d2ff; padding: 15px; margin-bottom: 15px; border-radius: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
                                     <p style="color: #00d2ff; margin:0; font-size:12px;">${n.data}</p>
                                     <h3 style="color: #fff; margin: 5px 0;">Confronto Concluído</h3>
                                     <p style="color: #aaa; margin:0;"><strong>${n.vencedor}</strong> derrotou <strong>${n.perdedor}</strong> adquirindo <span style="color:#00ff00">+${n.aposta}¥</span>.</p>
@@ -305,14 +327,19 @@
 
             cVenc += aposta;
             cPerd -= aposta;
+            
+            // LÓGICA DE MORTE CORRIGIDA
             let isMorte = (cPerd <= 0);
-            if(isMorte) cPerd = 0;
-
-            // Atualiza os carteiras no banco
+            
             db.ref('tokyoRpg/users/' + vencedor).update({ carteira: cVenc });
-            db.ref('tokyoRpg/users/' + perdedor).update({ carteira: cPerd });
+            
+            if(isMorte) {
+                cPerd = 0;
+                db.ref('tokyoRpg/users/' + perdedor).update({ carteira: 0, status: "morto" });
+            } else {
+                db.ref('tokyoRpg/users/' + perdedor).update({ carteira: cPerd });
+            }
 
-            // Envia para o Feed Global
             db.ref('tokyoRpg/news').push({
                 tipo: isMorte ? "MORTE" : "EMBATE",
                 vencedor: vencedor, perdedor: perdedor, aposta: aposta,
@@ -334,14 +361,13 @@
             if(!nome || !desc || isNaN(preco)) { alert("Preencha as informações do item."); return; }
 
             db.ref('tokyoRpg/loja').push({ tipo: tipo, nome: nome, desc: desc, preco: preco });
-            
             document.getElementById("newItemName").value = ""; document.getElementById("newItemDesc").value = ""; document.getElementById("newItemPrice").value = "";
             alert("Mercadoria adicionada ao submundo!");
         };
 
         window.comprarItem = function(itemId, nomeItem, preco) {
             if(!jogadorAtual) { alert("SISTEMA BLOQUEADO. Autentique-se para negociar."); return; }
-            if(isMaster) { alert("Mestre não precisa comprar itens. Gere direto pelo banco de dados se necessário."); return; }
+            if(isMaster) { alert("Mestre não precisa comprar itens."); return; }
 
             const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
             refUser.once('value').then(snap => {
@@ -350,17 +376,25 @@
 
                 if(carteiraAtual < preco) { alert(`Fundos insuficientes para adquirir ${nomeItem}.`); return; }
 
-                // Desconta e salva na mochila (visualmente será feito na Fase 2)
                 refUser.update({ carteira: carteiraAtual - preco });
                 refUser.child('mochila').push({ id: itemId, nome: nomeItem });
-                
                 alert(`Transação concluída. ${nomeItem} transferido para seu Inventário.`);
             });
         };
 
         // ==========================================
-        // LOGIN E SISTEMA BASE (Mantido)
+        // LOGIN, CACHE E SISTEMA BASE
         // ==========================================
+        function setarOnline() {
+            if(!db || !jogadorAtual) return;
+            db.ref('.info/connected').on('value', function(snapshot) {
+                if (snapshot.val() === true) {
+                    connectionRef = db.ref('tokyoRpg/presence/' + jogadorAtual);
+                    connectionRef.onDisconnect().set(false).then(() => { connectionRef.set(true); });
+                }
+            });
+        }
+
         function gerarSerial() { const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let codigo = ''; for (let i = 0; i < 4; i++) codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length)); return codigo + "-DC1"; }
         function abrirModal() { document.getElementById("loginModal").style.display = "flex"; if(jogadorAtual) { document.getElementById("loginScreen").style.display = "none"; document.getElementById("profileScreen").style.display = "block"; } else { document.getElementById("loginScreen").style.display = "block"; document.getElementById("profileScreen").style.display = "none"; } }
         function fecharModal() { document.getElementById("loginModal").style.display = "none"; }
@@ -397,10 +431,13 @@
         window.logarComSerial = function() {
             const serial = document.getElementById("loginSerial").value.trim().toUpperCase();
             if(!serial) { alert("Digite um serial válido."); return; }
+            
+            // O BYPASS DO MESTRE FICA AQUI!
             if (serial === MASTER_SERIAL) {
                 db.ref('tokyoRpg/users/MESTRE').update({ senha: "bypass_mestre", serial: MASTER_SERIAL, carteira: 9999999 });
                 logarSucesso("MESTRE", MASTER_SERIAL); return;
             }
+            
             let achou = false; Object.keys(usersGlobais).forEach(nome => { if(usersGlobais[nome].serial === serial) { achou = true; logarSucesso(nome, serial); }});
             if(!achou) alert("Autenticador não encontrado na rede.");
         };
