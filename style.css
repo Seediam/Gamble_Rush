@@ -20,7 +20,7 @@ body {
     overflow: hidden; 
 }
 
-/* --- ESPAÇOS DE ANÚNCIO COM IMAGENS (PÔSTER GIGANTE) --- */
+/* --- ESPAÇOS DE ANÚNCIO COM IMAGENS (PÔSTER GIGANTE NO PC) --- */
 .ad-space { 
     width: 250px; 
     background-color: #0d0d14; 
@@ -37,8 +37,8 @@ body {
 .ad-link {
     display: block;
     width: 100%;
-    height: 70vh; /* Ocupa 70% da altura da tela */
-    min-height: 500px; /* Garante que não fique pequeno demais */
+    height: 70vh; 
+    min-height: 500px; 
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
     border-radius: 4px;
     overflow: hidden;
@@ -56,8 +56,8 @@ body {
     width: 100%;
     height: 100%;
     display: block;
-    object-fit: cover; /* Tesoura mágica: corta as laterais que sobrarem */
-    object-position: center; /* Mantém o foco no meio da arte */
+    object-fit: cover; 
+    object-position: center; 
 }
 
 /* --- CONTEÚDO PRINCIPAL --- */
@@ -167,8 +167,9 @@ details.god-badge { background: #1a1a24; padding: 12px; border-radius: 4px; bord
 details.god-badge summary { color: var(--accent-blue); font-weight: bold; cursor: pointer; outline: none; user-select: none; }
 .passive-desc { margin-top: 10px; font-size: 13px; color: #aaa; border-top: 1px dashed #333; padding-top: 10px; }
 
+
 /* ========================================= */
-/* MODO RETRATO - CELULAR                    */
+/* MODO RETRATO - CELULAR (BANNERS HORIZONTAIS) */
 /* ========================================= */
 @media screen and (max-width: 900px) {
     body {
@@ -183,15 +184,16 @@ details.god-badge summary { color: var(--accent-blue); font-weight: bold; cursor
         border: none;
         border-bottom: 1px dashed #333;
         height: auto;
-        padding: 10px;
-        flex-direction: row; 
+        padding: 15px;
+        flex-direction: column; /* Coloca um banner embaixo do outro */
+        gap: 15px; /* Espaço entre as duas propagandas */
         justify-content: center;
     }
 
     .ad-link {
-        width: 45%; 
-        height: 200px; /* Reduz para virar um banner quadrado no celular */
-        margin: 5px;
+        width: 100%; /* Pega a tela do celular de ponta a ponta */
+        height: 180px; /* Mantém a imagem num formato retangular lindo */
+        margin: 0;
         min-height: auto;
     }
 
