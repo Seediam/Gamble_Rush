@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema do Distrito - Seleção Divina</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    
     <style>
         :root {
             --bg-dark: #0a0a0f;
@@ -13,220 +16,66 @@
             --text-main: #e0e0e0;
         }
 
-        body {
-            font-family: 'Consolas', 'Courier New', monospace;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            display: flex;
-            margin: 0;
-            height: 100vh;
-            overflow: hidden;
-        }
+        body { font-family: 'Consolas', 'Courier New', monospace; background-color: var(--bg-dark); color: var(--text-main); display: flex; margin: 0; height: 100vh; overflow: hidden; }
+        
+        /* Espaços para Anúncios */
+        .ad-space { width: 200px; background-color: #0d0d14; border-right: 1px dashed #333; border-left: 1px dashed #333; display: flex; flex-direction: column; align-items: center; padding: 10px; overflow-y: auto; }
+        .ad-placeholder { width: 100%; height: 300px; background: repeating-linear-gradient(45deg, #1a1a24, #1a1a24 10px, #12121c 10px, #12121c 20px); border: 1px solid #333; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; color: #555; text-align: center; font-size: 12px; animation: glitch 5s infinite; }
+        @keyframes glitch { 0% { opacity: 1; } 98% { opacity: 1; } 99% { opacity: 0.2; } 100% { opacity: 1; } }
 
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 30px;
-            overflow-y: auto;
-        }
-
-        .sidebar {
-            width: 320px;
-            background-color: var(--panel-bg);
-            border-left: 1px solid rgba(255, 42, 95, 0.3);
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        h1 { 
-            color: var(--accent-red); 
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(255, 42, 95, 0.5);
-        }
-
+        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 30px; overflow-y: auto; }
+        .sidebar { width: 320px; background-color: var(--panel-bg); border-left: 1px solid rgba(255, 42, 95, 0.3); padding: 20px; display: flex; flex-direction: column; }
+        
+        h1 { color: var(--accent-red); text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 42, 95, 0.5); }
         h2 { color: var(--accent-blue); font-size: 1.2rem; }
-
-        .system-notice {
-            color: var(--accent-red);
-            font-size: 1.1rem;
-            margin-bottom: 20px;
-            border: 1px dashed var(--accent-red);
-            padding: 10px 20px;
-            background: rgba(255, 42, 95, 0.05);
-        }
-
-        .input-section { 
-            margin-bottom: 30px; 
-            text-align: center; 
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-        }
-
-        input[type="text"], input[type="number"] {
-            padding: 12px;
-            font-size: 16px;
-            background: #1a1a24;
-            color: white;
-            border: 1px solid var(--accent-blue);
-            border-radius: 4px;
-            outline: none;
-            font-family: inherit;
-        }
-
-        input[type="text"] { width: 200px; }
-        input[type="number"] { width: 120px; }
-
+        .system-notice { color: var(--accent-red); font-size: 1.1rem; margin-bottom: 20px; border: 1px dashed var(--accent-red); padding: 10px 20px; background: rgba(255, 42, 95, 0.05); text-align: center; }
+        
+        .input-section { margin-bottom: 30px; text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; background: #12121c; padding: 20px; border: 1px solid #333; border-radius: 8px; }
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+        input[type="text"], input[type="number"], input[type="password"] { padding: 12px; font-size: 16px; background: #1a1a24; color: white; border: 1px solid var(--accent-blue); border-radius: 4px; outline: none; font-family: inherit; }
         input:focus { box-shadow: 0 0 8px rgba(0, 210, 255, 0.5); }
-
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            font-family: inherit;
-            font-weight: bold;
-            text-transform: uppercase;
-            background-color: transparent;
-            color: var(--accent-red);
-            border: 2px solid var(--accent-red);
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin: 10px 5px;
-        }
-
-        button:hover:not(:disabled) { 
-            background-color: var(--accent-red); 
-            color: white;
-            box-shadow: 0 0 15px rgba(255, 42, 95, 0.6);
-        }
+        
+        button { padding: 12px 24px; font-size: 16px; font-family: inherit; font-weight: bold; text-transform: uppercase; background-color: transparent; color: var(--accent-red); border: 2px solid var(--accent-red); border-radius: 4px; cursor: pointer; transition: all 0.3s ease; margin: 10px 5px; }
+        button:hover:not(:disabled) { background-color: var(--accent-red); color: white; box-shadow: 0 0 15px rgba(255, 42, 95, 0.6); }
         button:disabled { border-color: #555; color: #555; cursor: not-allowed; }
 
-        .cards-container {
-            display: flex;
-            gap: 30px;
-            margin-bottom: 30px;
-            perspective: 1000px;
-        }
-
-        .card {
-            width: 160px;
-            height: 240px;
-            background: linear-gradient(180deg, #1a1a24 0%, #0a0a0f 100%);
-            border: 1px solid var(--accent-blue);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            font-weight: bold;
-            color: var(--accent-blue);
-            text-shadow: 0 0 5px rgba(0, 210, 255, 0.5);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            transition: transform 0.6s, box-shadow 0.3s;
-        }
-
-        .card.face-down {
-            background: repeating-linear-gradient(45deg, #12121c, #12121c 10px, #0a0a0f 10px, #0a0a0f 20px);
-            border-color: #333;
-            color: transparent;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-        }
+        .cards-container { display: flex; gap: 30px; margin-bottom: 30px; perspective: 1000px; }
+        .card { width: 160px; height: 240px; background: linear-gradient(180deg, #1a1a24 0%, #0a0a0f 100%); border: 1px solid var(--accent-blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; color: var(--accent-blue); text-shadow: 0 0 5px rgba(0, 210, 255, 0.5); box-shadow: 0 10px 20px rgba(0,0,0,0.5); transition: transform 0.6s, box-shadow 0.3s; }
+        .card.face-down { background: repeating-linear-gradient(45deg, #12121c, #12121c 10px, #0a0a0f 10px, #0a0a0f 20px); border-color: #333; color: transparent; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); }
 
         .actions { display: none; text-align: center; }
+        .history-list { flex: 1; overflow-y: auto; margin-bottom: 20px; }
+        .history-item { background-color: #1a1a24; padding: 12px; margin-bottom: 10px; border-left: 3px solid var(--accent-blue); font-size: 14px; line-height: 1.4; }
+        .serial-code { color: #ff2a5f; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
 
-        .history-list {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 20px;
-        }
-
-        .history-item {
-            background-color: #1a1a24;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-left: 3px solid var(--accent-blue);
-            font-size: 14px;
-            line-height: 1.4;
-        }
-
-        .god-list-container {
-            width: 100%;
-            max-width: 900px;
-            margin-top: 20px;
-            background: var(--panel-bg);
-            padding: 20px;
-            border: 1px solid #333;
-            border-radius: 4px;
-        }
-
-        .god-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        details.god-badge {
-            background: #1a1a24;
-            padding: 12px;
-            border-radius: 4px;
-            border: 1px solid #333;
-            transition: border-color 0.3s;
-        }
-
-        details.god-badge:hover {
-            border-color: var(--accent-blue);
-        }
-
-        details.god-badge summary {
-            color: var(--accent-blue);
-            font-weight: bold;
-            font-size: 15px;
-            cursor: pointer;
-            outline: none;
-            user-select: none;
-        }
-
-        details.god-badge summary::marker {
-            color: var(--accent-red);
-        }
-
-        .passive-desc {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #aaa;
-            border-top: 1px dashed #333;
-            padding-top: 10px;
-            line-height: 1.5;
-        }
-
+        .god-list-container { width: 100%; max-width: 900px; margin-top: 20px; background: var(--panel-bg); padding: 20px; border: 1px solid #333; border-radius: 4px; }
+        .god-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px; margin-top: 15px; }
+        details.god-badge { background: #1a1a24; padding: 12px; border-radius: 4px; border: 1px solid #333; transition: border-color 0.3s; }
+        details.god-badge summary { color: var(--accent-blue); font-weight: bold; cursor: pointer; outline: none; user-select: none; }
+        .passive-desc { margin-top: 10px; font-size: 13px; color: #aaa; border-top: 1px dashed #333; padding-top: 10px; }
     </style>
 </head>
 <body>
+
+    <div class="ad-space">
+        <div class="ad-placeholder">[ ESPAÇO PUBLICITÁRIO ]<br>Insira sua imagem aqui</div>
+    </div>
 
     <div class="main-content">
         <h1>Seleção de Patrono</h1>
         
         <div class="system-notice">
-            [SISTEMA]: TAXA DE ROLAGEM = 500 YENES
+            [SISTEMA CONECTADO AO DISTRITO]: TAXA DE ROLAGEM = 500 YENES<br>
+            <span style="font-size: 12px; color: #aaa;">Credenciais necessárias para operar a máquina.</span>
         </div>
         
         <div class="input-section">
             <div class="input-group">
-                <input type="text" id="playerName" placeholder="Seu Codinome" autocomplete="off">
+                <input type="text" id="playerName" placeholder="Codinome do Agente" autocomplete="off">
+                <input type="password" id="playerPass" placeholder="Senha" autocomplete="off">
                 <input type="number" id="playerWallet" placeholder="Carteira (¥)" min="0" step="100">
             </div>
-            <button id="spinBtn" onclick="girarRoleta()">Girar (-500 ¥)</button>
+            <button id="spinBtn" onclick="tentarGirar()">Autenticar & Girar (-500 ¥)</button>
         </div>
 
         <div class="cards-container">
@@ -238,165 +87,11 @@
             <button onclick="escolherDeus(0)" id="btnGod1">Aceitar Patrono 1</button>
             <button onclick="escolherDeus(1)" id="btnGod2">Aceitar Patrono 2</button>
             <br>
-            <button onclick="girarRoleta()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
+            <button onclick="realizarGiroVisual()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
         </div>
 
         <div class="god-list-container">
             <h2>Panteão Disponível no Distrito</h2>
             <div class="god-grid">
-                <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc"><strong>Risco Assimétrico:</strong> Dobra o risco de Yenes do adversário em uma aposta e reduz o seu próprio pela metade.</div></details>
-                <details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc"><strong>Fascínio Ilícito:</strong> Força um acordo não-letal irresistível; o alvo não pode revelar quantos Yenes possui.</div></details>
-                <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc"><strong>Leitura Tática:</strong> Em confrontos, recebe do Mestre uma pista dedutiva vital sobre a carta/objetivo do oponente.</div></details>
-                <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc"><strong>Agiotagem:</strong> Empresta Yenes com juros. Se o devedor morrer, herda automaticamente todos os Yenes do cadáver.</div></details>
-                <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc"><strong>Interceptação:</strong> Uma vez por noite, garante fuga perfeita de perseguições ou intercepta mensagens de outros jogadores.</div></details>
-                <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc"><strong>Planta Baixa:</strong> Ao entrar num local fechado, mapeia instantaneamente saídas, pontos cegos e câmeras de segurança.</div></details>
-                <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc"><strong>Decreto Imperial:</strong> Força uma aposta pública; recusar causa multa imediata de 10% da carteira do alvo.</div></details>
-                <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc"><strong>Desapego:</strong> Imune a manipulações de apostas (como Oizus/Zeus) e à leitura corporal; seus blefes são perfeitos.</div></details>
-                <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc"><strong>Instinto Assassino:</strong> Ignora dor leve e descobre exatamente onde inimigos escondem armas ocultas no corpo.</div></details>
-                <details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc"><strong>Virada de Mesa:</strong> Uma vez por sessão, pode anular completamente a última transação ou acordo recém-firmado.</div></details>
-                <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc"><strong>Luz de Interrogatório:</strong> Força o alvo a responder com verdade uma pergunta de "Sim ou Não", sob pena de perder Yenes.</div></details>
-                <details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc"><strong>Marca da Predadora:</strong> Rastreio infalível de um alvo na multidão; vantagens extremas em emboscadas e furtividade.</div></details>
-            </div>
-        </div>
-    </div>
-
-    <div class="sidebar">
-        <h2>Registros</h2>
-        <div class="history-list" id="historyLog"></div>
-        <button onclick="limparHistorico()" style="font-size: 12px; padding: 8px; border-color: #555; color: #888;">Purgar Registros</button>
-    </div>
-
-    <script>
-        const deuses = [
-            "Oizus", "Afrodite", "Athena", "Hades", 
-            "Hermes", "Gaia", "Zeus", "Diogenes",
-            "Ares", "Poseidon", "Apolo", "Ártemis"
-        ];
-
-        let yenesGastos = 0;
-        let deusesSorteados = [];
-        let jogadorAtual = "";
-
-        window.addEventListener('DOMContentLoaded', (event) => {
-            atualizarSidebar();
-        });
-
-        function girarRoleta() {
-            const inputNome = document.getElementById("playerName");
-            const inputCarteira = document.getElementById("playerWallet");
-            
-            jogadorAtual = inputNome.value.trim();
-            let carteiraAtual = parseInt(inputCarteira.value);
-
-            if (!jogadorAtual) {
-                alert("ACESSO NEGADO: Codinome necessário.");
-                return;
-            }
-
-            if (isNaN(carteiraAtual) || carteiraAtual < 500) {
-                alert("ACESSO NEGADO: Fundos insuficientes. São necessários 500 Yenes.");
-                return;
-            }
-
-            // Desconta da carteira e atualiza o campo
-            carteiraAtual -= 500;
-            inputCarteira.value = carteiraAtual;
-            
-            // Trava o nome (mas deixa a carteira editável caso ele ganhe dinheiro depois)
-            inputNome.disabled = true;
-            yenesGastos += 500;
-
-            let deusesEmbalhados = [...deuses].sort(() => 0.5 - Math.random());
-            deusesSorteados = [deusesEmbalhados[0], deusesEmbalhados[1]];
-
-            const card1 = document.getElementById("card1");
-            const card2 = document.getElementById("card2");
-            const actionButtons = document.getElementById("actionButtons");
-
-            card1.classList.add("face-down");
-            card2.classList.add("face-down");
-            actionButtons.style.display = "none";
-
-            setTimeout(() => {
-                card1.classList.remove("face-down");
-                card2.classList.remove("face-down");
-                
-                card1.innerText = deusesSorteados[0];
-                card2.innerText = deusesSorteados[1];
-
-                document.getElementById("btnGod1").innerText = `Aceitar ${deusesSorteados[0]}`;
-                document.getElementById("btnGod2").innerText = `Aceitar ${deusesSorteados[1]}`;
-                
-                actionButtons.style.display = "block";
-            }, 500);
-        }
-
-        function escolherDeus(index) {
-            const deusEscolhido = deusesSorteados[index];
-            const novoRegistro = {
-                jogador: jogadorAtual,
-                deus: deusEscolhido,
-                custo: yenesGastos,
-                data: new Date().toLocaleTimeString()
-            };
-            
-            try {
-                let historico = JSON.parse(localStorage.getItem("tokyoRpgHistory")) || [];
-                historico.push(novoRegistro);
-                localStorage.setItem("tokyoRpgHistory", JSON.stringify(historico));
-            } catch(e) {
-                console.warn("LocalStorage bloqueado. Atualizando apenas a tela.");
-            }
-
-            adicionarNaTela(novoRegistro);
-
-            // Reseta a interface
-            document.getElementById("playerName").value = "";
-            document.getElementById("playerName").disabled = false;
-            // Não resetamos a carteira de propósito para o jogador ver quanto sobrou
-            
-            document.getElementById("card1").classList.add("face-down");
-            document.getElementById("card2").classList.add("face-down");
-            document.getElementById("card1").innerText = "?";
-            document.getElementById("card2").innerText = "?";
-            document.getElementById("actionButtons").style.display = "none";
-            
-            yenesGastos = 0;
-            
-            alert(`SISTEMA: Vínculo estabelecido. ${jogadorAtual} agora é protegido por ${deusEscolhido}.`);
-        }
-
-        function adicionarNaTela(item) {
-            const logDiv = document.getElementById("historyLog");
-            let div = document.createElement("div");
-            div.className = "history-item";
-            div.innerHTML = `<span style="color: #00d2ff;">[${item.data}]</span><br>
-                             Agente: <strong>${item.jogador}</strong><br>
-                             Patrono: <strong>${item.deus}</strong><br>
-                             <span style="color: #ff2a5f; font-size: 12px;">Gastos na Roleta: -${item.custo}¥</span>`;
-            logDiv.prepend(div);
-        }
-
-        function atualizarSidebar() {
-            const logDiv = document.getElementById("historyLog");
-            logDiv.innerHTML = "";
-            
-            try {
-                let historico = JSON.parse(localStorage.getItem("tokyoRpgHistory")) || [];
-                historico.slice().reverse().forEach(item => {
-                    adicionarNaTela(item);
-                });
-            } catch(e) {}
-        }
-
-        function limparHistorico() {
-            if(confirm("Deseja apagar os registros do sistema?")) {
-                try {
-                    localStorage.removeItem("tokyoRpgHistory");
-                } catch(e) {}
-                document.getElementById("historyLog").innerHTML = "";
-            }
-        }
-    </script>
-</body>
-</html>
+                <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra o risco de Yenes do adversário e reduz o seu pela metade.</div></details>
+                <details class="god-badge"><summary>Afrodite (Desejo)</summary><div
