@@ -98,4 +98,212 @@
                 <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Empresta Yenes. Herda automaticamente Yenes de devedores mortos.</div></details>
                 <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Garante fuga perfeita ou intercepta mensagens de outros jogadores.</div></details>
                 <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Mapeia instantaneamente saídas, pontos cegos e câmeras.</div></details>
-                <details class="god-badge"><summary>Zeus (Autoridade)</summary
+                <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Força aposta pública; recusar causa multa de 10% da carteira.</div></details>
+                <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a manipulações de apostas; blefes perfeitos.</div></details>
+                <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc">Ignora dor leve e descobre armas ocultas no corpo dos alvos.</div></details>
+                <details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc">Pode anular completamente a última transação ou acordo.</div></details>
+                <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc">Força o alvo a responder com verdade uma pergunta de Sim/Não.</div></details>
+                <details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc">Rastreio infalível; vantagens em emboscadas e furtividade.</div></details>
+            </div>
+        </div>
+    </div>
+
+    <div class="ad-space">
+        <div class="ad-placeholder">[ ESPAÇO PUBLICITÁRIO ]<br>Sinal Interceptado</div>
+    </div>
+
+    <div class="sidebar">
+        <h2>Registros Oficiais</h2>
+        <div class="history-list" id="historyLog"></div>
+        <button onclick="limparHistorico()" style="font-size: 12px; padding: 8px; border-color: #555; color: #888;">Purgar Registros</button>
+    </div>
+
+    <script>
+        console.log("Iniciando carregamento do sistema...");
+
+        // Configuração do Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw",
+          authDomain: "gumble-rush.firebaseapp.com",
+          databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com",
+          projectId: "gumble-rush",
+          storageBucket: "gumble-rush.firebasestorage.app",
+          messagingSenderId: "837162957323",
+          appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e",
+          measurementId: "G-038Y2W1GBL"
+        };
+        
+        let db;
+
+        // Bloco de segurança para inicializar o Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            console.log("Firebase inicializado com sucesso!");
+        } catch (error) {
+            console.error("ERRO CRÍTICO no Firebase:", error);
+            alert("Ocorreu um erro ao conectar ao banco de dados. Pressione F12 para ver os detalhes no Console.");
+        }
+
+        const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
+        let yenesGastos = 0;
+        let deusesSorteados = [];
+        let jogadorAtual = "";
+        let senhaAtual = "";
+        let serialAtual = "";
+
+        // Só tenta escutar o banco se ele iniciou direito
+        if (db) {
+            db.ref('tokyoRpg/history').on('value', (snapshot) => {
+                const logDiv = document.getElementById("historyLog");
+                logDiv.innerHTML = "";
+                const dados = snapshot.val();
+                
+                if (dados) {
+                    const historico = Object.values(dados).filter(item => item && item.data).reverse();
+                    historico.forEach(item => {
+                        let div = document.createElement("div");
+                        div.className = "history-item";
+                        div.innerHTML = `<span style="color: #00d2ff;">[${item.data}]</span><br>
+                                         Agente: <strong>${item.jogador}</strong> <span class="serial-code">(${item.serial})</span><br>
+                                         Patrono: <strong>${item.deus}</strong><br>
+                                         <span style="color: #ff2a5f; font-size: 12px;">Gastos na Roleta: -${item.custo}¥</span>`;
+                        logDiv.appendChild(div);
+                    });
+                }
+            });
+        }
+
+        function gerarSerial() {
+            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let codigo = '';
+            for (let i = 0; i < 4; i++) {
+                codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+            }
+            return codigo + "-DC1";
+        }
+
+        // Função global para o botão chamar (agora declarada com segurança)
+        window.tentarGirar = function() {
+            console.log("Botão de girar acionado.");
+            
+            if (!db) {
+                alert("O sistema está offline. Verifique o console (F12).");
+                return;
+            }
+
+            const inputNome = document.getElementById("playerName");
+            const inputSenha = document.getElementById("playerPass");
+            const inputCarteira = document.getElementById("playerWallet");
+            
+            const nomeDigitado = inputNome.value.trim().toUpperCase();
+            const senhaDigitada = inputSenha.value;
+            let carteiraAtual = parseInt(inputCarteira.value);
+
+            if (!nomeDigitado || !senhaDigitada) {
+                alert("ACESSO NEGADO: Codinome e Senha são obrigatórios.");
+                return;
+            }
+
+            if (isNaN(carteiraAtual) || carteiraAtual < 500) {
+                alert("ACESSO NEGADO: Fundos insuficientes.");
+                return;
+            }
+
+            console.log("Verificando usuário no banco de dados...");
+            db.ref('tokyoRpg/users/' + nomeDigitado).once('value').then((snapshot) => {
+                const userData = snapshot.val();
+                
+                if (userData) {
+                    if (userData.senha !== senhaDigitada) {
+                        alert("ACESSO NEGADO: Senha incorreta para este Codinome.");
+                        return;
+                    }
+                    serialAtual = userData.serial;
+                } else {
+                    serialAtual = gerarSerial();
+                    db.ref('tokyoRpg/users/' + nomeDigitado).set({
+                        senha: senhaDigitada,
+                        serial: serialAtual
+                    });
+                }
+
+                jogadorAtual = nomeDigitado;
+                carteiraAtual -= 500;
+                inputCarteira.value = carteiraAtual;
+                
+                inputNome.disabled = true;
+                inputSenha.disabled = true;
+                realizarGiroVisual();
+                
+            }).catch((error) => {
+                console.error("Erro na leitura do banco:", error);
+                alert("SISTEMA OFFLINE: " + error.message);
+            });
+        };
+
+        window.realizarGiroVisual = function() {
+            yenesGastos += 500;
+            let deusesEmbalhados = [...deuses].sort(() => 0.5 - Math.random());
+            deusesSorteados = [deusesEmbalhados[0], deusesEmbalhados[1]];
+
+            const card1 = document.getElementById("card1");
+            const card2 = document.getElementById("card2");
+            const actionButtons = document.getElementById("actionButtons");
+
+            card1.classList.add("face-down");
+            card2.classList.add("face-down");
+            actionButtons.style.display = "none";
+
+            setTimeout(() => {
+                card1.classList.remove("face-down");
+                card2.classList.remove("face-down");
+                card1.innerText = deusesSorteados[0];
+                card2.innerText = deusesSorteados[1];
+                document.getElementById("btnGod1").innerText = `Aceitar ${deusesSorteados[0]}`;
+                document.getElementById("btnGod2").innerText = `Aceitar ${deusesSorteados[1]}`;
+                actionButtons.style.display = "block";
+            }, 500);
+        };
+
+        window.escolherDeus = function(index) {
+            const deusEscolhido = deusesSorteados[index];
+            const novoRegistro = {
+                jogador: jogadorAtual,
+                serial: serialAtual,
+                deus: deusEscolhido,
+                custo: yenesGastos,
+                data: new Date().toLocaleTimeString()
+            };
+            
+            db.ref('tokyoRpg/history').push(novoRegistro);
+
+            document.getElementById("playerName").value = "";
+            document.getElementById("playerPass").value = "";
+            document.getElementById("playerName").disabled = false;
+            document.getElementById("playerPass").disabled = false;
+            
+            document.getElementById("card1").classList.add("face-down");
+            document.getElementById("card2").classList.add("face-down");
+            document.getElementById("card1").innerText = "?";
+            document.getElementById("card2").innerText = "?";
+            document.getElementById("actionButtons").style.display = "none";
+            
+            yenesGastos = 0;
+            alert(`SISTEMA: Vínculo estabelecido com a rede central. Agente [${serialAtual}] registrado.`);
+        };
+
+        window.limparHistorico = function() {
+            if(confirm("ATENÇÃO MESTRE: Deseja apagar os registros do banco de dados online e limpar todos os usuários cadastrados?")) {
+                if(db) {
+                    db.ref('tokyoRpg/history').remove();
+                    db.ref('tokyoRpg/users').remove();
+                    alert("Banco de dados formatado com sucesso.");
+                }
+            }
+        };
+
+        console.log("Sistema completamente carregado.");
+    </script>
+</body>
+</html>
