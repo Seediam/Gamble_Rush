@@ -6,10 +6,10 @@
     --text-main: #e0e0e0;
 }
 * { box-sizing: border-box; }
-body { font-family: 'Consolas', 'Courier New', monospace; background-color: var(--bg-dark); color: var(--text-main); display: flex; margin: 0; height: 100vh; overflow: hidden; }
+body { font-family: 'Consolas', 'Courier New', monospace; background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; margin: 0; height: 100vh; overflow: hidden; }
 
 /* --- MENU DE NAVEGAÇÃO (ABAS) --- */
-.nav-bar { position: absolute; top: 0; left: 0; width: 100%; background: #0d0d14; border-bottom: 2px solid var(--accent-red); display: flex; justify-content: center; padding: 10px 0; z-index: 500; }
+.nav-bar { position: fixed; top: 0; left: 0; width: 100%; background: #0d0d14; border-bottom: 2px solid var(--accent-red); display: flex; justify-content: center; padding: 10px 0; z-index: 500; }
 .nav-btn { background: transparent; color: #aaa; border: none; font-size: 14px; font-weight: bold; text-transform: uppercase; padding: 10px 20px; cursor: pointer; transition: 0.3s; margin: 0 5px; }
 .nav-btn:hover, .nav-btn.active { color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue); border-bottom: 2px solid var(--accent-blue); }
 
@@ -30,21 +30,23 @@ body { font-family: 'Consolas', 'Courier New', monospace; background-color: var(
 .wallet-box { background: #0a0a0f; border: 1px solid #00ff00; padding: 15px; border-radius: 5px; margin: 15px 0; }
 .wallet-box h2 { color: #00ff00; margin: 5px 0; text-shadow: 0 0 10px #00ff00; font-size: 28px; }
 
-/* --- ESTRUTURA DAS ABAS --- */
-.tab-content { display: none; width: 100%; height: 100%; padding-top: 70px; overflow-y: auto; flex-direction: column; align-items: center; }
-.tab-content.active { display: flex; }
+/* --- ESTRUTURA GLOBAL (MANTÉM AS LATERAIS FIXAS) --- */
+.global-layout { display: flex; width: 100%; height: calc(100vh - 50px); margin-top: 50px; }
 
-/* --- ESPAÇOS DE ANÚNCIO COM IMAGENS --- */
-.ad-space { width: 250px; background-color: #0d0d14; border-right: 1px dashed #333; border-left: 1px dashed #333; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; overflow-y: auto; margin-top: 60px; }
+/* --- ESPAÇOS DE ANÚNCIO E SIDEBAR --- */
+.ad-space { width: 250px; background-color: #0d0d14; border-right: 1px dashed #333; border-left: 1px dashed #333; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; overflow-y: auto; }
 .ad-link { display: block; width: 100%; height: 70vh; min-height: 500px; transition: 0.3s; border-radius: 4px; overflow: hidden; border: 1px solid #333; }
 .ad-link:hover { transform: scale(1.02); box-shadow: 0 0 20px var(--accent-red); border-color: var(--accent-red); }
 .ad-image { width: 100%; height: 100%; object-fit: cover; object-position: center; }
 
-/* --- LAYOUT PRINCIPAL (ROLETA) --- */
-.main-area { flex: 1; display: flex; height: 100%; }
-.center-panel { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; overflow-y: auto; margin-top: 60px;}
-.sidebar { width: 250px; background-color: var(--panel-bg); border-left: 1px solid rgba(255, 42, 95, 0.3); border-right: 1px solid rgba(255, 42, 95, 0.3); padding: 20px; display: flex; flex-direction: column; margin-top: 60px;}
+.sidebar { width: 250px; background-color: var(--panel-bg); border-left: 1px solid rgba(255, 42, 95, 0.3); border-right: 1px solid rgba(255, 42, 95, 0.3); padding: 20px; display: flex; flex-direction: column; overflow-y: auto; }
 
+/* --- PAINEL CENTRAL (ONDE AS ABAS TROCAM) --- */
+.center-panel { flex: 1; position: relative; overflow: hidden; }
+.tab-content { display: none; width: 100%; height: 100%; padding: 30px; overflow-y: auto; flex-direction: column; align-items: center; }
+.tab-content.active { display: flex; }
+
+/* --- ELEMENTOS INTERNOS --- */
 h1 { color: var(--accent-red); text-transform: uppercase; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 42, 95, 0.5); text-align: center;}
 h2 { color: var(--accent-blue); font-size: 1.2rem; margin-bottom: 20px;}
 
@@ -74,8 +76,9 @@ button.action-btn:hover:not(:disabled) { background-color: var(--accent-red); co
 /* CELULAR */
 @media screen and (max-width: 900px) {
     .nav-bar { overflow-x: auto; white-space: nowrap; justify-content: flex-start; }
-    .main-area { flex-direction: column; overflow-y: auto; height: auto; }
-    .ad-space { width: 100%; height: auto; margin-top: 20px; }
+    .global-layout { flex-direction: column; overflow-y: auto; height: auto; }
+    .ad-space { width: 100%; height: auto; margin-top: 0; }
     .ad-link { height: 180px; min-height: auto; }
-    .center-panel, .sidebar { width: 100%; margin-top: 0; }
+    .center-panel { overflow-y: visible; }
+    .sidebar { width: 100%; border-left: none; border-right: none; border-top: 1px solid rgba(255, 42, 95, 0.3); height: auto; min-height: 400px; }
 }
