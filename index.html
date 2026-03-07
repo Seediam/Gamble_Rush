@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema do Distrito - WebApp V4.2</title>
-    <link rel="stylesheet" href="style.css?v=V4.2">
+    <title>Sistema do Distrito - WebApp V4.3</title>
+    <link rel="stylesheet" href="style.css?v=V4.3">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
@@ -48,13 +48,11 @@
                     <span style="color: #aaa; font-size: 12px;">Def Base: <strong id="lblDef" style="color: #fff;">0</strong></span>
                     <span style="color: #ffaa00; font-size: 12px;">Pts Livres: <strong id="lblPts">0</strong></span>
                 </div>
-                
                 <div class="attr-row"><span>Força [F]</span> <div class="attr-controls"><span id="valFor">1</span> <div class="btn-attr" onclick="distribuirPonto('for')">+</div></div></div>
                 <div class="attr-row"><span>Agilidade [A]</span> <div class="attr-controls"><span id="valAgi">1</span> <div class="btn-attr" onclick="distribuirPonto('agi')">+</div></div></div>
                 <div class="attr-row"><span>Manuseio [M]</span> <div class="attr-controls"><span id="valMan">1</span> <div class="btn-attr" onclick="distribuirPonto('man')">+</div></div></div>
                 <div class="attr-row"><span>Vigor [V]</span> <div class="attr-controls"><span id="valVig">1</span> <div class="btn-attr" onclick="distribuirPonto('vig')">+</div></div></div>
                 <div class="attr-row"><span>Inteligência [I]</span> <div class="attr-controls"><span id="valInt">1</span> <div class="btn-attr" onclick="distribuirPonto('int')">+</div></div></div>
-                
                 <div style="margin-top: 10px; font-size: 12px; color: #ccc;">
                     Integridade (Saturação): <span id="lblIntegVal">100%</span>
                     <div class="integrity-bar-bg"><div class="integrity-bar-fill" id="integrityBar"></div></div>
@@ -73,20 +71,19 @@
                 <p style="margin: 0; font-size: 11px; color: #aaa;">Seu Autenticador:</p>
                 <h3 style="margin: 5px 0; color: #fff; letter-spacing: 2px;" id="profileSerial">XXXX-DC1</h3>
             </div>
-            
             <button onclick="deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
             <br><span class="close-modal" onclick="fecharModal()">Fechar</span>
         </div>
     </div>
 
     <div class="global-layout">
-        
         <div class="ad-space"><img src="anuncio1.png" class="ad-image" onerror="this.style.display='none'"></div>
 
         <div class="center-panel">
             
             <div id="tab-mapa" class="tab-content active" style="padding: 10px;">
-                <h1 style="margin-top: 0; font-size: 1.3rem;">Distrito de Morioh</h1>
+                <h1 style="margin-top: 0; font-size: 1.3rem;">Distrito de Morioh V4.3</h1>
+                <p style="text-align: center; color: #aaa; font-size: 12px; margin-top: 0;">Siga as linhas de conexão para se mover. Cuidado com embates.</p>
                 
                 <div class="map-wrapper">
                     <div class="map-canvas" id="mapCanvas">
@@ -95,6 +92,15 @@
                     
                     <div class="dice-panel">
                         <div style="background:#1a1a24; padding:10px; text-align:center; font-weight:bold; color:var(--accent-blue); border-bottom:1px solid #333;">Map Dados</div>
+                        <div class="dice-quick-row">
+                            <button class="dice-quick-btn" onclick="document.getElementById('diceInput').value='1d4'; lancarDado();">d4</button>
+                            <button class="dice-quick-btn" onclick="document.getElementById('diceInput').value='1d6'; lancarDado();">d6</button>
+                            <button class="dice-quick-btn" onclick="document.getElementById('diceInput').value='1d8'; lancarDado();">d8</button>
+                            <button class="dice-quick-btn" onclick="document.getElementById('diceInput').value='1d10'; lancarDado();">d10</button>
+                            <button class="dice-quick-btn" onclick="document.getElementById('diceInput').value='1d12'; lancarDado();">d12</button>
+                            <button class="dice-quick-btn" onclick="document.getElementById('diceInput').value='1d20'; lancarDado();">d20</button>
+                            <button class="dice-quick-btn" onclick="document.getElementById('diceInput').value='1d100'; lancarDado();">d100</button>
+                        </div>
                         <div class="dice-log" id="diceLog"></div>
                         <div class="dice-input">
                             <input type="text" id="diceInput" placeholder="Ex: 1d20+1" onkeypress="if(event.key === 'Enter') lancarDado()">
@@ -108,19 +114,22 @@
                 <h1 class="blink-text">Notícias do Distrito</h1>
                 <div id="masterHomePanel" class="master-panel" style="display:none;">
                     <h3>[ MASTER ] GERENCIAR EMBATES</h3>
-                    
                     <div style="border: 1px solid var(--accent-blue); padding: 15px; margin-bottom: 15px; border-radius: 4px;">
-                        <h4 style="color:var(--accent-blue); margin:0 0 10px 0;">1. Iniciar Combate (Pisca no Mapa)</h4>
-                        <input type="text" id="embLocal" placeholder="Local (Ex: Bar do Submundo)" style="width: 48%;">
-                        <input type="number" id="embAposta" placeholder="Aposta Base (¥)" style="width: 48%;">
-                        <button class="action-btn" onclick="iniciarEmbateMap()" style="font-size: 12px; padding: 8px;">Declarar Embate</button>
+                        <h4 style="color:var(--accent-blue); margin:0 0 10px 0;">1. Iniciar Combate (Tranca no Mapa)</h4>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px;">
+                            <input type="text" id="embLocal" placeholder="Local (Ex: Ghost Ramen)" style="width: 32%;">
+                            <input type="text" id="embP1" placeholder="Lutador 1" style="width: 32%;">
+                            <input type="text" id="embP2" placeholder="Lutador 2" style="width: 32%;">
+                        </div>
+                        <button class="action-btn" onclick="iniciarEmbateMap()" style="font-size: 12px; padding: 8px;">Declarar Embate Oficial</button>
                     </div>
 
                     <div style="border: 1px solid var(--accent-red); padding: 15px; border-radius: 4px;">
                         <h4 style="color:var(--accent-red); margin:0 0 10px 0;">2. Resolver Combate</h4>
                         <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px;">
-                            <input type="text" id="embVencedor" placeholder="Vencedor" style="width: 48%;">
-                            <input type="text" id="embPerdedor" placeholder="Perdedor" style="width: 48%;">
+                            <input type="text" id="embVencedor" placeholder="Vencedor" style="width: 32%;">
+                            <input type="text" id="embPerdedor" placeholder="Perdedor" style="width: 32%;">
+                            <input type="number" id="embAposta" placeholder="Aposta Paga (¥)" style="width: 32%;">
                         </div>
                         <div style="display: flex; gap: 10px; justify-content: center;">
                             <input type="text" id="embMorteDesc" placeholder="Causa Mortis (Opcional)" style="width: 48%; border-color:#ffaa00;">
@@ -134,13 +143,12 @@
 
             <div id="tab-igamble" class="tab-content">
                 <h1 style="color: #00d2ff; margin-bottom: 5px;">I-Gamble</h1>
-                <p style="color: #aaa; margin-top: 0; font-size: 12px;">Rede de Comunicação do Submundo</p>
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages"></div>
                     <div class="chat-input-area">
                         <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
                         <button class="btn-attach" onclick="document.getElementById('chatImageFile').click()" title="Anexar">📎</button>
-                        <input type="text" id="chatInput" placeholder="Sua mensagem ou link de imagem..." maxlength="200" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
+                        <input type="text" id="chatInput" placeholder="Mensagem ou link .png..." maxlength="200" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
                         <button class="btn-send" onclick="prepararEnvioMensagem()">ENVIAR</button>
                     </div>
                 </div>
@@ -149,19 +157,13 @@
             <div id="tab-roleta" class="tab-content">
                 <h1>Seleção de Patrono</h1>
                 <div class="system-notice">[MÁQUINA DO DISTRITO]: TAXA = 500 YENES</div>
-                <div class="input-section">
-                    <p id="statusJogador" style="color: #555; margin-top: 0;">Nenhum agente conectado na máquina.</p>
-                    <button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar (-500 ¥)</button>
-                </div>
-                <div class="cards-container">
-                    <div class="card face-down" id="card1">?</div><div class="card face-down" id="card2">?</div>
-                </div>
+                <div class="input-section"><button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar (-500 ¥)</button></div>
+                <div class="cards-container"><div class="card face-down" id="card1">?</div><div class="card face-down" id="card2">?</div></div>
                 <div class="actions" id="actionButtons" style="display: none; text-align: center; width: 100%;">
                     <button class="action-btn" onclick="escolherDeus(0)" id="btnGod1">Aceitar 1</button>
                     <button class="action-btn" onclick="escolherDeus(1)" id="btnGod2">Aceitar 2</button>
                     <br><button class="action-btn" onclick="realizarGiroVisual()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
                 </div>
-                
                 <div class="god-list-container">
                     <h2>Panteão Disponível no Distrito</h2>
                     <div class="god-grid">
@@ -198,51 +200,35 @@
 
             <div id="tab-mochila" class="tab-content">
                 <h1 style="color: #00ff00;">Inventário e Safehouse</h1>
-                <p style="color: #aaa; text-align: center;">Clique em alimentos para recuperar Integridade. Use equipamentos com sabedoria.</p>
-                <div id="mochilaGrid" class="inv-grid">
-                    <p style="text-align: center; color: #555; width: 100%;">Autentique-se para ver sua mochila.</p>
-                </div>
+                <div id="mochilaGrid" class="inv-grid"></div>
             </div>
             
         </div>
 
-        <div class="sidebar">
-            <h2>Agentes Online</h2>
-            <div class="user-list" id="userLog"></div>
-        </div>
-        
+        <div class="sidebar"><h2>Agentes Online</h2><div class="user-list" id="userLog"></div></div>
         <div class="ad-space"><img src="anuncio2.png" class="ad-image" onerror="this.style.display='none'"></div>
     </div>
 
-    <div class="version-tag">Versão do Sistema: V4.2</div>
+    <div class="version-tag">Versão do Sistema: V4.3</div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
-        let db; let usersGlobais = {}; let presenceGlobal = {};
+        let db; let usersGlobais = {}; let presenceGlobal = {}; let embatesGlobais = {};
         let jogadorAtual = ""; let serialAtual = ""; let connectionRef = null; let isMaster = false; const MASTER_SERIAL = "4053-DC1";
-        
         const codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
         const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
         let yenesGastos = 0; let deusesSorteados = [];
 
         try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch (error) { console.error(error); }
 
-        // --- SISTEMA DE ABAS (CORRIGIDO PARA NÃO TRAVAR) ---
         function mudarAba(idAba, btnElemento) {
-            let abas = document.querySelectorAll('.tab-content');
-            abas.forEach(t => t.classList.remove('active'));
-            
-            let botoes = document.querySelectorAll('.nav-btn');
-            botoes.forEach(b => b.classList.remove('active'));
-            
-            let alvo = document.getElementById(idAba);
-            if(alvo) alvo.classList.add('active');
-            if(btnElemento) btnElemento.classList.add('active');
-
-            if(idAba === 'tab-mapa') drawMapVisuals(); // Redesenha o mapa ao abrir a aba
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(idAba).classList.add('active'); if(btnElemento) btnElemento.classList.add('active');
+            if(idAba === 'tab-mapa') drawMapVisuals();
         }
 
-        // --- MAPA (15 LOCAIS E RUAS) ---
+        // --- MAPA (15 LOCAIS COM MAIS CONEXÕES) ---
         const locaisMapa = {
             "p1": { nome: "Praça Central", x: 50, y: 50, tipo: "praca" },
             "p2": { nome: "Ghost Ramen", x: 35, y: 65, tipo: "bar" },
@@ -265,16 +251,22 @@
             { de: "p1", para: "p2" }, { de: "p2", para: "p3" }, { de: "p1", para: "p4" }, { de: "p1", para: "p5" },
             { de: "p5", para: "p6" }, { de: "p1", para: "p9" }, { de: "p9", para: "p10" }, { de: "p10", para: "p11" },
             { de: "p11", para: "p12" }, { de: "p2", para: "p13" }, { de: "p13", para: "p14" }, { de: "p3", para: "p8" },
-            { de: "p7", para: "p6" }, { de: "p3", para: "p7" }, { de: "p2", para: "p15" }, { de: "p4", para: "p13"}
+            { de: "p7", para: "p6" }, { de: "p3", para: "p7" }, { de: "p2", para: "p15" }, { de: "p4", para: "p13"},
+            { de: "p1", para: "p11"}, { de: "p9", para: "p5" }, { de: "p12", para: "p14"}, { de: "p15", para: "p8"} // Linhas Extras
         ];
+
+        function isPlayerInEmbate(nome) {
+            let trancado = false;
+            Object.values(embatesGlobais).forEach(emb => { if(emb.p1 === nome || emb.p2 === nome) trancado = true; });
+            return trancado;
+        }
 
         function drawMapVisuals() {
             const canvas = document.getElementById("mapCanvas");
             if(!canvas) return;
-            // Limpa tudo menos a grid base
             canvas.innerHTML = '<div class="map-overlay-grid"></div>';
             
-            // Desenha Ruas
+            // Desenha Linhas
             conexoesMapa.forEach(con => {
                 let pDe = locaisMapa[con.de]; let pPara = locaisMapa[con.para];
                 let isViela = (pDe.tipo === "viela" || pPara.tipo === "viela");
@@ -288,70 +280,74 @@
                 canvas.appendChild(line);
             });
 
-            // Decorativos (Casinhas)
-            for(let i=0; i<30; i++) { 
-                canvas.innerHTML += `<div class="map-house-box" style="left:${Math.random()*90}%; top:${Math.random()*90}%; width:${Math.random()*25+10}px; height:${Math.random()*20+10}px;"></div>`;
-            }
-
-            // Pontos Locais e Embates
-            db.ref('tokyoRpg/mapEmbates').once('value').then(snap => {
-                let embates = snap.val() || {};
-                Object.keys(locaisMapa).forEach(k => {
-                    let loc = locaisMapa[k];
-                    let temLuta = Object.values(embates).some(e => e.localKey === k);
-                    canvas.innerHTML += `<div class="map-node ${temLuta?'danger':''}" style="left:${loc.x}%; top:${loc.y}%;" onclick="viajarPara('${k}')"><div class="node-label">${temLuta?'⚔️':''} ${loc.nome}</div></div>`;
-                });
+            // Nós de Locais
+            Object.keys(locaisMapa).forEach(k => {
+                let loc = locaisMapa[k];
+                let temLuta = Object.values(embatesGlobais).some(e => e.localKey === k);
+                canvas.innerHTML += `<div class="map-node ${temLuta?'danger':''}" style="left:${loc.x}%; top:${loc.y}%;" onclick="viajarPara('${k}')"><div class="node-label">${temLuta?'⚔️':''} ${loc.nome}</div></div>`;
             });
 
-            // Avatares dos Jogadores
+            // Agrupa jogadores por local para não encavalar
+            let playersByLoc = {};
             Object.keys(usersGlobais).forEach(n => {
+                if (n === "MESTRE") return;
                 let u = usersGlobais[n];
-                if(n !== "MESTRE" && u.status !== "morto" && presenceGlobal[n] === true && u.local) {
-                    let locObj = locaisMapa[u.local];
-                    if(locObj) {
-                        let av = u.avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${n}`;
-                        canvas.innerHTML += `<img src="${av}" class="avatar-on-map" style="left:${locObj.x}%; top:${locObj.y}%;" title="${n}">`;
-                    }
-                }
+                if (u.status === "morto") return;
+                let loc = u.local || "p1";
+                if (!playersByLoc[loc]) playersByLoc[loc] = [];
+                playersByLoc[loc].push({ nome: n, user: u });
+            });
+
+            // Desenha Avatares em Círculo no Ponto
+            Object.keys(playersByLoc).forEach(locKey => {
+                let loc = locaisMapa[locKey];
+                let players = playersByLoc[locKey];
+                let total = players.length;
+
+                players.forEach((p, idx) => {
+                    let angle = (idx / total) * Math.PI * 2;
+                    let radius = total > 1 ? 25 : 0; // Se tiver mais de 1 pessoa, abre a roda
+                    let ox = Math.cos(angle) * radius;
+                    let oy = Math.sin(angle) * radius;
+
+                    let isOnline = presenceGlobal[p.nome] === true;
+                    let avClass = isOnline ? "" : "avatar-offline";
+                    let isCombat = isPlayerInEmbate(p.nome);
+
+                    canvas.innerHTML += `
+                    <div style="position:absolute; left:calc(${loc.x}% + ${ox}px); top:calc(${loc.y}% + ${oy}px); transform: translate(-50%, -100%); z-index:${isOnline?30:15};">
+                        <img src="${p.user.avatarUrl || 'https://api.dicebear.com/7.x/identicon/svg?seed='+p.nome}" class="avatar-on-map ${avClass}" title="${p.nome} ${isOnline?'(Online)':'(Offline)'}">
+                        ${isCombat ? '<div class="avatar-combat-icon">⚔️</div>' : ''}
+                    </div>`;
+                });
             });
         }
 
-        // --- RELÓGIO (10 minutos fictícios por segundo) ---
+        // --- RELÓGIO (10 min fictícios / s) ---
         let clockTime = new Date('2026-03-07T20:00:00');
         setInterval(() => {
             clockTime.setMinutes(clockTime.getMinutes() + 10); 
-            let hh = String(clockTime.getHours()).padStart(2, '0');
-            let mm = String(clockTime.getMinutes()).padStart(2, '0');
+            let hh = String(clockTime.getHours()).padStart(2, '0'); let mm = String(clockTime.getMinutes()).padStart(2, '0');
             document.getElementById("clockTime").innerText = `${hh}:${mm}`;
             document.getElementById("clockTime").style.color = (clockTime.getHours() >= 18 || clockTime.getHours() < 6) ? "#ff2a5f" : "#00d2ff"; 
         }, 1000);
 
-        // --- SISTEMA DE LOGIN E RPG ---
-        function defaultStats() { return { for: 1, agi: 1, man: 1, vig: 1, int: 1, pontosLivres: 3, nivel: 1, integridade: 100, defesa: 0 }; }
+        // --- SISTEMA BLINDADO DE RPG E LOGIN ---
+        function getSafeRpg(u) { let d = { for: 1, agi: 1, man: 1, vig: 1, int: 1, pontosLivres: 3, nivel: 1, integridade: 100, defesa: 0 }; return u && u.rpg ? Object.assign(d, u.rpg) : d; }
 
         function renderizarFicha() {
             if(!jogadorAtual || !usersGlobais[jogadorAtual]) return;
-            let u = usersGlobais[jogadorAtual];
-            if(!u.rpg) u.rpg = defaultStats(); 
-
-            document.getElementById("lblNivel").innerText = `[ Embate Nv. ${u.rpg.nivel} ]`;
-            document.getElementById("lblDef").innerText = u.rpg.defesa;
-            document.getElementById("lblPts").innerText = u.rpg.pontosLivres;
-            document.getElementById("valFor").innerText = u.rpg.for; document.getElementById("valAgi").innerText = u.rpg.agi;
-            document.getElementById("valMan").innerText = u.rpg.man; document.getElementById("valVig").innerText = u.rpg.vig;
-            document.getElementById("valInt").innerText = u.rpg.int;
-            
-            let integ = u.rpg.integridade;
-            document.getElementById("lblIntegVal").innerText = integ + "%";
-            document.getElementById("integrityBar").style.width = integ + "%";
-            document.getElementById("integrityBar").style.background = integ > 60 ? "#00ff00" : (integ > 30 ? "#ffaa00" : "#ff0000");
+            let u = usersGlobais[jogadorAtual]; let r = getSafeRpg(u);
+            document.getElementById("lblNivel").innerText = `[ Embate Nv. ${r.nivel} ]`; document.getElementById("lblDef").innerText = r.defesa; document.getElementById("lblPts").innerText = r.pontosLivres;
+            document.getElementById("valFor").innerText = r.for; document.getElementById("valAgi").innerText = r.agi; document.getElementById("valMan").innerText = r.man; document.getElementById("valVig").innerText = r.vig; document.getElementById("valInt").innerText = r.int;
+            document.getElementById("lblIntegVal").innerText = r.integridade + "%"; document.getElementById("integrityBar").style.width = r.integridade + "%"; document.getElementById("integrityBar").style.background = r.integridade < 30 ? "#ff0000" : "#00ff00";
         }
 
         function distribuirPonto(attr) {
-            if(!jogadorAtual) return; let u = usersGlobais[jogadorAtual];
-            if(u.rpg.pontosLivres > 0 && u.rpg[attr] < 3) {
-                db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(u.rpg[attr] + 1);
-                db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(u.rpg.pontosLivres - 1);
+            if(!jogadorAtual) return; let u = usersGlobais[jogadorAtual]; let r = getSafeRpg(u);
+            if(r.pontosLivres > 0 && r[attr] < 3) {
+                db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(r[attr] + 1);
+                db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres - 1);
             } else { alert("Sem pontos livres ou atributo no máximo (3)."); }
         }
 
@@ -359,30 +355,22 @@
         function fecharModal() { document.getElementById("loginModal").style.display = "none"; }
         function gerarSerial() { let c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let k=''; for(let i=0;i<4;i++) k+=c.charAt(Math.floor(Math.random()*c.length)); return k+"-DC1"; }
 
-        function setarOnline() {
-            if(!db || !jogadorAtual) return;
-            db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { connectionRef = db.ref('tokyoRpg/presence/' + jogadorAtual); connectionRef.onDisconnect().set(false).then(() => { connectionRef.set(true); }); }});
-        }
+        function setarOnline() { if(!db || !jogadorAtual) return; db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { connectionRef = db.ref('tokyoRpg/presence/' + jogadorAtual); connectionRef.onDisconnect().set(false).then(() => { connectionRef.set(true); }); }}); }
 
         function logarSucesso(nome, serial) {
             jogadorAtual = nome; serialAtual = serial; isMaster = (serial === MASTER_SERIAL);
             document.getElementById("userBtn").classList.add("logged");
             document.getElementById("statusJogador").innerHTML = `Conectado: <strong style="color: #00d2ff">${nome}</strong>`;
             document.getElementById("profileName").innerText = nome; document.getElementById("profileSerial").innerText = serial;
-            
-            if(!usersGlobais[nome] || usersGlobais[nome].carteira === undefined) db.ref('tokyoRpg/users/' + nome).update({ carteira: 0, rpg: defaultStats(), local: "p1" });
-            
-            document.getElementById('masterHomePanel').style.display = isMaster ? 'block' : 'none';
-            document.getElementById('masterShopPanel').style.display = isMaster ? 'block' : 'none';
-            
+            if(!usersGlobais[nome] || usersGlobais[nome].carteira === undefined) db.ref('tokyoRpg/users/' + nome).update({ carteira: 0, rpg: getSafeRpg(), local: "p1" });
+            document.getElementById('masterHomePanel').style.display = isMaster ? 'block' : 'none'; document.getElementById('masterShopPanel').style.display = isMaster ? 'block' : 'none';
             setarOnline(); renderizarFicha(); drawMapVisuals(); fecharModal();
         }
 
         function deslogar() {
             if(connectionRef) connectionRef.set(false);
             jogadorAtual = ""; serialAtual = ""; isMaster = false;
-            document.getElementById("userBtn").classList.remove("logged");
-            document.getElementById("statusJogador").innerHTML = `Nenhum agente conectado.`;
+            document.getElementById("userBtn").classList.remove("logged"); document.getElementById("statusJogador").innerHTML = `Nenhum agente conectado.`;
             document.getElementById("loginName").value = ""; document.getElementById("loginPass").value = ""; document.getElementById("loginSerial").value = "";
             document.getElementById('masterHomePanel').style.display = 'none'; document.getElementById('masterShopPanel').style.display = 'none';
             fecharModal(); drawMapVisuals();
@@ -394,7 +382,7 @@
             db.ref('tokyoRpg/users/' + nome).once('value').then((snap) => {
                 let ud = snap.val();
                 if(ud) { if (ud.senha !== senha) { alert("Senha incorreta."); return; } logarSucesso(nome, ud.serial); } 
-                else { let ns = gerarSerial(); db.ref('tokyoRpg/users/' + nome).set({ senha: senha, serial: ns, carteira: 0, rpg: defaultStats(), local: "p1" }); logarSucesso(nome, ns); alert(`Criado. Guarde seu Autenticador.`); }
+                else { let ns = gerarSerial(); db.ref('tokyoRpg/users/' + nome).set({ senha: senha, serial: ns, carteira: 0, rpg: getSafeRpg(), local: "p1" }); logarSucesso(nome, ns); alert(`Criado. Guarde seu Autenticador.`); }
             });
         }
 
@@ -406,11 +394,22 @@
             if(!achou) alert("Não encontrado.");
         }
 
-        // --- MAPA E DADOS FUNÇÕES ---
+        // --- MAPA NAVEGAÇÃO RESTRITA ---
         function viajarPara(k) {
-            if(!jogadorAtual || isMaster) { alert(isMaster?"Mestre é onipresente.":"Autentique-se."); return; }
-            let r = usersGlobais[jogadorAtual].rpg;
-            if(r.integridade <= 5) { alert("Sua integridade é muito baixa (Fome/Sede). Coma algo da mochila."); return; }
+            if(!jogadorAtual || isMaster) return;
+            if(isPlayerInEmbate(jogadorAtual)) { alert("Você está TRANCADO em um EMBATE! Fale com o Mestre ou derrote seu alvo."); return; }
+            
+            let user = usersGlobais[jogadorAtual];
+            let currentLoc = user.local || "p1";
+            
+            // Regra Adjacência
+            if(currentLoc !== k) {
+                let isConnected = conexoesMapa.some(c => (c.de === currentLoc && c.para === k) || (c.para === currentLoc && c.de === k));
+                if(!isConnected) { alert("Você não pode voar. Siga as linhas iluminadas a partir do seu local atual."); return; }
+            }
+
+            let r = getSafeRpg(user);
+            if(r.integridade <= 5) { alert("Sua integridade é crítica (Fome/Sede). Coma algo da mochila antes de viajar."); return; }
             db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/integridade`).set(r.integridade - 5);
             db.ref(`tokyoRpg/users/${jogadorAtual}/local`).set(k);
         }
@@ -420,81 +419,88 @@
             let exp = document.getElementById("diceInput").value.trim().toLowerCase();
             if(!exp.includes('d')) return; 
             let p = exp.split('d'); let qtd = parseInt(p[0]) || 1; let r = p[1].split('+'); let faces = parseInt(r[0]); let mod = r[1]?parseInt(r[1]):0;
-            let tot = 0; let rol = [];
-            for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random() * faces) + 1; rol.push(d); tot += d; }
-            tot += mod;
+            let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random() * faces) + 1; rol.push(d); tot += d; } tot += mod;
             db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `${qtd}d${faces}${mod>0?'+'+mod:''} ➔ [${rol.join(',')}] = ${tot}` });
             document.getElementById("diceInput").value = "";
         }
 
+        // --- EMBATE (MESTRE) ---
         function iniciarEmbateMap() {
             if(!isMaster) return;
-            let locStr = document.getElementById("embLocal").value.trim(); let ap = document.getElementById("embAposta").value;
+            let locStr = document.getElementById("embLocal").value.trim();
+            let p1 = document.getElementById("embP1").value.trim().toUpperCase();
+            let p2 = document.getElementById("embP2").value.trim().toUpperCase();
+            if(!locStr || !p1 || !p2) { alert("Preencha Local, Lutador 1 e Lutador 2"); return;}
+
             let kAchou = Object.keys(locaisMapa).find(k => locaisMapa[k].nome.toLowerCase().includes(locStr.toLowerCase()));
             if(!kAchou) { alert("Local não existe no mapa."); return; }
-            db.ref('tokyoRpg/mapEmbates').push({ localKey: kAchou, aposta: ap });
-            document.getElementById("embLocal").value = ""; document.getElementById("embAposta").value = "";
+            
+            db.ref('tokyoRpg/mapEmbates').push({ localKey: kAchou, p1: p1, p2: p2 });
+            alert("Aviso de Embate disparado! Os jogadores estão trancados neste local.");
+            document.getElementById("embLocal").value = ""; document.getElementById("embP1").value = ""; document.getElementById("embP2").value = "";
         }
 
         function processarEmbate() {
             if(!isMaster) return;
             let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase();
-            let ap = parseInt(document.getElementById("embAposta").value || "0"); // Mestre pode definir Yenes depois
+            let ap = parseInt(document.getElementById("embAposta").value || "0"); 
             let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value;
             if(!v || !p) { alert("Preencha Vencedor e Perdedor."); return; }
             
-            let cVenc = usersGlobais[v] ? usersGlobais[v].carteira || 0 : 0;
-            let cPerd = usersGlobais[p] ? usersGlobais[p].carteira || 0 : 0;
+            let cVenc = usersGlobais[v] ? usersGlobais[v].carteira || 0 : 0; let cPerd = usersGlobais[p] ? usersGlobais[p].carteira || 0 : 0;
             cVenc += ap; cPerd -= ap; let isMorte = (cPerd <= 0);
             
             if(usersGlobais[v]) db.ref(`tokyoRpg/users/${v}`).update({ carteira: cVenc, "rpg/nivel": (usersGlobais[v].rpg?.nivel||1)+1, "rpg/pontosLivres": (usersGlobais[v].rpg?.pontosLivres||0)+1 });
-            if(usersGlobais[p]) {
-                if(isMorte) db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" });
-                else db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd });
-            }
-            db.ref('tokyoRpg/mapEmbates').remove(); // Limpa ícones do mapa
+            if(usersGlobais[p]) { if(isMorte) db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" }); else db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd }); }
+            
+            db.ref('tokyoRpg/mapEmbates').remove(); 
             db.ref('tokyoRpg/news').push({ tipo: isMorte?"MORTE":"EMBATE", vencedor: v, perdedor: p, aposta: ap, saldoVencedor: cVenc, saldoPerdedor: cPerd, data: new Date().toLocaleTimeString(), descMorte: mDesc, imgMorte: mImg });
-            alert("Embate Registrado!");
+            alert("Embate Resolvido e Jogadores Liberados!");
         }
 
-        // --- CHAT, ROLETA E LOJA ---
-        function prepararEnvioMensagem() {
-            if(!jogadorAtual) return; let t = document.getElementById("chatInput").value.trim(); let i = document.getElementById("chatImageFile");
-            if(!t && i.files.length === 0) return;
-            if(i.files.length > 0) {
-                let f = i.files[0]; if(f.size > 2000000) { alert("Máx 2MB"); return; }
-                let r = new FileReader(); r.onload = (e) => { db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: e.target.result, data: new Date().toLocaleTimeString() }); i.value = ""; document.getElementById("chatInput").value = ""; }; r.readAsDataURL(f);
-            } else {
-                let iLink = null; if(t.match(/\.(jpeg|jpg|gif|png)$/) && t.startsWith("http")) { iLink = t; t = ""; }
-                db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); document.getElementById("chatInput").value = "";
-            }
-        }
-        
-        function tentarGirar() { if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<500){alert("Sem grana.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-500); realizarGiroVisual(); }
-        function realizarGiroVisual() { yenesGastos+=500; deusesSorteados = [...deuses].sort(()=>0.5-Math.random()); document.getElementById("card1").innerText=deusesSorteados[0]; document.getElementById("card2").innerText=deusesSorteados[1]; document.getElementById("btnGod1").innerText=`Aceitar ${deusesSorteados[0]}`; document.getElementById("btnGod2").innerText=`Aceitar ${deusesSorteados[1]}`; document.getElementById("actionButtons").style.display="block"; }
+        // --- SISTEMA RESTANTE ---
+        function resgatarCodigo() { let c = document.getElementById("sponsorCode").value.trim().toUpperCase(); if(!c) return; if(codigosPromocionais[c]) { let v = codigosPromocionais[c]; let r = db.ref('tokyoRpg/users/' + jogadorAtual); r.once('value').then(s => { let u = s.val(); if(u.codigosUsados && u.codigosUsados[c]) { alert("Já resgatado."); } else { r.child('codigosUsados').update({ [c]: true }); r.update({ carteira: (u.carteira || 0) + v }); alert(`+${v}¥`); document.getElementById("sponsorCode").value = ""; } }); } else alert("Inválido."); }
+        function prepararEnvioMensagem() { if(!jogadorAtual) return; let t = document.getElementById("chatInput").value.trim(); let i = document.getElementById("chatImageFile"); if(!t && i.files.length === 0) return; if(i.files.length > 0) { let f = i.files[0]; if(f.size > 2000000) return; let r = new FileReader(); r.onload = (e) => { db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: e.target.result, data: new Date().toLocaleTimeString() }); i.value = ""; document.getElementById("chatInput").value = ""; }; r.readAsDataURL(f); } else { let iLink = null; if(t.match(/\.(jpeg|jpg|gif|png)$/) && t.startsWith("http")) { iLink = t; t = ""; } db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); document.getElementById("chatInput").value = ""; } }
+        function tentarGirar() { if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<500){alert("Sem grana.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-500); yenesGastos+=500; deusesSorteados = [...deuses].sort(()=>0.5-Math.random()); document.getElementById("card1").innerText=deusesSorteados[0]; document.getElementById("card2").innerText=deusesSorteados[1]; document.getElementById("btnGod1").innerText=`Aceitar 1`; document.getElementById("btnGod2").innerText=`Aceitar 2`; document.getElementById("actionButtons").style.display="block"; }
         function escolherDeus(i) { db.ref(`tokyoRpg/users/${jogadorAtual}/deus`).set(deusesSorteados[i]); document.getElementById("actionButtons").style.display="none"; alert(`Patrono: ${deusesSorteados[i]}`); }
+        function criarItemLoja() { if(!isMaster) return; let t=document.getElementById("newItemType").value; let n=document.getElementById("newItemName").value.trim(); let d=document.getElementById("newItemDesc").value.trim(); let p=parseInt(document.getElementById("newItemPrice").value); if(n && d && p) { db.ref('tokyoRpg/loja').push({ tipo: t, nome: n, desc: d, preco: p }); document.getElementById("newItemName").value=""; document.getElementById("newItemDesc").value=""; document.getElementById("newItemPrice").value=""; alert("Criado!"); } }
+        function comprarItem(id, n, p, t, d) { if(!jogadorAtual || isMaster) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<p) {alert("Sem grana."); return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-p); db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d }); alert("Comprado!"); }
         
-        function criarItemLoja() {
-            if(!isMaster) return; let t=document.getElementById("newItemType").value; let n=document.getElementById("newItemName").value.trim(); let d=document.getElementById("newItemDesc").value.trim(); let p=parseInt(document.getElementById("newItemPrice").value);
-            if(n && d && p) { db.ref('tokyoRpg/loja').push({ tipo: t, nome: n, desc: d, preco: p }); document.getElementById("newItemName").value=""; document.getElementById("newItemDesc").value=""; document.getElementById("newItemPrice").value=""; alert("Criado!"); }
-        }
-        function comprarItem(id, n, p, t, d) {
-            if(!jogadorAtual || isMaster) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<p) {alert("Sem grana."); return;}
-            db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-p); db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d }); alert("Comprado!");
-        }
-
-        // --- LISTENERS ---
-        if (db) {
-            db.ref('tokyoRpg/users').on('value', s => { usersGlobais = s.val()||{}; renderizarFicha(); drawMapVisuals(); if(jogadorAtual && usersGlobais[jogadorAtual]) document.getElementById("profileWallet").innerText = (usersGlobais[jogadorAtual].carteira||0)+" ¥"; });
-            db.ref('tokyoRpg/presence').on('value', s => { presenceGlobal = s.val()||{}; drawMapVisuals(); 
-                let b = document.getElementById("userLog"); b.innerHTML = "";
-                Object.keys(usersGlobais).forEach(n => { if(n!=="MESTRE"){ let u=usersGlobais[n]; let isD=(u.status==="morto"); let isO=presenceGlobal[n]===true&&!isD; b.innerHTML += `<div class="user-item ${isD?'is-dead':''}"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong>${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span></div>`; } });
+        function renderizarMochila() {
+            let box = document.getElementById("mochilaGrid");
+            if(!jogadorAtual) { box.innerHTML = "<p style='text-align:center; color:#555;'>Faça login.</p>"; return; }
+            let itens = usersGlobais[jogadorAtual]?.mochila;
+            if(!itens) { box.innerHTML = "<p style='text-align:center; color:#aaa; width:100%;'>Sua mochila está vazia.</p>"; return; }
+            box.innerHTML = "";
+            Object.keys(itens).forEach(k => {
+                let i = itens[k];
+                box.innerHTML += `<div class="inv-item"><span style="font-size:10px; color:#aaa;">[ ${i.tipo||"Item"} ]</span><h3 style="color:#00d2ff;margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#eee;margin-bottom:15px;">${i.desc||""}</p><button onclick="removerItemMochila('${k}')" style="background:transparent;border:1px solid #ff2a5f;color:#ff2a5f;padding:5px 10px;cursor:pointer;width:100%;">Descartar</button></div>`;
             });
-            db.ref('tokyoRpg/mapDados').limitToLast(8).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div class="dice-msg"><strong style="color:#00d2ff">${x.nome}:</strong> <span style="color:#00ff00">${x.texto}</span></div>`); b.scrollTop = b.scrollHeight; }});
+        }
+        function removerItemMochila(k) { if(confirm("Descartar este item?")) db.ref('tokyoRpg/users/' + jogadorAtual + '/mochila/' + k).remove(); }
+
+        // --- LISTENERS FIREBASE ---
+        if (db) {
+            db.ref('tokyoRpg/users').on('value', s => { 
+                usersGlobais = s.val()||{}; 
+                renderizarFicha(); renderizarMochila(); drawMapVisuals(); 
+                if(jogadorAtual && usersGlobais[jogadorAtual]) document.getElementById("profileWallet").innerText = (usersGlobais[jogadorAtual].carteira||0)+" ¥";
+            });
+            db.ref('tokyoRpg/presence').on('value', s => { 
+                presenceGlobal = s.val()||{}; drawMapVisuals(); 
+                let b = document.getElementById("userLog"); b.innerHTML = "";
+                Object.keys(usersGlobais).forEach(n => { 
+                    if(n!=="MESTRE"){ 
+                        let u=usersGlobais[n]; let isD=(u.status==="morto"); let isO=presenceGlobal[n]===true&&!isD; 
+                        b.innerHTML += `<div class="user-item ${isD?'is-dead':''}"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong>${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span></div>`; 
+                    } 
+                });
+            });
+            db.ref('tokyoRpg/mapEmbates').on('value', s => { embatesGlobais = s.val() || {}; drawMapVisuals(); });
+            db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div class="dice-msg"><strong style="color:#00d2ff">${x.nome}:</strong> <span style="color:#00ff00">${x.texto}</span></div>`); b.scrollTop = b.scrollHeight; }});
             db.ref('tokyoRpg/chat').limitToLast(30).on('value', s => { let d = s.val(); let b = document.getElementById("chatMessages"); b.innerHTML=""; if(d){ Object.values(d).forEach(m => b.innerHTML += `<div class="msg-box"><div class="msg-content"><div class="msg-header">${m.nome} <span style="color:#555;font-size:10px">${m.data}</span></div><p class="msg-text">${m.texto||''}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}</div></div>`); b.scrollTop = b.scrollHeight; }});
             db.ref('tokyoRpg/loja').on('value', s => { let d = s.val(); let b = document.getElementById("shopGrid"); b.innerHTML=""; if(d){ Object.keys(d).forEach(k => { let i = d[k]; b.innerHTML += `<div class="shop-item"><div><span class="shop-type">${i.tipo}</span><h3 style="color:#00d2ff;margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#aaa;">${i.desc}</p></div><div><h2 style="color:#00ff00;margin:10px 0;">${i.preco}¥</h2><button class="action-btn" onclick="comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}')">Comprar</button></div></div>`; });}});
             db.ref('tokyoRpg/news').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("newsFeed"); b.innerHTML=""; if(d){ Object.values(d).reverse().forEach(n => { b.innerHTML += `<div class="news-item ${n.tipo==='MORTE'?'news-death':''}"><p style="color:${n.tipo==='MORTE'?'#ff2a5f':'#00d2ff'};margin:0;font-size:12px;">${n.data}</p><h3 style="color:#fff;margin:5px 0;">${n.tipo==='MORTE'?'🚨 ÓBITO NO DISTRITO 🚨':'Confronto Concluído'}</h3><p style="color:#ccc;">${n.vencedor} vs ${n.perdedor}. ${n.tipo==='MORTE'?'Perdedor Eliminado.':'Aposta: '+n.aposta+'¥'}</p>${n.imgMorte?`<img src="${n.imgMorte}" class="death-img">`:''}</div>`; }); }});
-            db.ref('tokyoRpg/mapEmbates').on('value', s => drawMapVisuals());
         }
     </script>
 </body>
