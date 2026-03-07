@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema do Distrito - Seleção Divina</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0f;
+            --panel-bg: #12121c;
+            --accent-red: #ff2a5f;
+            --accent-blue: #00d2ff;
+            --text-main: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace; /* Estilo terminal/sistema */
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px;
+            overflow-y: auto;
+        }
+
+        .sidebar {
+            width: 320px;
+            background-color: var(--panel-bg);
+            border-left: 1px solid rgba(255, 42, 95, 0.3);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h1 { 
+            color: var(--accent-red); 
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 42, 95, 0.5);
+        }
+
+        h2 { color: var(--accent-blue); font-size: 1.2rem; }
+
+        .system-notice {
+            color: var(--accent-red);
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            border: 1px dashed var(--accent-red);
+            padding: 10px 20px;
+            background: rgba(255, 42, 95, 0.05);
+        }
+
+        .input-section { margin-bottom: 30px; text-align: center; }
+
+        input[type="text"] {
+            padding: 12px;
+            font-size: 16px;
+            background: #1a1a24;
+            color: white;
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            outline: none;
+            width: 250px;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus {
+            box-shadow: 0 0 8px rgba(0, 210, 255, 0.5);
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-family: inherit;
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: transparent;
+            color: var(--accent-red);
+            border: 2px solid var(--accent-red);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px 5px;
+        }
+
+        button:hover:not(:disabled) { 
+            background-color: var(--accent-red); 
+            color: white;
+            box-shadow: 0 0 15px rgba(255, 42, 95, 0.6);
+        }
+        button:disabled { border-color: #555; color: #555; cursor: not-allowed; }
+
+        .cards-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+            perspective: 1000px;
+        }
+
+        .card {
+            width: 160px;
+            height: 240px;
+            background: linear-gradient(180deg, #1a1a24 0%, #0a0a0f 100%);
+            border: 1px solid var(--accent-blue);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--accent-blue);
+            text-shadow: 0 0 5px rgba(0, 210, 255, 0.5);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            transition: transform 0.6s, box-shadow 0.3s;
+        }
+
+        .card.face-down {
+            background: repeating-linear-gradient(45deg, #12121c, #12121c 10px, #0a0a0f 10px, #0a0a0f 20px);
+            border-color: #333;
+            color: transparent;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .actions { display: none; text-align: center; }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .history-item {
+            background-color: #1a1a24;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--accent-blue);
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .god-list-container {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 40px;
+            background: var(--panel-bg);
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 4px;
+        }
+
+        .god-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .god-badge {
+            background: #1a1a24;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+            border: 1px solid #333;
+        }
+        
+        .god-badge span { color: var(--accent-blue); font-weight: bold;}
+
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+        <h1>Seleção de Patrono</h1>
+        
+        <div class="system-notice">
+            [SISTEMA]: CUSTO POR GIRO = 500 YENES
+        </div>
+        
+        <div class="input-section">
+            <input type="text" id="playerName" placeholder="Insira seu Codinome" autocomplete="off">
+            <br>
+            <button id="spinBtn" onclick="girarRoleta()">Girar (-500 ¥)</button>
+        </div>
+
+        <div class="cards-container">
+            <div class="card face-down" id="card1">?</div>
+            <div class="card face-down" id="card2">?</div>
+        </div>
+
+        <div class="actions" id="actionButtons">
+            <button onclick="escolherDeus(0)" id="btnGod1">Aceitar Patrono 1</button>
+            <button onclick="escolherDeus(1)" id="btnGod2">Aceitar Patrono 2</button>
+            <br>
+            <button onclick="girarRoleta()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
+        </div>
+
+        <div class="god-list-container">
+            <h2>Panteão Disponível no Distrito</h2>
+            <div class="god-grid">
+                <div class="god-badge"><span>Oizus</span><br>Miséria</div>
+                <div class="god-badge"><span>Afrodite</span><br>Desejo</div>
+                <div class="god-badge"><span>Athena</span><br>Estratégia</div>
+                <div class="god-badge"><span>Hades</span><br>Submundo</div>
+                <div class="god-badge"><span>Hermes</span><br>Tráfico</div>
+                <div class="god-badge"><span>Gaia</span><br>Território</div>
+                <div class="god-badge"><span>Zeus</span><br>Autoridade</div>
+                <div class="god-badge"><span>Diogenes</span><br>Cinismo</div>
+                <div class="god-badge"><span>Ares</span><br>Violência</div>
+                <div class="god-badge"><span>Poseidon</span><br>Maré</div>
+                <div class="god-badge"><span>Apolo</span><br>Verdade</div>
+                <div class="god-badge"><span>Ártemis</span><br>Caçada</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h2>Histórico do Sistema</h2>
+        <div class="history-list" id="historyLog"></div>
+        <button onclick="limparHistorico()" style="font-size: 12px; padding: 8px; border-color: #555; color: #888;">Purgar Registros</button>
+    </div>
+
+    <script>
+        const deuses = [
+            "Oizus", "Afrodite", "Athena", "Hades", 
+            "Hermes", "Gaia", "Zeus", "Diogenes",
+            "Ares", "Poseidon", "Apolo", "Ártemis"
+        ];
+
+        let girosAtuais = 0;
+        let yenesGastos = 0;
+        let deusesSorteados = [];
+        let jogadorAtual = "";
+
+        // Inicialização segura
+        window.addEventListener('DOMContentLoaded', (event) => {
+            atualizarSidebar();
+        });
+
+        function girarRoleta() {
+            const inputNome = document.getElementById("playerName");
+            jogadorAtual = inputNome.value.trim();
+
+            if (!jogadorAtual) {
+                alert("ACESSO NEGADO: Codinome necessário.");
+                return;
+            }
+
+            inputNome.disabled = true;
+            girosAtuais++;
+            yenesGastos += 500;
+
+            let deusesEmbalhados = [...deuses].sort(() => 0.5 - Math.random());
+            deusesSorteados = [deusesEmbalhados[0], deusesEmbalhados[1]];
+
+            const card1 = document.getElementById("card1");
+            const card2 = document.getElementById("card2");
+            const actionButtons = document.getElementById("actionButtons");
+
+            card1.classList.add("face-down");
+            card2.classList.add("face-down");
+            actionButtons.style.display = "none";
+
+            setTimeout(() => {
+                card1.classList.remove("face-down");
+                card2.classList.remove("face-down");
+                
+                card1.innerText = deusesSorteados[0];
+                card2.innerText = deusesSorteados[1];
+
+                document.getElementById("btnGod1").innerText = `Aceitar ${deusesSorteados[0]}`;
+                document.getElementById("btnGod2").innerText = `Aceitar ${deusesSorteados[1]}`;
+                
+                actionButtons.style.display = "block";
+            }, 500);
+        }
+
+        function escolherDeus(index) {
+            const deusEscolhido = deusesSorteados[index];
+            const novoRegistro = {
+                jogador: jogadorAtual,
+                deus: deusEscolhido,
+                custo: yenesGastos,
+                data: new Date().toLocaleTimeString()
+            };
+            
+            // Tenta salvar no LocalStorage (ignora erro se o navegador bloquear)
+            try {
+                let historico = JSON.parse(localStorage.getItem("tokyoRpgHistory")) || [];
+                historico.push(novoRegistro);
+                localStorage.setItem("tokyoRpgHistory", JSON.stringify(historico));
+            } catch(e) {
+                console.warn("LocalStorage bloqueado. Atualizando apenas a tela.");
+            }
+
+            // Atualiza a tela diretamente (Garante que vai aparecer)
+            adicionarNaTela(novoRegistro);
+
+            // Reseta a interface
+            document.getElementById("playerName").value = "";
+            document.getElementById("playerName").disabled = false;
+            document.getElementById("card1").classList.add("face-down");
+            document.getElementById("card2").classList.add("face-down");
+            document.getElementById("card1").innerText = "?";
+            document.getElementById("card2").innerText = "?";
+            document.getElementById("actionButtons").style.display = "none";
+            
+            girosAtuais = 0;
+            yenesGastos = 0;
+            
+            alert(`SISTEMA: Vínculo estabelecido. ${jogadorAtual} agora é protegido por ${deusEscolhido}.`);
+        }
+
+        function adicionarNaTela(item) {
+            const logDiv = document.getElementById("historyLog");
+            let div = document.createElement("div");
+            div.className = "history-item";
+            div.innerHTML = `<span style="color: #00d2ff;">[${item.data}]</span><br>
+                             Agente: <strong>${item.jogador}</strong><br>
+                             Patrono: <strong>${item.deus}</strong><br>
+                             <span style="color: #ff2a5f; font-size: 12px;">Custo: -${item.custo}¥</span>`;
+            // Adiciona no topo
+            logDiv.prepend(div);
+        }
+
+        function atualizarSidebar() {
+            const logDiv = document.getElementById("historyLog");
+            logDiv.innerHTML = "";
+            
+            try {
+                let historico = JSON.parse(localStorage.getItem("tokyoRpgHistory")) || [];
+                // Reverte para mostrar do mais novo para o mais velho
+                historico.slice().reverse().forEach(item => {
+                    adicionarNaTela(item);
+                });
+            } catch(e) {
+                // Se der erro, a tela fica vazia até o primeiro giro
+            }
+        }
+
+        function limparHistorico() {
+            if(confirm("Deseja apagar os registros do sistema?")) {
+                try {
+                    localStorage.removeItem("tokyoRpgHistory");
+                } catch(e) {}
+                document.getElementById("historyLog").innerHTML = "";
+            }
+        }
+    </script>
+</body>
+</html>
