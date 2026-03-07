@@ -6,7 +6,7 @@
     <title>Sistema do Distrito - WebApp</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff2a5f">
-    <link rel="stylesheet" href="style.css?v=9">
+    <link rel="stylesheet" href="style.css?v=10">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
@@ -31,7 +31,7 @@
             <input type="password" id="loginPass" placeholder="Senha" autocomplete="off">
             <button onclick="logarComSenha()">Entrar / Registrar</button>
             <div style="margin: 15px 0; color: #555;">OU</div>
-            <input type="text" id="loginSerial" placeholder="Autenticador (Ex: M05U-DC1)" autocomplete="off">
+            <input type="text" id="loginSerial" placeholder="Autenticador Mestre/Agente" autocomplete="off">
             <button onclick="logarComSerial()" style="border-color: #00d2ff; color: #00d2ff;">Acesso Direto</button>
             <br><span class="close-modal" onclick="fecharModal()">Cancelar</span>
         </div>
@@ -39,20 +39,16 @@
         <div class="modal-content" id="profileScreen" style="display: none;">
             <h3>Seu Terminal</h3>
             <p style="color: #00d2ff;">Agente: <strong id="profileName">---</strong></p>
-            
             <div class="wallet-box">
                 <p style="margin: 0; font-size: 12px; color: #aaa;">Fundos Disponíveis:</p>
                 <h2 id="profileWallet">0 ¥</h2>
             </div>
-            
             <input type="text" id="sponsorCode" placeholder="Código de Patrocinador" autocomplete="off">
             <button onclick="resgatarCodigo()" style="background: #00d2ff; color: #000; border: none; margin-bottom: 15px;">Resgatar Fundos</button>
-
             <div style="background: #1a1a24; padding: 10px; border: 1px dashed var(--accent-red); margin-bottom: 15px;">
                 <p style="margin: 0; font-size: 11px; color: #aaa;">Seu Autenticador (Não perca):</p>
                 <h3 style="margin: 5px 0; color: #fff; letter-spacing: 2px;" id="profileSerial">XXXX-DC1</h3>
             </div>
-            
             <button onclick="deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
             <br><span class="close-modal" onclick="fecharModal()">Fechar</span>
         </div>
@@ -72,58 +68,35 @@
                 <h1 class="blink-text">O Próximo Embate está Próximo</h1>
                 
                 <div id="masterHomePanel" class="master-panel">
-                    <h3>[ ACESSO MASTER ] GERAR EMBATE</h3>
-                    <p style="color:#aaa; font-size: 12px;">Selecione os agentes que irão para o confronto.</p>
-                    <div style="display: flex; gap: 10px; justify-content: center;">
-                        <input type="text" placeholder="Codinome Agente 1" style="padding: 10px; background: #000; color: #fff; border: 1px solid #ff2a5f;">
-                        <span style="color: #ff2a5f; align-self: center; font-weight: bold;">VS</span>
-                        <input type="text" placeholder="Codinome Agente 2" style="padding: 10px; background: #000; color: #fff; border: 1px solid #00d2ff;">
+                    <h3>[ ACESSO MASTER ] RESOLVER EMBATE</h3>
+                    <p style="color:#aaa; font-size: 12px;">Preencha para transferir os Yenes e anunciar no feed.</p>
+                    <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                        <input type="text" id="embVencedor" placeholder="Nome Vencedor" style="border-color: #00d2ff; width: 150px;">
+                        <input type="text" id="embPerdedor" placeholder="Nome Perdedor" style="border-color: #ff2a5f; width: 150px;">
+                        <input type="number" id="embAposta" placeholder="Aposta (¥)" style="border-color: #00ff00; width: 120px;">
                     </div>
-                    <button class="action-btn" style="margin-top: 15px;">Registrar na Tela Central</button>
+                    <button class="action-btn" onclick="processarEmbate()" style="margin-top: 15px;">Registrar Resultado</button>
                 </div>
 
-                <div style="width: 100%; max-width: 800px; text-align: center; color: #aaa;">
-                    <p>Nenhum embate registrado no momento.</p>
-                    <p>Aguardando diretrizes do Distrito...</p>
+                <div id="newsFeed" class="news-container">
+                    <p style="text-align: center; color: #555;">Carregando registros de embates...</p>
                 </div>
             </div>
 
             <div id="tab-roleta" class="tab-content">
                 <h1>Seleção de Patrono</h1>
                 <div class="system-notice">[MÁQUINA DO DISTRITO]: TAXA = 500 YENES</div>
-                
                 <div class="input-section">
                     <p id="statusJogador" style="color: #555; margin-top: 0;">Nenhum agente conectado na máquina.</p>
                     <button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar (-500 ¥)</button>
                 </div>
-
                 <div class="cards-container">
-                    <div class="card face-down" id="card1">?</div>
-                    <div class="card face-down" id="card2">?</div>
+                    <div class="card face-down" id="card1">?</div><div class="card face-down" id="card2">?</div>
                 </div>
-
                 <div class="actions" id="actionButtons" style="display: none; text-align: center; width: 100%;">
                     <button class="action-btn" onclick="escolherDeus(0)" id="btnGod1">Aceitar 1</button>
                     <button class="action-btn" onclick="escolherDeus(1)" id="btnGod2">Aceitar 2</button>
                     <br><button class="action-btn" onclick="realizarGiroVisual()" style="border-color: #fff; color: #fff;">Rerrolar (-500 ¥)</button>
-                </div>
-
-                <div class="god-list-container">
-                    <h2>Panteão Disponível no Distrito</h2>
-                    <div class="god-grid">
-                        <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra o risco de Yenes do adversário.</div></details>
-                        <details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc">Força acordo não-letal.</div></details>
-                        <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc">Pista dedutiva sobre o oponente.</div></details>
-                        <details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Herda Yenes de devedores mortos.</div></details>
-                        <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Intercepta mensagens.</div></details>
-                        <details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Mapeia plantas baixas.</div></details>
-                        <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Multa intimidadora.</div></details>
-                        <details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a manipulações de apostas.</div></details>
-                        <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc">Ignora dor leve.</div></details>
-                        <details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc">Anula última transação.</div></details>
-                        <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc">Força alvo a dizer a verdade.</div></details>
-                        <details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc">Rastreio infalível.</div></details>
-                    </div>
                 </div>
             </div>
 
@@ -135,24 +108,23 @@
             <div id="tab-loja" class="tab-content">
                 <h1>Mercado Negro</h1>
                 <div id="masterShopPanel" class="master-panel">
-                    <h3>[ ACESSO MASTER ] ADICIONAR ITEM</h3>
+                    <h3>[ ACESSO MASTER ] ADICIONAR ITEM AO CATÁLOGO</h3>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-                        <select style="padding: 10px; background: #000; color: #fff; border: 1px solid #555;">
-                            <option>Arma</option><option>Escudo</option><option>Roupa</option>
+                        <select id="newItemType">
+                            <option value="Arma">Arma</option>
+                            <option value="Escudo">Escudo</option>
+                            <option value="Roupa">Roupa</option>
+                            <option value="Acessório">Acessório</option>
                         </select>
-                        <input type="text" placeholder="Nome do Item" style="padding: 10px; background: #000; color: #fff; border: 1px solid #555;">
-                        <input type="text" placeholder="Dano (ex: 1d6)" style="padding: 10px; background: #000; color: #fff; border: 1px solid #555;">
-                        <input type="number" placeholder="Valor (¥)" style="padding: 10px; background: #000; color: #fff; border: 1px solid #555;">
+                        <input type="text" id="newItemName" placeholder="Nome do Item">
+                        <input type="text" id="newItemDesc" placeholder="Dano/Atributo (ex: 1d6)">
+                        <input type="number" id="newItemPrice" placeholder="Valor (¥)" style="width: 100px;">
                     </div>
-                    <button class="action-btn" style="margin-top: 15px;">+ Criar e Publicar</button>
+                    <button class="action-btn" onclick="criarItemLoja()" style="margin-top: 15px;">+ Criar e Publicar</button>
                 </div>
-                <div style="width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">
-                    <div style="background: #1a1a24; border: 1px solid #333; padding: 15px; border-radius: 5px; text-align: center;">
-                        <h3 style="color: #00d2ff; margin: 0;">Pistola Calibre .38</h3>
-                        <p style="font-size: 12px; color: #aaa;">Arma de Fogo Leve. Dano: 1d6</p>
-                        <h2 style="color: #00ff00; margin: 10px 0;">2500 ¥</h2>
-                        <button class="action-btn" style="width: 100%; border-color: #00ff00; color: #00ff00;">Comprar</button>
-                    </div>
+                
+                <div id="shopGrid" style="width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 20px;">
+                    <p style="text-align: center; color: #555; width: 100%;">Carregando catálogo clandestino...</p>
                 </div>
             </div>
 
@@ -173,7 +145,6 @@
                 <img src="anuncio2.png" alt="Gumble Duel" class="ad-image">
             </a>
         </div>
-
     </div>
 
     <script>
@@ -188,20 +159,10 @@
           measurementId: "G-038Y2W1GBL"
         };
         
-        let db;
-        let usersGlobais = {}; 
-        let presenceGlobal = {};
-        
-        let jogadorAtual = ""; 
-        let serialAtual = "";
-        let connectionRef = null; 
-        
-        let isMaster = false;
-        const MASTER_SERIAL = "4053-DC1";
-
+        let db; let usersGlobais = {}; let presenceGlobal = {};
+        let jogadorAtual = ""; let serialAtual = ""; let connectionRef = null; 
+        let isMaster = false; const MASTER_SERIAL = "4053-DC1";
         const codigosPromocionais = { "Plebe": 15000, "Jobber": 25000, "Nobless": 50000 };
-        const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
-        let yenesGastos = 0; let deusesSorteados = [];
 
         try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } 
         catch (error) { console.error("ERRO FIREBASE:", error); }
@@ -225,28 +186,35 @@
             }
         }
 
+        // ==========================================
+        // RENDERIZAÇÃO DA LISTA DE JOGADORES (E CHECAGEM DE MORTE)
+        // ==========================================
         function desenharListaUsuarios() {
             const logDiv = document.getElementById("userLog");
             logDiv.innerHTML = "";
             Object.keys(usersGlobais).forEach(nomeUsuario => {
-                // Não mostra o MESTRE na lista de alvos do distrito
                 if(nomeUsuario === "MESTRE") return;
 
                 let user = usersGlobais[nomeUsuario];
-                let isOnline = presenceGlobal[nomeUsuario] === true;
-                let dotClass = isOnline ? "online" : "offline";
-                let boxClass = isOnline ? "is-online" : "";
+                let isDead = (user.carteira !== undefined && user.carteira <= 0 && user.gastoTotal > 0); // Considera morto se dinheiro for 0 (mas tem que ter jogado)
+                let isOnline = presenceGlobal[nomeUsuario] === true && !isDead;
+                
+                let dotClass = isDead ? "dead" : (isOnline ? "online" : "offline");
+                let boxClass = isDead ? "is-dead" : (isOnline ? "is-online" : "");
+                
                 let ehODono = (jogadorAtual.toUpperCase() === nomeUsuario.toUpperCase()) || isMaster;
                 let deusMostrado = user.deus ? user.deus : "Nenhum";
                 if(!ehODono && user.deus) deusMostrado = "[ DADO PROTEGIDO ]";
+                
                 let corDeus = ehODono ? "#fff" : "#555";
-                let gasto = user.gastoTotal || 0;
+                let statusTexto = isDead ? "<strong style='color:#ff0000'>ELIMINADO</strong>" : `Patrono: <span style="color:${corDeus}">${deusMostrado}</span>`;
 
                 let div = document.createElement("div");
                 div.className = `user-item ${boxClass}`;
                 div.innerHTML = `<span class="status-dot ${dotClass}"></span><strong>${nomeUsuario}</strong><br>
-                                 Patrono: <span style="color:${corDeus}">${deusMostrado}</span><br>
-                                 <span style="color: #ff2a5f; font-size: 11px;">Yenes Gastos: ${gasto}¥</span>`;
+                                 ${statusTexto}<br>
+                                 <span style="color: #ff2a5f; font-size: 11px;">Balança Atual: ${user.carteira || 0}¥</span>`;
+                
                 if(isOnline) logDiv.prepend(div); else logDiv.appendChild(div);
             });
         }
@@ -260,52 +228,150 @@
                 }
             });
             db.ref('tokyoRpg/presence').on('value', (snapshot) => { presenceGlobal = snapshot.val() || {}; desenharListaUsuarios(); });
-        }
+            
+            // Listener da Loja
+            db.ref('tokyoRpg/loja').on('value', (snapshot) => {
+                const shopGrid = document.getElementById("shopGrid");
+                shopGrid.innerHTML = "";
+                let itens = snapshot.val();
+                if(itens) {
+                    Object.keys(itens).forEach(id => {
+                        let item = itens[id];
+                        shopGrid.innerHTML += `
+                            <div class="shop-item">
+                                <div>
+                                    <span class="shop-type">[ ${item.tipo} ]</span>
+                                    <h3 style="color: #00d2ff; margin: 5px 0;">${item.nome}</h3>
+                                    <p style="font-size: 12px; color: #aaa;">Dano/Efeito: ${item.desc}</p>
+                                </div>
+                                <div>
+                                    <h2 style="color: #00ff00; margin: 10px 0;">${item.preco} ¥</h2>
+                                    <button class="action-btn" onclick="comprarItem('${id}', '${item.nome}', ${item.preco})" style="width: 100%; border-color: #00ff00; color: #00ff00; padding: 10px;">Comprar</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    shopGrid.innerHTML = `<p style="text-align: center; color: #555; width: 100%;">O catálogo está vazio no momento.</p>`;
+                }
+            });
 
-        function setarOnline() {
-            if(!db || !jogadorAtual) return;
-            db.ref('.info/connected').on('value', function(snapshot) {
-                if (snapshot.val() === true) {
-                    connectionRef = db.ref('tokyoRpg/presence/' + jogadorAtual);
-                    connectionRef.onDisconnect().set(false).then(() => { connectionRef.set(true); });
+            // Listener do Feed de Notícias (Embates)
+            db.ref('tokyoRpg/news').limitToLast(10).on('value', (snapshot) => {
+                const feed = document.getElementById("newsFeed");
+                feed.innerHTML = "";
+                let noticias = snapshot.val();
+                if(noticias) {
+                    // Reverte para mostrar do mais novo para o mais velho
+                    Object.values(noticias).reverse().forEach(n => {
+                        if(n.tipo === "MORTE") {
+                            feed.innerHTML += `
+                                <div class="news-item news-death">
+                                    <p style="color: #ff2a5f; margin:0; font-size:12px;">${n.data}</p>
+                                    <h3 style="color: #fff; margin: 5px 0; text-transform:uppercase;">🚨 ALERTA DE ÓBITO NO DISTRITO 🚨</h3>
+                                    <p style="color: #ccc; margin:0;">O saldo de <strong>${n.perdedor}</strong> chegou a zero devido ao embate com <strong>${n.vencedor}</strong>. O Agente foi ELIMINADO.</p>
+                                </div>`;
+                        } else {
+                            feed.innerHTML += `
+                                <div class="news-item">
+                                    <p style="color: #00d2ff; margin:0; font-size:12px;">${n.data}</p>
+                                    <h3 style="color: #fff; margin: 5px 0;">Confronto Concluído</h3>
+                                    <p style="color: #aaa; margin:0;"><strong>${n.vencedor}</strong> derrotou <strong>${n.perdedor}</strong> adquirindo <span style="color:#00ff00">+${n.aposta}¥</span>.</p>
+                                    <p style="color: #555; font-size:12px; margin-top:5px;">Saldos atualizados: ${n.vencedor} (${n.saldoVencedor}¥) | ${n.perdedor} (${n.saldoPerdedor}¥)</p>
+                                </div>`;
+                        }
+                    });
+                } else {
+                    feed.innerHTML = "<p style='text-align: center; color: #aaa;'>A calmaria antecede a tempestade...</p>";
                 }
             });
         }
 
-        function gerarSerial() {
-            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let codigo = '';
-            for (let i = 0; i < 4; i++) codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
-            return codigo + "-DC1";
-        }
+        // ==========================================
+        // FUNÇÕES DO MESTRE: EMBATE E LOJA
+        // ==========================================
+        window.processarEmbate = function() {
+            if(!isMaster) return;
+            const vencedor = document.getElementById("embVencedor").value.trim().toUpperCase();
+            const perdedor = document.getElementById("embPerdedor").value.trim().toUpperCase();
+            const aposta = parseInt(document.getElementById("embAposta").value);
 
-        function abrirModal() {
-            document.getElementById("loginModal").style.display = "flex";
-            if(jogadorAtual) {
-                document.getElementById("loginScreen").style.display = "none";
-                document.getElementById("profileScreen").style.display = "block";
-            } else {
-                document.getElementById("loginScreen").style.display = "block";
-                document.getElementById("profileScreen").style.display = "none";
-            }
-        }
+            if(!vencedor || !perdedor || isNaN(aposta) || aposta <= 0) { alert("Preencha todos os campos de embate corretamente."); return; }
+            if(!usersGlobais[vencedor]) { alert(`Agente Vencedor [${vencedor}] não existe no banco.`); return; }
+            if(!usersGlobais[perdedor]) { alert(`Agente Perdedor [${perdedor}] não existe no banco.`); return; }
+
+            let cVenc = usersGlobais[vencedor].carteira || 0;
+            let cPerd = usersGlobais[perdedor].carteira || 0;
+
+            cVenc += aposta;
+            cPerd -= aposta;
+            let isMorte = (cPerd <= 0);
+            if(isMorte) cPerd = 0;
+
+            // Atualiza os carteiras no banco
+            db.ref('tokyoRpg/users/' + vencedor).update({ carteira: cVenc });
+            db.ref('tokyoRpg/users/' + perdedor).update({ carteira: cPerd });
+
+            // Envia para o Feed Global
+            db.ref('tokyoRpg/news').push({
+                tipo: isMorte ? "MORTE" : "EMBATE",
+                vencedor: vencedor, perdedor: perdedor, aposta: aposta,
+                saldoVencedor: cVenc, saldoPerdedor: cPerd,
+                data: new Date().toLocaleTimeString()
+            });
+
+            document.getElementById("embVencedor").value = ""; document.getElementById("embPerdedor").value = ""; document.getElementById("embAposta").value = "";
+            alert("Sistema atualizado: Dinheiro transferido e Feed alimentado.");
+        };
+
+        window.criarItemLoja = function() {
+            if(!isMaster) return;
+            const tipo = document.getElementById("newItemType").value;
+            const nome = document.getElementById("newItemName").value.trim();
+            const desc = document.getElementById("newItemDesc").value.trim();
+            const preco = parseInt(document.getElementById("newItemPrice").value);
+
+            if(!nome || !desc || isNaN(preco)) { alert("Preencha as informações do item."); return; }
+
+            db.ref('tokyoRpg/loja').push({ tipo: tipo, nome: nome, desc: desc, preco: preco });
+            
+            document.getElementById("newItemName").value = ""; document.getElementById("newItemDesc").value = ""; document.getElementById("newItemPrice").value = "";
+            alert("Mercadoria adicionada ao submundo!");
+        };
+
+        window.comprarItem = function(itemId, nomeItem, preco) {
+            if(!jogadorAtual) { alert("SISTEMA BLOQUEADO. Autentique-se para negociar."); return; }
+            if(isMaster) { alert("Mestre não precisa comprar itens. Gere direto pelo banco de dados se necessário."); return; }
+
+            const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
+            refUser.once('value').then(snap => {
+                let user = snap.val();
+                let carteiraAtual = user.carteira || 0;
+
+                if(carteiraAtual < preco) { alert(`Fundos insuficientes para adquirir ${nomeItem}.`); return; }
+
+                // Desconta e salva na mochila (visualmente será feito na Fase 2)
+                refUser.update({ carteira: carteiraAtual - preco });
+                refUser.child('mochila').push({ id: itemId, nome: nomeItem });
+                
+                alert(`Transação concluída. ${nomeItem} transferido para seu Inventário.`);
+            });
+        };
+
+        // ==========================================
+        // LOGIN E SISTEMA BASE (Mantido)
+        // ==========================================
+        function gerarSerial() { const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let codigo = ''; for (let i = 0; i < 4; i++) codigo += caracteres.charAt(Math.floor(Math.random() * caracteres.length)); return codigo + "-DC1"; }
+        function abrirModal() { document.getElementById("loginModal").style.display = "flex"; if(jogadorAtual) { document.getElementById("loginScreen").style.display = "none"; document.getElementById("profileScreen").style.display = "block"; } else { document.getElementById("loginScreen").style.display = "block"; document.getElementById("profileScreen").style.display = "none"; } }
         function fecharModal() { document.getElementById("loginModal").style.display = "none"; }
 
         function logarSucesso(nome, serial) {
             jogadorAtual = nome; serialAtual = serial;
             document.getElementById("userBtn").classList.add("logged");
-            
             let masterBadge = (serial === MASTER_SERIAL) ? " <span style='color:#ff2a5f'>[MESTRE]</span>" : "";
             document.getElementById("statusJogador").innerHTML = `Conectado: <strong style="color: #00d2ff">${nome}</strong>${masterBadge}`;
-            document.getElementById("profileName").innerText = nome;
-            document.getElementById("profileSerial").innerText = serial;
-            
-            if(usersGlobais[nome] && usersGlobais[nome].carteira !== undefined) {
-                document.getElementById("profileWallet").innerText = usersGlobais[nome].carteira + " ¥";
-            } else {
-                db.ref('tokyoRpg/users/' + nome).update({ carteira: 0 });
-                document.getElementById("profileWallet").innerText = "0 ¥";
-            }
-
+            document.getElementById("profileName").innerText = nome; document.getElementById("profileSerial").innerText = serial;
+            if(usersGlobais[nome] && usersGlobais[nome].carteira !== undefined) { document.getElementById("profileWallet").innerText = usersGlobais[nome].carteira + " ¥"; } else { db.ref('tokyoRpg/users/' + nome).update({ carteira: 0 }); document.getElementById("profileWallet").innerText = "0 ¥"; }
             setarOnline(); verificarPoderesDeMestre(); desenharListaUsuarios(); fecharModal();
         }
 
@@ -319,115 +385,68 @@
         }
 
         window.logarComSenha = function() {
-            const nomeDigitado = document.getElementById("loginName").value.trim().toUpperCase();
-            const senhaDigitada = document.getElementById("loginPass").value;
-            if (!nomeDigitado || !senhaDigitada) { alert("Preencha codinome e senha."); return; }
-
-            db.ref('tokyoRpg/users/' + nomeDigitado).once('value').then((snapshot) => {
+            const nome = document.getElementById("loginName").value.trim().toUpperCase(); const senha = document.getElementById("loginPass").value;
+            if (!nome || !senha) { alert("Preencha codinome e senha."); return; }
+            db.ref('tokyoRpg/users/' + nome).once('value').then((snapshot) => {
                 const userData = snapshot.val();
-                if (userData) {
-                    if (userData.senha !== senhaDigitada) { alert("Senha incorreta."); return; }
-                    logarSucesso(nomeDigitado, userData.serial);
-                } else {
-                    let novoSerial = gerarSerial();
-                    db.ref('tokyoRpg/users/' + nomeDigitado).set({ senha: senhaDigitada, serial: novoSerial, gastoTotal: 0, carteira: 0 });
-                    logarSucesso(nomeDigitado, novoSerial);
-                    alert(`Vínculo criado. Guarde seu Autenticador Secreto.`);
-                }
+                if (userData) { if (userData.senha !== senha) { alert("Senha incorreta."); return; } logarSucesso(nome, userData.serial); } 
+                else { let novoSerial = gerarSerial(); db.ref('tokyoRpg/users/' + nome).set({ senha: senha, serial: novoSerial, gastoTotal: 0, carteira: 0 }); logarSucesso(nome, novoSerial); alert(`Vínculo criado. Guarde seu Autenticador Secreto.`); }
             });
         };
 
         window.logarComSerial = function() {
-            const serialDigitado = document.getElementById("loginSerial").value.trim().toUpperCase();
-            if(!serialDigitado) { alert("Digite um serial válido."); return; }
-
-            // ===============================================
-            // MAGIA DO MESTRE: BYPASS DIRETO PARA O BANCO!
-            // ===============================================
-            if (serialDigitado === MASTER_SERIAL) {
-                db.ref('tokyoRpg/users/MESTRE').update({
-                    senha: "bypass_mestre",
-                    serial: MASTER_SERIAL,
-                    carteira: 9999999
-                });
-                logarSucesso("MESTRE", MASTER_SERIAL);
-                return;
+            const serial = document.getElementById("loginSerial").value.trim().toUpperCase();
+            if(!serial) { alert("Digite um serial válido."); return; }
+            if (serial === MASTER_SERIAL) {
+                db.ref('tokyoRpg/users/MESTRE').update({ senha: "bypass_mestre", serial: MASTER_SERIAL, carteira: 9999999 });
+                logarSucesso("MESTRE", MASTER_SERIAL); return;
             }
-
-            let achou = false;
-            Object.keys(usersGlobais).forEach(nome => { if(usersGlobais[nome].serial === serialDigitado) { achou = true; logarSucesso(nome, serialDigitado); }});
+            let achou = false; Object.keys(usersGlobais).forEach(nome => { if(usersGlobais[nome].serial === serial) { achou = true; logarSucesso(nome, serial); }});
             if(!achou) alert("Autenticador não encontrado na rede.");
         };
 
         window.resgatarCodigo = function() {
-            const codigoDigitado = document.getElementById("sponsorCode").value.trim();
-            if(!codigoDigitado) return;
-
-            if(codigosPromocionais[codigoDigitado]) {
-                const valor = codigosPromocionais[codigoDigitado];
-                const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
-                
+            const codigo = document.getElementById("sponsorCode").value.trim();
+            if(!codigo) return;
+            if(codigosPromocionais[codigo]) {
+                const valor = codigosPromocionais[codigo]; const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
                 refUser.once('value').then(snap => {
                     let user = snap.val();
-                    if(user.codigosUsados && user.codigosUsados[codigoDigitado]) {
-                        alert("Você já resgatou os fundos deste Patrocinador.");
-                    } else {
-                        let saldoAtual = user.carteira || 0;
-                        refUser.child('codigosUsados').update({ [codigoDigitado]: true });
-                        refUser.update({ carteira: saldoAtual + valor });
-                        alert(`SUCESSO: Transferência de ${valor}¥ recebida.`);
-                        document.getElementById("sponsorCode").value = ""; 
-                    }
+                    if(user.codigosUsados && user.codigosUsados[codigo]) { alert("Você já resgatou os fundos deste Patrocinador."); } 
+                    else { refUser.child('codigosUsados').update({ [codigo]: true }); refUser.update({ carteira: (user.carteira || 0) + valor }); alert(`SUCESSO: ${valor}¥ recebidos.`); document.getElementById("sponsorCode").value = ""; }
                 });
-            } else {
-                alert("Código de Patrocinador inválido ou expirado.");
-            }
+            } else { alert("Código de Patrocinador inválido ou expirado."); }
         };
+
+        // --- SISTEMA ORIGINAL DA ROLETA ---
+        const deuses = ["Oizus", "Afrodite", "Athena", "Hades", "Hermes", "Gaia", "Zeus", "Diogenes", "Ares", "Poseidon", "Apolo", "Ártemis"];
+        let yenesGastos = 0; let deusesSorteados = [];
 
         window.tentarGirar = function() {
             if(!jogadorAtual) { alert("SISTEMA BLOQUEADO. Autentique-se."); return; }
-
             const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
             refUser.once('value').then(snap => {
                 let carteiraAtual = snap.val().carteira || 0;
-                if(carteiraAtual < 500) {
-                    alert("Fundos insuficientes. Acesse seu Terminal para adicionar fundos.");
-                    return;
-                }
-                refUser.update({ carteira: carteiraAtual - 500 });
-                realizarGiroVisual();
+                if(carteiraAtual < 500) { alert("Fundos insuficientes."); return; }
+                refUser.update({ carteira: carteiraAtual - 500 }); realizarGiroVisual();
             });
         };
 
         window.realizarGiroVisual = function() {
-            yenesGastos += 500;
-            let deusesEmbalhados = [...deuses].sort(() => 0.5 - Math.random());
-            deusesSorteados = [deusesEmbalhados[0], deusesEmbalhados[1]];
-            const card1 = document.getElementById("card1"); const card2 = document.getElementById("card2");
-            const actionButtons = document.getElementById("actionButtons");
-
+            yenesGastos += 500; let deusesEmbalhados = [...deuses].sort(() => 0.5 - Math.random()); deusesSorteados = [deusesEmbalhados[0], deusesEmbalhados[1]];
+            const card1 = document.getElementById("card1"); const card2 = document.getElementById("card2"); const actionButtons = document.getElementById("actionButtons");
             card1.classList.add("face-down"); card2.classList.add("face-down"); actionButtons.style.display = "none";
             setTimeout(() => {
-                card1.classList.remove("face-down"); card2.classList.remove("face-down");
-                card1.innerText = deusesSorteados[0]; card2.innerText = deusesSorteados[1];
-                document.getElementById("btnGod1").innerText = `Aceitar ${deusesSorteados[0]}`; document.getElementById("btnGod2").innerText = `Aceitar ${deusesSorteados[1]}`;
-                actionButtons.style.display = "block";
+                card1.classList.remove("face-down"); card2.classList.remove("face-down"); card1.innerText = deusesSorteados[0]; card2.innerText = deusesSorteados[1];
+                document.getElementById("btnGod1").innerText = `Aceitar ${deusesSorteados[0]}`; document.getElementById("btnGod2").innerText = `Aceitar ${deusesSorteados[1]}`; actionButtons.style.display = "block";
             }, 500);
         };
 
         window.escolherDeus = function(index) {
-            const deusEscolhido = deusesSorteados[index];
-            const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
-            refUser.once('value').then(snap => {
-                let gastoAntigo = snap.val().gastoTotal || 0;
-                refUser.update({ deus: deusEscolhido, gastoTotal: gastoAntigo + yenesGastos });
-            });
-
-            document.getElementById("card1").classList.add("face-down"); document.getElementById("card2").classList.add("face-down");
-            document.getElementById("card1").innerText = "?"; document.getElementById("card2").innerText = "?";
-            document.getElementById("actionButtons").style.display = "none";
-            yenesGastos = 0;
-            alert(`Vínculo atualizado. Você segue ${deusEscolhido}.`);
+            const deusEscolhido = deusesSorteados[index]; const refUser = db.ref('tokyoRpg/users/' + jogadorAtual);
+            refUser.once('value').then(snap => { refUser.update({ deus: deusEscolhido, gastoTotal: (snap.val().gastoTotal || 0) + yenesGastos }); });
+            document.getElementById("card1").classList.add("face-down"); document.getElementById("card2").classList.add("face-down"); document.getElementById("card1").innerText = "?"; document.getElementById("card2").innerText = "?"; document.getElementById("actionButtons").style.display = "none";
+            yenesGastos = 0; alert(`Vínculo atualizado. Você segue ${deusEscolhido}.`);
         };
     </script>
 </body>
