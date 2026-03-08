@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema do Distrito - WebApp V9.0</title>
-    <link rel="stylesheet" href="style.css?v=V9.0">
+    <title>Sistema do Distrito - WebApp V10.0</title>
+    <link rel="stylesheet" href="style.css?v=V10.0">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
@@ -75,22 +75,22 @@
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 5px;"><span style="font-size: 12px;">Defesa: <strong id="lblDef" class="neon-blue">0</strong></span><span style="font-size: 12px;">Pts Livres: <strong id="lblPts" class="neon-gold">0</strong></span></div>
                         
-                        <div class="attr-row"><span>Força [F]</span> <div class="attr-controls"><span class="val-display" id="valFor">1</span><div class="btn-attr" onclick="distribuirPonto('for')">+</div></div></div>
-                        <div class="attr-row"><span>Agilidade [A]</span> <div class="attr-controls"><span class="val-display" id="valAgi">1</span><div class="btn-attr" onclick="distribuirPonto('agi')">+</div></div></div>
-                        <div class="attr-row"><span>Manuseio [M]</span> <div class="attr-controls"><span class="val-display" id="valMan">1</span><div class="btn-attr" onclick="distribuirPonto('man')">+</div></div></div>
-                        <div class="attr-row"><span>Vigor [V]</span> <div class="attr-controls"><span class="val-display" id="valVig">1</span><div class="btn-attr" onclick="distribuirPonto('vig')">+</div></div></div>
-                        <div class="attr-row"><span>Inteligência [I]</span> <div class="attr-controls"><span class="val-display" id="valInt">1</span><div class="btn-attr" onclick="distribuirPonto('int')">+</div></div></div>
+                        <div class="attr-row"><span>Força [F]</span> <div class="attr-controls"><span class="val-display" id="valFor">1</span><div class="btn-attr" onclick="rolarAtributo('Força', 'for')">🎲</div><div class="btn-attr" onclick="distribuirPonto('for')">+</div></div></div>
+                        <div class="attr-row"><span>Agilidade [A]</span> <div class="attr-controls"><span class="val-display" id="valAgi">1</span><div class="btn-attr" onclick="rolarAtributo('Agilidade', 'agi')">🎲</div><div class="btn-attr" onclick="distribuirPonto('agi')">+</div></div></div>
+                        <div class="attr-row"><span>Manuseio [M]</span> <div class="attr-controls"><span class="val-display" id="valMan">1</span><div class="btn-attr" onclick="rolarAtributo('Manuseio', 'man')">🎲</div><div class="btn-attr" onclick="distribuirPonto('man')">+</div></div></div>
+                        <div class="attr-row"><span>Vigor [V]</span> <div class="attr-controls"><span class="val-display" id="valVig">1</span><div class="btn-attr" onclick="rolarAtributo('Vigor', 'vig')">🎲</div><div class="btn-attr" onclick="distribuirPonto('vig')">+</div></div></div>
+                        <div class="attr-row"><span>Inteligência [I]</span> <div class="attr-controls"><span class="val-display" id="valInt">1</span><div class="btn-attr" onclick="rolarAtributo('Inteligência', 'int')">🎲</div><div class="btn-attr" onclick="distribuirPonto('int')">+</div></div></div>
                         
                         <div style="margin-top: 5px; font-size: 11px;">Saturação (<span id="lblIntegMax">100</span>%): <span id="lblIntegVal" class="neon-green">100%</span><div class="integrity-bar-bg"><div class="integrity-bar-fill" id="integrityBar"></div></div></div>
                         
-                        <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 10px;">
+                        <div style="margin-top: 15px; border-top: 1px dashed #333; padding-top: 10px;">
                             <h4 style="margin:0 0 5px 0; font-size:12px; color:var(--accent-blue);">Perícias Rápidas</h4>
                             <div class="skills-grid-quick" id="skillsGridQuick"></div>
                         </div>
 
                         <div style="margin-top:auto; padding-top:10px; display:flex; gap:5px;">
-                            <input type="text" id="diceInput" placeholder="Ex: 1d20+1" onkeypress="if(event.key === 'Enter') lancarDado()" style="flex:1; padding:8px; font-size:12px;">
-                            <button onclick="lancarDado()" style="background:var(--accent-blue); border:none; padding:8px; border-radius:4px; font-weight:bold;">Rolar</button>
+                            <input type="text" id="diceInput" placeholder="Ex: 1d20+1" onkeypress="if(event.key === 'Enter') lancarDadoPersonalizado()" style="flex:1; padding:8px; font-size:12px;">
+                            <button onclick="lancarDadoPersonalizado()" style="background:var(--accent-blue); border:none; padding:8px; border-radius:4px; font-weight:bold;">Rolar</button>
                         </div>
                     </div>
 
@@ -102,9 +102,9 @@
 
                         <div class="submap-canvas" id="subMapCanvas">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background:rgba(0,0,0,0.8); padding:10px; border-radius:8px; border:1px solid var(--accent-blue);">
-                                <div><h2 id="subMapTitle" style="margin:0;">Local</h2><p style="color:#00ff00;font-size:11px;margin:0;">Basta clicar num espaço vazio para mover seu Token.</p></div>
+                                <div><h2 id="subMapTitle" style="margin:0;">Local</h2><p style="color:#00ff00;font-size:11px;margin:0;">Clique direto no grid para mover seu Token.</p></div>
                                 <div>
-                                    <button id="btnMestreBgMap" class="action-btn" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); font-size:11px;" onclick="mudarBgSubMapa()">[Mestre] Importar Battlemap URL</button>
+                                    <button id="btnMestreBgMap" class="action-btn" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); font-size:11px;" onclick="mudarBgSubMapa()">[Mestre] Importar Fundo</button>
                                     <button class="action-btn" onclick="fecharSubMapa()">Sair 🌍</button>
                                 </div>
                             </div>
@@ -119,8 +119,8 @@
 
             <div id="tab-casa" class="tab-content">
                 <h1 class="neon-gold">Sua Propriedade</h1>
-                <p style="color:#aaa; font-size:12px;">Clique no móvel embaixo e clique no grid para mobiliar. Móveis te dão bônus!</p>
-                <div style="width:100%; height:60vh; max-height: 500px; position:relative; border:2px solid var(--accent-blue); background:#000;">
+                <p style="color:#aaa; font-size:12px;">Clique no móvel embaixo e clique no grid para mobiliar. Os buffs somam na sua ficha.</p>
+                <div style="width:100%; height:50vh; min-height:400px; position:relative; border:2px solid var(--accent-blue); background:#000;">
                     <div class="tactical-board" id="casaBoard" style="height:100%;"></div>
                 </div>
                 <div class="furniture-tray" id="furnitureTray"></div>
@@ -128,27 +128,28 @@
 
             <div id="tab-principal" class="tab-content">
                 <h1 class="blink-text">Notícias do Distrito</h1>
-                <div id="masterHomePanel" class="master-panel">
+                <div id="masterHomePanel" class="master-panel" style="display:none;">
                     <h3 style="color:var(--accent-red); border-bottom:1px dashed #333; padding-bottom:10px;">[ CENTRAL DO MESTRE ]</h3>
                     <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                         <div style="flex:1; min-width:250px;">
                             <h4>1. Iniciar Embate</h4>
                             <select id="embLocal" style="margin-bottom:5px; width:100%;"></select>
                             <input type="text" id="embP1" placeholder="Lutador 1" style="width:48%;"> <input type="text" id="embP2" placeholder="Lutador 2" style="width:48%; float:right;">
+                            <input type="number" id="embAposta" placeholder="Aposta Paga (¥)" style="width:100%; margin-top:5px;">
                             <button class="action-btn" onclick="iniciarEmbateMap()" style="width:100%; margin-top:5px;">Trancar no Mapa</button>
                         </div>
                         <div style="flex:1; min-width:250px;">
                             <h4>2. Resolver Embate</h4>
                             <input type="text" id="embVencedor" placeholder="Vencedor" style="width:48%;"> <input type="text" id="embPerdedor" placeholder="Perdedor" style="width:48%; float:right;">
-                            <input type="number" id="embAposta" placeholder="Aposta (¥)" style="width:100%;">
-                            <input type="text" id="embMorteDesc" placeholder="Causa Morte (Opc)" style="width:100%;">
+                            <input type="text" id="embMorteDesc" placeholder="Causa Morte (Opc)" style="width:100%; margin-top:5px;">
+                            <input type="text" id="embMorteImg" placeholder="Link Imagem Morte" style="width:100%; margin-top:5px;">
                             <button class="action-btn" onclick="processarEmbate()" style="width:100%; margin-top:5px;">Finalizar</button>
                         </div>
                         <div style="flex:1; min-width:250px;">
                             <h4>3. Criar Imóvel</h4>
                             <select id="imovelLocal" style="margin-bottom:5px; width:100%;"></select>
                             <input type="text" id="imovelNome" placeholder="Nome do Imóvel" style="width:100%;">
-                            <input type="number" id="imovelPreco" placeholder="Preço ¥" style="width:100%;">
+                            <input type="number" id="imovelPreco" placeholder="Preço ¥" style="width:100%; margin-top:5px;">
                             <button class="action-btn" onclick="criarImovelMestre()" style="width:100%; margin-top:5px; color:var(--accent-blue); border-color:var(--accent-blue);">Anunciar Venda</button>
                         </div>
                     </div>
@@ -160,17 +161,26 @@
                 <div class="igamble-wrapper">
                     <div class="igamble-side">
                         <div class="avatar-maker-panel">
-                            <h4 style="width:100%; text-align:center; color:var(--accent-blue);">Fábrica de Avatares</h4>
-                            <div style="width:100%; display:flex; gap:10px; align-items:center;">
-                                <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
-                                    <select id="avTop" onchange="previewAvatar()"><option value="shortHair">Cabelo Curto</option><option value="longHair">Longo</option><option value="hat">Chapéu</option><option value="eyepatch">Tapa Olho</option></select>
-                                    <select id="avHair" onchange="previewAvatar()"><option value="Black">Preto</option><option value="Blonde">Loiro</option><option value="Red">Ruivo</option><option value="Blue">Azul</option><option value="Pink">Rosa</option></select>
-                                    <select id="avMouth" onchange="previewAvatar()"><option value="smile">Sorrindo</option><option value="serious">Sério</option><option value="screamOpen">Grito</option></select>
-                                    <select id="avSkin" onchange="previewAvatar()"><option value="Light">Clara</option><option value="Yellow">Parda</option><option value="DarkBrown">Escura</option></select>
-                                </div>
-                                <div style="width:80px; height:80px; border-radius:50%; overflow:hidden; border:2px solid var(--accent-blue);"><img id="avPreviewImg" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Base" style="width:100%; height:100%; object-fit:cover;"></div>
+                            <h4 style="width:100%; text-align:center; color:var(--accent-blue);">Fábrica de Avatares (500¥)</h4>
+                            
+                            <div style="display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
+                                <div style="width:100px; height:100px; border-radius:50%; overflow:hidden; border:2px solid var(--accent-blue); box-shadow: 0 0 15px rgba(0,229,255,0.4);"><img id="avPreviewImg" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Base" style="width:100%; height:100%; object-fit:cover;"></div>
                             </div>
-                            <button class="action-btn" onclick="salvarAvatarCustom()" style="width:100%; font-size:12px;">Equipar (500 ¥)</button>
+                            
+                            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">Cabelo:</div>
+                            <div class="avatar-part-grid" id="gridCabelo">
+                                <div class="part-btn active" onclick="setAvatarPart('top', 'shortHair', this)">Curto</div><div class="part-btn" onclick="setAvatarPart('top', 'longHair', this)">Longo</div><div class="part-btn" onclick="setAvatarPart('top', 'hat', this)">Chapéu</div><div class="part-btn" onclick="setAvatarPart('top', 'eyepatch', this)">Pirata</div>
+                            </div>
+                            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">Cor:</div>
+                            <div class="avatar-part-grid" id="gridCor">
+                                <div class="part-btn active" onclick="setAvatarPart('hair', 'Black', this)">Preto</div><div class="part-btn" onclick="setAvatarPart('hair', 'Blonde', this)">Loiro</div><div class="part-btn" onclick="setAvatarPart('hair', 'Red', this)">Ruivo</div><div class="part-btn" onclick="setAvatarPart('hair', 'Blue', this)">Azul</div><div class="part-btn" onclick="setAvatarPart('hair', 'Pink', this)">Rosa</div>
+                            </div>
+                            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">Boca/Rosto:</div>
+                            <div class="avatar-part-grid" id="gridBoca">
+                                <div class="part-btn active" onclick="setAvatarPart('mouth', 'smile', this)">Feliz</div><div class="part-btn" onclick="setAvatarPart('mouth', 'serious', this)">Sério</div><div class="part-btn" onclick="setAvatarPart('mouth', 'sad', this)">Triste</div><div class="part-btn" onclick="setAvatarPart('mouth', 'screamOpen', this)">Grito</div>
+                            </div>
+
+                            <button class="action-btn" onclick="salvarAvatarCustom()" style="width:100%; font-size:12px;">Pagar Cirurgia (500 ¥)</button>
                         </div>
 
                         <div class="avatar-maker-panel" style="flex-direction:column;">
@@ -184,15 +194,12 @@
                         <div class="chat-messages" id="chatMessages"></div>
                         <div class="chat-input-area">
                             <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
-                            <button class="neon-icon-btn" onclick="document.getElementById('chatImageFile').click()" title="Anexar Imagem">📎</button>
-                            <input type="text" id="chatInput" placeholder="Mensagem..." maxlength="150" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
+                            <button class="neon-icon-btn" onclick="document.getElementById('chatImageFile').click()" title="Anexar">📎</button>
+                            <input type="text" id="chatInput" placeholder="Mensagem ou Link da imagem..." maxlength="200" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
                             <button class="neon-icon-btn" onclick="prepararEnvioMensagem()">➤</button>
                         </div>
                         <div id="emojiPopupDynamic" class="emoji-popup">
-                            <button class="emoji-btn" onclick="executarReacao('🔥')">🔥</button><button class="emoji-btn" onclick="executarReacao('💀')">💀</button>
-                            <button class="emoji-btn" onclick="executarReacao('😂')">😂</button><button class="emoji-btn" onclick="executarReacao('👀')">👀</button>
-                            <button class="emoji-btn" onclick="executarReacao('💯')">💯</button><button class="emoji-btn" onclick="executarReacao('🤡')">🤡</button>
-                            <button class="emoji-btn" onclick="executarReacao('💔')">💔</button><button class="emoji-btn" onclick="executarReacao('💰')">💰</button>
+                            <button class="emoji-btn" onclick="executarReacao('🔥')">🔥</button><button class="emoji-btn" onclick="executarReacao('💀')">💀</button><button class="emoji-btn" onclick="executarReacao('😂')">😂</button><button class="emoji-btn" onclick="executarReacao('👀')">👀</button><button class="emoji-btn" onclick="executarReacao('💯')">💯</button><button class="emoji-btn" onclick="executarReacao('🤡')">🤡</button><button class="emoji-btn" onclick="executarReacao('💔')">💔</button><button class="emoji-btn" onclick="executarReacao('💰')">💰</button>
                         </div>
                     </div>
                 </div>
@@ -251,17 +258,17 @@
         <div class="sidebar"><h2>Agentes Online</h2><div class="user-list" id="userLog"></div></div>
     </div>
 
-    <div class="version-tag">Versão do Sistema: V9.0</div>
+    <div class="version-tag">Versão do Sistema: V10.0</div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
         let db; let usersGlobais = {}; let presenceGlobal = {}; let embatesGlobais = {}; let lojaGlobal = {}; let imoveisGlobais = {}; let submapasGlobais = {}; let submapasBGs = {}; let casaGlobais = {};
         let jogadorAtual = ""; let serialAtual = ""; let connectionRef = null; let isMaster = false; const MASTER_SERIAL = "4053-DC1";
         
+        const codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
         const deuses = [{n:"Oizus", d:"Dobra risco do adversário."}, {n:"Afrodite", d:"Acordo não-letal."}, {n:"Athena", d:"Pista dedutiva."}, {n:"Hades", d:"Herda Yenes."}, {n:"Hermes", d:"Fuga perfeita."}, {n:"Gaia", d:"Ver rotas e passar por obstáculos."}, {n:"Zeus", d:"Força aposta."}, {n:"Diogenes", d:"Imune."}, {n:"Ares", d:"Ignora dor."}, {n:"Poseidon", d:"Anula transação."}, {n:"Apolo", d:"Força verdade."}, {n:"Ártemis", d:"Rastreio infalível."}];
         const periciasSistema = [{ nome: "Luta", attr: "for" }, { nome: "Atletismo", attr: "for" }, { nome: "Furtividade", attr: "agi" }, { nome: "Pilotagem", attr: "agi" }, { nome: "Acrobacia", attr: "agi" }, { nome: "Armas", attr: "man" }, { nome: "Mecânica", attr: "man" }, { nome: "Sobrevivência", attr: "vig" }, { nome: "Intimidação", attr: "vig" }, { nome: "Investigação", attr: "int" }, { nome: "Medicina", attr: "int" }, { nome: "Hackear", attr: "int" }];
         
-        // Geração de 70 Títulos para o Loja
         const titulosExtensos = "Novato|com|0,Alvo Fácil|com|500,Rato de Beco|com|800,Corredor|com|1000,Sobrevivente|com|1200,Apostador|com|1500,Lutador|inc|2000,Atirador|inc|2500,Sombra|inc|3000,Lobo Solitário|inc|3500,Hustler|inc|4000,Estrategista|rar|6000,Investigador|rar|7000,Caçador de Recompensas|rar|8000,Silencioso|rar|9000,O Hacker|epi|12000,Trapaceiro|epi|15000,Fantasma Digital|epi|18000,Lorde das Armas|epi|20000,O Intocável|epi|25000,Assassino Fantasma|leg|35000,Demônio de Neon|leg|40000,Deus das Apostas|leg|45000,Rei do Distrito|leg|50000,A Lenda Viva|leg|60000".split(',');
 
         try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch (error) { console.error(error); }
@@ -281,7 +288,16 @@
             fecharSubMapa(); 
         }
 
-        // --- MAPA GLOBAL, SUBMAPAS E GAIA ---
+        // --- RELÓGIO (10min/sec) ---
+        const startTimestamp = 1710000000000;
+        setInterval(() => {
+            let tempoRPG = new Date(startTimestamp + ((Date.now() - startTimestamp) * 600)); 
+            let hh = String(tempoRPG.getHours()).padStart(2, '0'); let mm = String(tempoRPG.getMinutes()).padStart(2, '0');
+            setElText("clockTime", `${hh}:${mm}`);
+            let elClock = document.getElementById("clockTime"); if(elClock) elClock.style.color = (tempoRPG.getHours() >= 18 || tempoRPG.getHours() < 6) ? "#ff1a55" : "#00e5ff"; 
+        }, 1000);
+
+        // --- MAPA GLOBAL E LINHAS ORTOGONAIS ---
         const locaisMapa = {
             "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Fonte", x:4, y:2, w:4, h:4}] }, "p2": { nome: "Ghost Ramen", x: 35, y: 65, salas: [{n:"Salão", x:1, y:1, w:6, h:4}, {n:"Cozinha", x:7, y:1, w:4, h:4}], obs:["1_2","2_2","3_2","4_2"] },
             "p3": { nome: "Viela da Fome", x: 20, y: 55, salas: [{n:"Beco", x:2, y:1, w:8, h:6}], obs:["5_3","5_4","5_5"] }, "p4": { nome: "Club Neon", x: 50, y: 85, salas: [{n:"Pista", x:2, y:2, w:6, h:5}, {n:"VIP", x:8, y:2, w:3, h:3}], obs:["7_2","7_3","7_4"] },
@@ -304,12 +320,16 @@
             
             let isGaia = usersGlobais[jogadorAtual]?.deus === "Gaia";
 
+            // Desenha linhas Ortogonais (Quadradas)
             conexoesMapa.forEach(con => {
                 let pDe = locaisMapa[con.de]; let pPara = locaisMapa[con.para];
-                let angle = Math.atan2(pPara.y - pDe.y, pPara.x - pDe.x) * 180 / Math.PI; let dist = Math.sqrt(Math.pow(pPara.x - pDe.x, 2) + Math.pow(pPara.y - pDe.y, 2));
-                canvas.innerHTML += `<div class="map-street" style="left:${pDe.x}%; top:${pDe.y}%; width:${dist}%; transform:rotate(${angle}deg);"></div>`;
+                let wHoriz = Math.abs(pPara.x - pDe.x); let hVert = Math.abs(pPara.y - pDe.y);
+                let lHoriz = Math.min(pDe.x, pPara.x); let tVert = Math.min(pDe.y, pPara.y);
+                canvas.innerHTML += `<div class="map-street" style="left:${lHoriz}%; top:${pDe.y}%; width:${wHoriz}%;"></div>`;
+                canvas.innerHTML += `<div class="map-street" style="left:${pPara.x}%; top:${tVert}%; width:3px; height:${hVert}%;"></div>`;
             });
 
+            // Linhas Diagonais só para Gaia
             if(isGaia || isMaster) {
                 rotasSecretasGaia.forEach(con => {
                     let pDe = locaisMapa[con.de]; let pPara = locaisMapa[con.para];
@@ -424,7 +444,7 @@
         window.clicarGrid = function(x, y, isObs) {
             if(!jogadorAtual || isMaster) return; 
             let isGaia = usersGlobais[jogadorAtual]?.deus === "Gaia";
-            if(isObs && !isGaia) { alert("Obstáculo na área. Somente Gaia pode atravessar."); return; }
+            if(isObs && !isGaia) { alert("Obstáculo! Somente Gaia atravessa."); return; }
 
             let cellId = `${x}_${y}`; let gridTokens = submapasGlobais[currentSubMapKey] || {};
             if(gridTokens[cellId]) return; 
@@ -445,27 +465,35 @@
             setElDisplay("subMapCanvas", "none"); setElDisplay("mapCanvas", "block"); drawMapVisuals(); 
         };
 
-        // --- DADOS ANIMADOS (OVERLAY) ---
+        // --- MINHA CASA VTT ---
+        let selectedFurniture = null;
+        function drawCasaBoard() {
+            let b = document.getElementById("casaBoard"); if(!b) return;
+            b.innerHTML = ""; let gridCasa = casaGlobais[jogadorAtual] || {}; 
+            for(let y=0; y<8; y++) {
+                for(let x=0; x<12; x++) {
+                    let cellId = `${x}_${y}`; let fItem = gridCasa[cellId];
+                    let cellHtml = `<div class="tactical-cell" onclick="clicarGridCasa(${x}, ${y})">`;
+                    if(fItem) cellHtml += `<div class="furniture-token" onclick="removerMoveCasa('${cellId}', event)">${fItem}</div>`;
+                    cellHtml += `</div>`; b.innerHTML += cellHtml;
+                }
+            }
+        }
+        window.selecionarMovel = function(nome, el) { selectedFurniture = nome; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); }
+        window.clicarGridCasa = function(x,y) { if(!selectedFurniture) return; let cellId = `${x}_${y}`; db.ref(`tokyoRpg/casasGrid/${jogadorAtual}/${cellId}`).set(selectedFurniture); selectedFurniture = null; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); drawCasaBoard(); renderizarMochila(); }
+        window.removerMoveCasa = function(cellId, ev) { ev.stopPropagation(); db.ref(`tokyoRpg/casasGrid/${jogadorAtual}/${cellId}`).remove().then(()=>renderizarMochila()); }
+
+        // --- DADOS ANIMADOS OVERLAY ---
         function mostrarDadoOverlay(nome, rollString, resultFinal) {
             let ov = document.getElementById("globalDiceOverlay"); let sp = document.getElementById("diceSpinners"); let res = document.getElementById("diceFinalResult");
             setElText("diceRollerName", "Agente: " + nome); setElText("diceFormulaLabel", "Formula: " + rollString);
             sp.style.display = "flex"; res.style.display = "none"; ov.style.display = "flex";
             
-            // Efeito Caça Niquel nos dados
-            let interval = setInterval(() => {
-                sp.innerHTML = `<div class="dice-number">${Math.floor(Math.random()*20)}</div><div class="dice-number">${Math.floor(Math.random()*20)}</div><div class="dice-number">${Math.floor(Math.random()*20)}</div>`;
-            }, 50);
-
-            setTimeout(() => {
-                clearInterval(interval);
-                sp.style.display = "none";
-                res.style.display = "block";
-                res.innerText = resultFinal;
-                setTimeout(() => { ov.style.display = "none"; }, 3000);
-            }, 1500);
+            let interval = setInterval(() => { sp.innerHTML = `<div class="dice-number">${Math.floor(Math.random()*20)}</div><div class="dice-number">${Math.floor(Math.random()*20)}</div><div class="dice-number">${Math.floor(Math.random()*20)}</div>`; }, 50);
+            setTimeout(() => { clearInterval(interval); sp.style.display = "none"; res.style.display = "block"; res.innerText = resultFinal; setTimeout(() => { ov.style.display = "none"; }, 3000); }, 1500);
         }
 
-        window.lancarDado = function() {
+        window.lancarDadoPersonalizado = function() {
             if(!jogadorAtual) return; let exp = document.getElementById("diceInput").value.trim().toLowerCase(); if(!exp.includes('d')) return; 
             let p = exp.split('d'); let qtd = parseInt(p[0]) || 1; let r = p[1].split('+'); let faces = parseInt(r[0]); let mod = r[1]?parseInt(r[1]):0;
             let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random() * faces) + 1; rol.push(d); tot += d; } tot += mod;
@@ -473,9 +501,17 @@
             db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: txt }); setElVal("diceInput", "");
             db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `${qtd}d${faces}${mod>0?'+'+mod:''}`, result: tot, ts: Date.now() });
         };
-        window.rolarPericia = function(nP, attrName) {
-            if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); let qtd = r[attrName] || 1; let tot = 0; let rol = []; 
-            for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random()*20)+1; rol.push(d); tot += d; }
+
+        window.rolarAtributo = function(nomeAttr, attrKey) {
+            if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); let qtd = r[attrKey] || 1; let buffs = calcularBuffsMoveis(usersGlobais[jogadorAtual]);
+            qtd += buffs[attrKey];
+            let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random()*20)+1; rol.push(d); tot += d; }
+            db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `[${nomeAttr}] (${qtd}d20) ➔ [${rol.join(',')}] = ${tot}` });
+            db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `[${nomeAttr}] ${qtd}d20`, result: tot, ts: Date.now() });
+        };
+        
+        window.rolarPericia = function(nP, qtd) {
+            if(!jogadorAtual) return; let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random()*20)+1; rol.push(d); tot += d; }
             db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `[${nP}] (${qtd}d20) ➔ [${rol.join(',')}] = ${tot}` });
             db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `[${nP}] ${qtd}d20`, result: tot, ts: Date.now() });
         };
@@ -483,31 +519,50 @@
         // --- RPG E HP ---
         window.getSafeRpg = function(u) { let d = { for: 1, agi: 1, man: 1, vig: 1, int: 1, pontosLivres: 3, nivel: 1, integridade: 100, defesa: 0, hp: 100 }; return u && u.rpg ? {...d, ...u.rpg} : d; };
         function calcularMaxInteg(u) { let m = 100; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.buffType==="integ" && i.poder) m += parseInt(i.poder); }); return m; }
-        function calcularBuff(u, attr) { let b = 0; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.buffType===attr && i.poder) b += parseInt(i.poder); }); return b; }
+        function calcularBuffsMoveis(u) { let buffs = { for:0, agi:0, int:0, vig:0, man:0 }; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.buffType && i.poder && buffs[i.buffType] !== undefined) buffs[i.buffType] += parseInt(i.poder); }); return buffs; }
 
         function renderizarFicha() {
             if(!jogadorAtual || !usersGlobais[jogadorAtual]) return;
-            let u = usersGlobais[jogadorAtual]; let r = getSafeRpg(u); let mInteg = calcularMaxInteg(u);
+            let u = usersGlobais[jogadorAtual]; let r = getSafeRpg(u); let mInteg = calcularMaxInteg(u); let buffs = calcularBuffsMoveis(u);
             
             setElText("lblNivel", `[ Embate Nv. ${r.nivel} ]`); setElText("lblDef", r.defesa); setElText("lblPts", r.pontosLivres);
-            setElText("valFor", r.for + calcularBuff(u, 'for')); setElText("valAgi", r.agi + calcularBuff(u, 'agi')); setElText("valMan", r.man + calcularBuff(u, 'man')); setElText("valVig", r.vig + calcularBuff(u, 'vig')); setElText("valInt", r.int + calcularBuff(u, 'int'));
-            setElText("lblIntegMax", mInteg); setElText("lblIntegVal", r.integridade + "%"); setElText("hpMaxLabel", ((r.vig+calcularBuff(u,'vig')) * 10 + 90));
+            setElText("valFor", r.for + buffs.for); setElText("valAgi", r.agi + buffs.agi); setElText("valMan", r.man + buffs.man); setElText("valVig", r.vig + buffs.vig); setElText("valInt", r.int + buffs.int);
+            setElText("lblIntegMax", mInteg); setElText("lblIntegVal", r.integridade + "%"); setElText("hpMaxLabel", ((r.vig+buffs.vig) * 10 + 90));
             
             let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
             let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
             
             let pGrid = document.getElementById("skillsGridQuick"); if(!pGrid) return; pGrid.innerHTML = "";
-            periciasSistema.forEach(p => { let v = r[p.attr] + calcularBuff(u, p.attr); pGrid.innerHTML += `<button class="skill-btn" onclick="rolarPericia('${p.nome}', '${p.attr}')">${p.nome} ${v}d20</button>`; });
+            periciasSistema.forEach(p => { let v = r[p.attr] + buffs[p.attr]; pGrid.innerHTML += `<button class="skill-btn" onclick="rolarPericia('${p.nome}', ${v})">${p.nome.substring(0,4)} ${v}d</button>`; });
         }
 
         window.atualizarHP = function() { if(!jogadorAtual) return; let nHp = parseInt(document.getElementById("hpInput").value || 0); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/hp`).set(nHp); };
         window.distribuirPonto = function(attr) { if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); if(r.pontosLivres > 0 && r[attr] < 3) { db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(r[attr] + 1); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres - 1); } };
 
         // --- AVATAR STUDIO ---
-        window.previewAvatar = function() {
-            let top = document.getElementById("avTop").value; let hair = document.getElementById("avHair").value; let skin = document.getElementById("avSkin").value; let mouth = document.getElementById("avMouth").value;
-            let url = `https://api.dicebear.com/7.x/avataaars/svg?top=${top}&hairColor=${hair}&skinColor=${skin}&mouth=${mouth}&clothing=graphicShirt`;
-            document.getElementById("avPreviewImg").src = url; return url;
+        let hairColors = { Black:"Preto", Blonde:"Loiro", Brown:"Castanho", Red:"Ruivo", Platinum:"Platinado", Blue:"Azul", Pink:"Rosa", Green:"Verde" };
+        let skinColors = { Light:"Clara", Yellow:"Amarelada", Brown:"Parda", DarkBrown:"Escura", Black:"Negra" };
+        let mouths = { smile:"Sorrindo", serious:"Sério", sad:"Triste", screamOpen:"Grito" };
+        let tops = { shortHair:"Cabelo Curto", longHair:"Cabelo Longo", hat:"Chapéu", eyepatch:"Tapa Olho", hijab:"Hijab", turban:"Turbante" };
+        
+        function carregarOpcoesAvatar() {
+            let bC = document.getElementById("gridCabelo"); let bCr = document.getElementById("gridCor"); let bB = document.getElementById("gridBoca"); let bP = document.getElementById("gridPele");
+            if(!bC) return;
+            bC.innerHTML=""; Object.keys(tops).forEach(k => bC.innerHTML += `<div class="part-btn" onclick="setAvatarPart('top','${k}',this)">${tops[k]}</div>`);
+            bCr.innerHTML=""; Object.keys(hairColors).forEach(k => bCr.innerHTML += `<div class="part-btn" onclick="setAvatarPart('hair','${k}',this)">${hairColors[k]}</div>`);
+            bB.innerHTML=""; Object.keys(mouths).forEach(k => bB.innerHTML += `<div class="part-btn" onclick="setAvatarPart('mouth','${k}',this)">${mouths[k]}</div>`);
+            bP.innerHTML=""; Object.keys(skinColors).forEach(k => bP.innerHTML += `<div class="part-btn" onclick="setAvatarPart('skin','${k}',this)">${skinColors[k]}</div>`);
+        }
+
+        let myAvConf = { top:"shortHair", hair:"Black", skin:"Light", mouth:"smile" };
+        window.setAvatarPart = function(type, val, el) { 
+            myAvConf[type] = val; 
+            el.parentElement.querySelectorAll('.part-btn').forEach(e=>e.classList.remove('active')); el.classList.add('active'); 
+            previewAvatar(); 
+        }
+        function previewAvatar() {
+            let url = `https://api.dicebear.com/7.x/avataaars/svg?top=${myAvConf.top}&hairColor=${myAvConf.hair}&skinColor=${myAvConf.skin}&mouth=${myAvConf.mouth}&clothing=graphicShirt`;
+            let img = document.getElementById("avPreviewImg"); if(img) img.src = url; return url;
         }
         window.salvarAvatarCustom = function() {
             if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira || 0;
@@ -532,53 +587,9 @@
         window.abrirEmojiReacao = function(msgKey) { msgAtualParaReagir = msgKey; let p = document.getElementById("emojiPopupDynamic"); p.style.display="flex"; }
         window.executarReacao = function(emoji) { if(!msgAtualParaReagir) return; db.ref(`tokyoRpg/chat/${msgAtualParaReagir}/reacoes/${emoji}`).once('value').then(s => { db.ref(`tokyoRpg/chat/${msgAtualParaReagir}/reacoes/${emoji}`).set((s.val()||0)+1); document.getElementById("emojiPopupDynamic").style.display="none"; }); }
 
-        window.prepararEnvioMensagem = function() { if(!jogadorAtual) return; let t = document.getElementById("chatInput").value.trim(); let i = document.getElementById("chatImageFile"); if(!t && i.files.length === 0) return; if(i.files.length > 0) { let f = i.files[0]; if(f.size > 2000000) return; let r = new FileReader(); r.onload = (e) => { db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: e.target.result, data: new Date().toLocaleTimeString() }); i.value = ""; setElVal("chatInput", ""); }; r.readAsDataURL(f); } else { let iLink = null; if(t.match(/\.(jpeg|jpg|gif|png)$/) && t.startsWith("http")) { iLink = t; t = ""; } db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); setElVal("chatInput", ""); } }
+        window.prepararEnvioMensagem = function() { if(!jogadorAtual) return; let t = document.getElementById("chatInput").value.trim(); let i = document.getElementById("chatImageFile"); if(!t && i.files.length === 0) return; let u = usersGlobais[jogadorAtual]; let tituloObj = u.tituloChat || null; if(i.files.length > 0) { let f = i.files[0]; if(f.size > 2000000) return; let r = new FileReader(); r.onload = (e) => { db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: e.target.result, data: new Date().toLocaleTimeString() }); i.value = ""; setElVal("chatInput", ""); }; r.readAsDataURL(f); } else { let iLink = null; if(t.match(/\.(jpeg|jpg|gif|png)$/) && t.startsWith("http")) { iLink = t; t = ""; } db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); setElVal("chatInput", ""); } }
 
-        // --- SISTEMA MASTER ---
-        window.iniciarEmbateMap = function() { if(!isMaster) return; let locStr = document.getElementById("embLocal").value; let p1 = document.getElementById("embP1").value.trim().toUpperCase(); let p2 = document.getElementById("embP2").value.trim().toUpperCase(); let ap = parseInt(document.getElementById("embAposta").value||0); if(!locStr || !p1 || !p2) return; db.ref('tokyoRpg/mapEmbates').push({ localKey: locStr, p1: p1, p2: p2, aposta: ap }); alert("Embate Trancado."); setElVal("embP1",""); setElVal("embP2",""); setElVal("embAposta",""); }
-        window.processarEmbate = function() { if(!isMaster) return; let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase(); let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value; if(!v || !p) return;
-            let ap = 0; let embKey = null; Object.keys(embatesGlobais).forEach(k => { let e = embatesGlobais[k]; if((e.p1===v||e.p2===v)&&(e.p1===p||e.p2===p)) { ap = e.aposta||0; embKey = k; } });
-            let cVenc = usersGlobais[v]?.carteira || 0; let cPerd = usersGlobais[p]?.carteira || 0; cVenc += ap; cPerd -= ap; let isMorte = (cPerd <= 0);
-            if(usersGlobais[v]) db.ref(`tokyoRpg/users/${v}`).update({ carteira: cVenc, "rpg/nivel": (usersGlobais[v].rpg?.nivel||1)+1, "rpg/pontosLivres": (usersGlobais[v].rpg?.pontosLivres||0)+1 });
-            if(usersGlobais[p]) { if(isMorte) db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" }); else db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd }); }
-            if(embKey) db.ref(`tokyoRpg/mapEmbates/${embKey}`).remove(); db.ref('tokyoRpg/news').push({ tipo: isMorte?"MORTE":"EMBATE", vencedor: v, perdedor: p, aposta: ap, saldoVencedor: cVenc, saldoPerdedor: cPerd, data: new Date().toLocaleTimeString(), descMorte: mDesc, imgMorte: mImg }); alert("Resolvido!");
-            setElVal("embVencedor",""); setElVal("embPerdedor",""); setElVal("embMorteDesc",""); setElVal("embMorteImg","");
-        };
-        window.criarImovelMestre = function() { if(!isMaster) return; let kLoc = document.getElementById("imovelLocal").value; let n = document.getElementById("imovelNome").value.trim(); let c = parseInt(document.getElementById("imovelComodos").value); let p = parseInt(document.getElementById("imovelPreco").value); if(!kLoc || !n || isNaN(p)) return; db.ref('tokyoRpg/imoveis').push({ localKey: kLoc, nome: n, comodos: c, preco: p, dono: "Nenhum" }); alert("À venda!"); setElVal("imovelNome",""); setElVal("imovelPreco",""); setElVal("imovelComodos",""); };
-
-        // --- LOJA, MOCHILA E CASA ---
-        window.filtrarLoja = function(tipo, btnEl) { filtroLojaAtual = tipo; document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active')); if(btnEl) btnEl.classList.add('active'); renderizarLojaUI(); }
-        function renderizarLojaUI() { let b = document.getElementById("shopGrid"); if(!b) return; b.innerHTML=""; if(lojaGlobal) { Object.keys(lojaGlobal).forEach(k => { let i = lojaGlobal[k]; if(filtroLojaAtual === "Tudo" || (filtroLojaAtual==="Arma" && (i.tipo==="Arma"||i.tipo==="Roupa"||i.tipo==="Escudo")) || i.tipo === filtroLojaAtual) { let pd = i.poder ? `<span class="neon-gold"> [${i.buffType?'+'+i.poder+' '+i.buffType: 'Cura '+i.poder}]</span>` : ""; b.innerHTML += `<div class="shop-item"><div><span class="shop-type">${i.tipo}</span><h3 class="neon-blue" style="margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#aaa;">${i.desc}${pd}</p></div><div><h2 class="neon-green" style="margin:10px 0;">${i.preco}¥</h2><button class="action-btn" onclick="comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}', ${i.poder||0}, '${i.buffType||''}')">Comprar</button></div></div>`; }}); } }
-        window.criarItemLoja = function() { if(!isMaster) return; let t=document.getElementById("newItemType").value; let n=document.getElementById("newItemName").value.trim(); let d=document.getElementById("newItemDesc").value.trim(); let buff=document.getElementById("newItemBuffType").value; let poder=parseInt(document.getElementById("newItemPoder").value||"0"); let p=parseInt(document.getElementById("newItemPrice").value); if(n && p) { db.ref('tokyoRpg/loja').push({ tipo: t, nome: n, desc: d, preco: p, poder: poder, buffType: buff }); alert("Publicado!"); setElVal("newItemName",""); setElVal("newItemDesc",""); setElVal("newItemPrice",""); setElVal("newItemPoder",""); } }
-        window.comprarItem = function(id, n, p, t, d, poder, buff) { if(!jogadorAtual || isMaster) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<p) {alert("Sem Yenes.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-p); if(t === "Móvel") { db.ref(`tokyoRpg/users/${jogadorAtual}/casa`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); document.getElementById("btnAbaCasa").style.display = "inline-block"; } else db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); alert("Comprado!"); }
-        
-        window.renderizarMochila = function() {
-            let mGrid = document.getElementById("mochilaGrid"); let fTray = document.getElementById("furnitureTray"); if(!mGrid) return;
-            let itens = usersGlobais[jogadorAtual]?.mochila; if(!itens) { mGrid.innerHTML = "<p>Mochila vazia.</p>"; if(fTray) fTray.innerHTML=""; return; }
-            mGrid.innerHTML = ""; if(fTray) fTray.innerHTML="";
-            Object.keys(itens).forEach(k => {
-                let i = itens[k];
-                let btn = i.tipo === "Comida" ? `<button onclick="consumirComida('${k}', ${i.poder||0})" style="background:var(--accent-blue);color:#000;padding:5px;cursor:pointer;width:100%;font-weight:bold;border:none;">Consumir (+${i.poder||0})</button>` : `<button onclick="removerItemMochila('${k}')" style="background:transparent;border:1px solid #ff2a5f;color:#ff2a5f;padding:5px;cursor:pointer;width:100%;">Descartar</button>`; 
-                mGrid.innerHTML += `<div class="inv-item"><span style="font-size:10px; color:#aaa;">[ ${i.tipo||"Item"} ]</span><h3 style="color:#00d2ff;margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#eee;margin-bottom:15px;">${i.desc||""}</p>${btn}</div>`;
-            });
-            let prop = usersGlobais[jogadorAtual]?.casa; if(prop && fTray) { Object.keys(prop).forEach(k => { let i = prop[k]; if(i.tipo==="Móvel") fTray.innerHTML += `<div class="furniture-item" onclick="selecionarMovel('${i.nome}', this)">${i.nome}</div>`; }); }
-        };
-        window.consumirComida = function(k, nutricao) { let u = usersGlobais[jogadorAtual]; let r = getSafeRpg(u); let max = calcularMaxInteg(u); let novaInt = Math.min(r.integridade + parseInt(nutricao), max); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/integridade`).set(novaInt); db.ref(`tokyoRpg/users/${jogadorAtual}/mochila/${k}`).remove(); }
-        window.removerItemMochila = function(k) { if(confirm("Descartar item?")) db.ref('tokyoRpg/users/' + jogadorAtual + '/mochila/' + k).remove(); }
-        
-        let selectedFurniture = null;
-        function drawCasaBoard() { let b = document.getElementById("casaBoard"); if(!b) return; b.innerHTML = ""; let gridCasa = casaGlobais[jogadorAtual] || {}; for(let y=0; y<8; y++) { for(let x=0; x<12; x++) { let cellId = `${x}_${y}`; let fItem = gridCasa[cellId]; let cellHtml = `<div class="tactical-cell" onclick="clicarGridCasa(${x}, ${y})">`; if(fItem) cellHtml += `<div class="furniture-token" onclick="removerMoveCasa('${cellId}', event)">${fItem}</div>`; cellHtml += `</div>`; b.innerHTML += cellHtml; } } }
-        window.selecionarMovel = function(nome, el) { selectedFurniture = nome; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); }
-        window.clicarGridCasa = function(x,y) { if(!selectedFurniture) return; let cellId = `${x}_${y}`; db.ref(`tokyoRpg/casasGrid/${jogadorAtual}/${cellId}`).set(selectedFurniture); selectedFurniture = null; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); drawCasaBoard(); }
-        window.removerMoveCasa = function(cellId, ev) { ev.stopPropagation(); db.ref(`tokyoRpg/casasGrid/${jogadorAtual}/${cellId}`).remove(); }
-
-        // --- ROLETA ---
-        let roletaInterval;
-        window.tentarGirar = function() { if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<500){alert("Sem grana.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-500); setElDisplay("actionButtons", "none"); document.getElementById("card1").classList.add("spinning"); document.getElementById("card2").classList.add("spinning"); let t = 0; roletaInterval = setInterval(() => { document.getElementById("card1").innerText = deuses[Math.floor(Math.random()*deuses.length)].n; document.getElementById("card2").innerText = deuses[Math.floor(Math.random()*deuses.length)].n; t++; if(t > 15) { clearInterval(roletaInterval); document.getElementById("card1").classList.remove("spinning"); document.getElementById("card2").classList.remove("spinning"); deusesSorteados = [document.getElementById("card1").innerText, document.getElementById("card2").innerText]; setElDisplay("actionButtons", "flex"); } }, 100); }
-        window.escolherDeus = function(i) { let dName = deusesSorteados[i]; db.ref(`tokyoRpg/users/${jogadorAtual}/deus`).set(dName); setElDisplay("actionButtons", "none"); let dObj = deuses.find(x=>x.n===dName); setElDisplay("pantheonSavedArea", "block"); setElText("savedGodCard", dName); setElText("savedGodDesc", dObj.d); alert("Patrono atualizado!"); }
-        window.resgatarCodigo = function() { let c = document.getElementById("sponsorCode").value.trim().toUpperCase(); if(!c) return; if(codigosPromocionais[c]) { let v = codigosPromocionais[c]; let r = db.ref('tokyoRpg/users/' + jogadorAtual); r.once('value').then(s => { let u = s.val(); if(u.codigosUsados && u.codigosUsados[c]) { alert("Já resgatado."); } else { r.child('codigosUsados').update({ [c]: true }); r.update({ carteira: (u.carteira || 0) + v }); alert(`+${v}¥`); setElVal("sponsorCode", ""); } }); } }
-
-        // --- LOGIN BASE ---
+        // --- MESTRE, ROLETA E LOJA ---
         function abrirModal() { setElDisplay("loginModal", "flex"); if(jogadorAtual){setElDisplay("loginScreen", "none"); setElDisplay("profileScreen", "block");}else{setElDisplay("loginScreen", "block"); setElDisplay("profileScreen", "none");} }
         function fecharModal() { setElDisplay("loginModal", "none"); }
         function gerarSerial() { let c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let k=''; for(let i=0;i<4;i++) k+=c.charAt(Math.floor(Math.random()*c.length)); return k+"-DC1"; }
@@ -604,9 +615,50 @@
         window.logarComSerial = function() { const s = document.getElementById("loginSerial").value.trim().toUpperCase(); if(!s) return; if(s === MASTER_SERIAL) { db.ref('tokyoRpg/users/MESTRE').update({ serial: MASTER_SERIAL, carteira: 9999999 }); window.logarSucesso("MESTRE", MASTER_SERIAL); return; } let achou = false; Object.keys(usersGlobais).forEach(n => { if(usersGlobais[n].serial === s) { achou = true; window.logarSucesso(n, s); }}); if(!achou) alert("Não encontrado."); };
         window.deslogar = function() { if(connectionRef) connectionRef.set(false); jogadorAtual = ""; serialAtual = ""; isMaster = false; let btn = document.getElementById("userBtn"); if(btn) btn.classList.remove("logged"); setElVal("loginName", ""); setElVal("loginPass", ""); setElVal("loginSerial", ""); setElDisplay('masterHomePanel', 'none'); setElDisplay('masterShopPanel', 'none'); setElDisplay("btnAbaCasa", "none"); fecharSubMapa(); fecharModal(); drawMapVisuals(); };
 
-        // --- LISTENERS FIREBASE ---
+        window.iniciarEmbateMap = function() { if(!isMaster) return; let locStr = document.getElementById("embLocal").value; let p1 = document.getElementById("embP1").value.trim().toUpperCase(); let p2 = document.getElementById("embP2").value.trim().toUpperCase(); let ap = parseInt(document.getElementById("embAposta").value||0); if(!locStr || !p1 || !p2) return; db.ref('tokyoRpg/mapEmbates').push({ localKey: locStr, p1: p1, p2: p2, aposta: ap }); alert("Embate Trancado."); setElVal("embP1",""); setElVal("embP2",""); setElVal("embAposta",""); }
+        window.processarEmbate = function() { if(!isMaster) return; let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase(); let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value; if(!v || !p) return;
+            let ap = 0; let embKey = null; Object.keys(embatesGlobais).forEach(k => { let e = embatesGlobais[k]; if((e.p1===v||e.p2===v)&&(e.p1===p||e.p2===p)) { ap = e.aposta||0; embKey = k; } });
+            let cVenc = usersGlobais[v]?.carteira || 0; let cPerd = usersGlobais[p]?.carteira || 0; cVenc += ap; cPerd -= ap; let isMorte = (cPerd <= 0);
+            if(usersGlobais[v]) db.ref(`tokyoRpg/users/${v}`).update({ carteira: cVenc, "rpg/nivel": (usersGlobais[v].rpg?.nivel||1)+1, "rpg/pontosLivres": (usersGlobais[v].rpg?.pontosLivres||0)+1 });
+            if(usersGlobais[p]) { if(isMorte) db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" }); else db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd }); }
+            if(embKey) db.ref(`tokyoRpg/mapEmbates/${embKey}`).remove(); db.ref('tokyoRpg/news').push({ tipo: isMorte?"MORTE":"EMBATE", vencedor: v, perdedor: p, aposta: ap, saldoVencedor: cVenc, saldoPerdedor: cPerd, data: new Date().toLocaleTimeString(), descMorte: mDesc, imgMorte: mImg }); alert("Resolvido!");
+            setElVal("embVencedor",""); setElVal("embPerdedor",""); setElVal("embMorteDesc",""); setElVal("embMorteImg","");
+        };
+        window.criarImovelMestre = function() { if(!isMaster) return; let kLoc = document.getElementById("imovelLocal").value; let n = document.getElementById("imovelNome").value.trim(); let c = parseInt(document.getElementById("imovelComodos").value); let p = parseInt(document.getElementById("imovelPreco").value); if(!kLoc || !n || isNaN(p)) return; db.ref('tokyoRpg/imoveis').push({ localKey: kLoc, nome: n, comodos: c, preco: p, dono: "Nenhum" }); alert("À venda!"); setElVal("imovelNome",""); setElVal("imovelPreco",""); setElVal("imovelComodos",""); };
+
+        window.filtrarLoja = function(tipo, btnEl) { filtroLojaAtual = tipo; document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active')); if(btnEl) btnEl.classList.add('active'); renderizarLojaUI(); }
+        function renderizarLojaUI() { let b = document.getElementById("shopGrid"); if(!b) return; b.innerHTML=""; if(lojaGlobal) { Object.keys(lojaGlobal).forEach(k => { let i = lojaGlobal[k]; if(filtroLojaAtual === "Tudo" || (filtroLojaAtual==="Arma" && (i.tipo==="Arma"||i.tipo==="Roupa"||i.tipo==="Escudo")) || i.tipo === filtroLojaAtual) { let pd = i.poder ? `<span class="neon-gold"> [${i.buffType?'+'+i.poder+' '+i.buffType: 'Cura '+i.poder}]</span>` : ""; b.innerHTML += `<div class="shop-item"><div><span class="shop-type">${i.tipo}</span><h3 class="neon-blue" style="margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#aaa;">${i.desc}${pd}</p></div><div><h2 class="neon-green" style="margin:10px 0;">${i.preco}¥</h2><button class="action-btn" onclick="comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}', ${i.poder||0}, '${i.buffType||''}')">Comprar</button></div></div>`; }}); } }
+        window.criarItemLoja = function() { if(!isMaster) return; let t=document.getElementById("newItemType").value; let n=document.getElementById("newItemName").value.trim(); let d=document.getElementById("newItemDesc").value.trim(); let buff=document.getElementById("newItemBuffType").value; let poder=parseInt(document.getElementById("newItemPoder").value||"0"); let p=parseInt(document.getElementById("newItemPrice").value); if(n && p) { db.ref('tokyoRpg/loja').push({ tipo: t, nome: n, desc: d, preco: p, poder: poder, buffType: buff }); alert("Publicado!"); setElVal("newItemName",""); setElVal("newItemDesc",""); setElVal("newItemPrice",""); setElVal("newItemPoder",""); } }
+        window.comprarItem = function(id, n, p, t, d, poder, buff) { if(!jogadorAtual || isMaster) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<p) {alert("Sem Yenes.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-p); if(t === "Móvel") { db.ref(`tokyoRpg/users/${jogadorAtual}/casa`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); document.getElementById("btnAbaCasa").style.display = "inline-block"; } else db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); alert("Comprado!"); }
+        
+        window.renderizarMochila = function() {
+            let mGrid = document.getElementById("mochilaGrid"); let fTray = document.getElementById("furnitureTray"); if(!mGrid) return;
+            let itens = usersGlobais[jogadorAtual]?.mochila; 
+            
+            // Check moveis q estão na grid pra nao desenhar na bandeja
+            let moveisNoGrid = Object.values(casaGlobais[jogadorAtual] || {});
+
+            if(!itens) { mGrid.innerHTML = "<p>Mochila vazia.</p>"; if(fTray) fTray.innerHTML=""; return; }
+            mGrid.innerHTML = ""; if(fTray) fTray.innerHTML="";
+            Object.keys(itens).forEach(k => {
+                let i = itens[k];
+                let btn = i.tipo === "Comida" ? `<button onclick="consumirComida('${k}', ${i.poder||0})" style="background:var(--accent-blue);color:#000;padding:5px;cursor:pointer;width:100%;font-weight:bold;border:none;">Consumir (+${i.poder||0})</button>` : `<button onclick="removerItemMochila('${k}')" style="background:transparent;border:1px solid #ff2a5f;color:#ff2a5f;padding:5px;cursor:pointer;width:100%;">Descartar</button>`; 
+                mGrid.innerHTML += `<div class="inv-item"><span style="font-size:10px; color:#aaa;">[ ${i.tipo||"Item"} ]</span><h3 style="color:#00d2ff;margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#eee;margin-bottom:15px;">${i.desc||""}</p>${btn}</div>`;
+            });
+
+            let prop = usersGlobais[jogadorAtual]?.casa; if(prop && fTray) { Object.keys(prop).forEach(k => { let i = prop[k]; if(i.tipo==="Móvel" && !moveisNoGrid.includes(i.nome)) fTray.innerHTML += `<div class="furniture-item" onclick="selecionarMovel('${i.nome}', this)">${i.nome}</div>`; }); }
+        };
+        window.consumirComida = function(k, nutricao) { let u = usersGlobais[jogadorAtual]; let r = getSafeRpg(u); let max = calcularMaxInteg(u); let novaInt = Math.min(r.integridade + parseInt(nutricao), max); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/integridade`).set(novaInt); db.ref(`tokyoRpg/users/${jogadorAtual}/mochila/${k}`).remove(); }
+        window.removerItemMochila = function(k) { if(confirm("Descartar item?")) db.ref('tokyoRpg/users/' + jogadorAtual + '/mochila/' + k).remove(); }
+        
+        let roletaInterval;
+        window.tentarGirar = function() { if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<500){alert("Sem grana.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-500); setElDisplay("actionButtons", "none"); document.getElementById("card1").classList.add("spinning"); document.getElementById("card2").classList.add("spinning"); let t = 0; roletaInterval = setInterval(() => { document.getElementById("card1").innerText = deuses[Math.floor(Math.random()*deuses.length)].n; document.getElementById("card2").innerText = deuses[Math.floor(Math.random()*deuses.length)].n; t++; if(t > 15) { clearInterval(roletaInterval); document.getElementById("card1").classList.remove("spinning"); document.getElementById("card2").classList.remove("spinning"); deusesSorteados = [document.getElementById("card1").innerText, document.getElementById("card2").innerText]; setElDisplay("actionButtons", "flex"); } }, 100); }
+        window.escolherDeus = function(i) { let dName = deusesSorteados[i]; db.ref(`tokyoRpg/users/${jogadorAtual}/deus`).set(dName); setElDisplay("actionButtons", "none"); let dObj = deuses.find(x=>x.n===dName); setElDisplay("pantheonSavedArea", "block"); setElText("savedGodCard", dName); setElText("savedGodDesc", dObj.d); alert("Patrono atualizado!"); }
+        window.resgatarCodigo = function() { let c = document.getElementById("sponsorCode").value.trim().toUpperCase(); if(!c) return; if(codigosPromocionais[c]) { let v = codigosPromocionais[c]; let r = db.ref('tokyoRpg/users/' + jogadorAtual); r.once('value').then(s => { let u = s.val(); if(u.codigosUsados && u.codigosUsados[c]) { alert("Já resgatado."); } else { r.child('codigosUsados').update({ [c]: true }); r.update({ carteira: (u.carteira || 0) + v }); alert(`+${v}¥`); setElVal("sponsorCode", ""); } }); } }
+
+        // --- LISTENERS ---
         if (db) {
-            carregarTitulos();
+            carregarTitulos(); carregarOpcoesAvatar();
             db.ref('tokyoRpg/users').on('value', s => { 
                 usersGlobais = s.val()||{}; renderizarFicha(); renderizarMochila(); drawMapVisuals(); drawTacticalBoard(); drawCasaBoard();
                 if(jogadorAtual && usersGlobais[jogadorAtual]) setElText("profileWallet", (usersGlobais[jogadorAtual].carteira||0));
