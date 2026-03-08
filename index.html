@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema do Distrito - WebApp V11.0</title>
-    <link rel="stylesheet" href="style.css?v=V11.0">
+    <title>Sistema do Distrito - V1.0 Alpha</title>
+    <link rel="stylesheet" href="style.css?v=V1.0">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
 <body>
 
     <nav class="nav-bar">
-        <button class="nav-btn active" onclick="mudarAba('tab-mapa', this)">Mapa (VTT)</button>
+        <button class="nav-btn active" onclick="mudarAba('tab-mapa', this)">Mapa VTT</button>
         <button class="nav-btn" id="btnAbaCasa" onclick="mudarAba('tab-casa', this)" style="display:none; color:var(--accent-gold);">Minha Casa</button>
         <button class="nav-btn" onclick="mudarAba('tab-principal', this)">Notícias</button>
         <button class="nav-btn" onclick="mudarAba('tab-igamble', this)">IGamble</button>
+        <button class="nav-btn" id="btnAbaCelular" onclick="mudarAba('tab-celular', this)" style="display:none; color:#00ff00;">Celular</button>
         <button class="nav-btn" onclick="mudarAba('tab-roleta', this)">Panteão</button>
         <button class="nav-btn" onclick="mudarAba('tab-loja', this)">Mercado</button>
         <button class="nav-btn" onclick="mudarAba('tab-mochila', this)">Mochila</button>
@@ -26,13 +27,11 @@
     </div>
 
     <div id="globalDiceOverlay" class="dice-overlay">
-        <h2 style="margin:0;">ROLAGEM DE DADOS</h2>
+        <h2 style="margin:0;">RESULTADO</h2>
         <p id="diceRollerName" style="color:var(--accent-blue); margin:5px 0;">Agent: ---</p>
         <p id="diceFormulaLabel" style="color:#aaa; font-size:12px; margin:0;">Formula</p>
-        <div class="dice-spinners" id="diceSpinners">
-            <div class="dice-number">?</div><div class="dice-number">?</div><div class="dice-number">?</div>
-        </div>
-        <h1 id="diceFinalResult" style="color:#00ff00; font-size:48px; text-shadow: 0 0 20px #00ff00; display:none; margin:0;">00</h1>
+        <div class="dice-spinners" id="diceSpinners"></div>
+        <div id="diceFinalResult" style="display:none; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:10px;"></div>
     </div>
 
     <div class="modal-overlay" id="loginModal">
@@ -97,9 +96,9 @@
 
                         <div class="submap-canvas" id="subMapCanvas">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background:rgba(0,0,0,0.8); padding:10px; border-radius:8px; border:1px solid var(--accent-blue);">
-                                <div><h2 id="subMapTitle" style="margin:0;">Local</h2><p style="color:#00ff00;font-size:11px;margin:0;">VTT: Clique num espaço livre para mover seu Token (Obstáculos listrados bloqueiam passagem).</p></div>
+                                <div><h2 id="subMapTitle" style="margin:0;">Local</h2><p style="color:#00ff00;font-size:11px;margin:0;">VTT: Clique num espaço livre para mover. Obstáculos vermelhos bloqueiam.</p></div>
                                 <div>
-                                    <button id="btnMestreBgMap" class="action-btn" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); font-size:11px;" onclick="mudarBgSubMapa()">[Mestre] Imagem de Fundo</button>
+                                    <button id="btnMestreBgMap" class="action-btn" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); font-size:11px;" onclick="mudarBgSubMapa()">[Mestre] Importar Fundo URL</button>
                                     <button class="action-btn" onclick="fecharSubMapa()">Sair 🌍</button>
                                 </div>
                             </div>
@@ -113,18 +112,34 @@
 
                 <div class="skills-container">
                     <h3 style="color: #fff; margin-top:0; border-bottom: 1px solid #333; padding-bottom: 5px;">Perícias Oficiais</h3>
-                    <p style="font-size: 11px; color: #aaa; margin: 0;">Os dados baseiam-se na sua ficha. Role clicando no botão e o resultado animado piscará na tela.</p>
                     <div class="skills-grid" id="skillsGridQuick"></div>
                 </div>
             </div>
 
             <div id="tab-casa" class="tab-content">
                 <h1 class="neon-gold">Sua Propriedade</h1>
-                <p style="color:#aaa; font-size:12px;">Selecione um móvel na bandeja e clique no chão para mobiliar. Móveis te dão bônus!</p>
+                <div style="display:flex; gap:10px; margin-bottom:10px; width:100%; max-width:900px;">
+                    <input type="text" id="casaNomeInp" placeholder="Nome do Local (Ex: Meu AP)" style="flex:1;">
+                    <input type="text" id="casaBgInp" placeholder="URL da Imagem de Fundo (Battlemap)" style="flex:2;">
+                    <button class="action-btn" onclick="salvarConfigCasa()" style="margin:0;">Salvar Casa</button>
+                </div>
                 <div style="width:100%; height:50vh; min-height:400px; position:relative; border:2px solid var(--accent-blue); background:#000;">
                     <div class="tactical-board" id="casaBoard" style="height:100%;"></div>
                 </div>
                 <div class="furniture-tray" id="furnitureTray"></div>
+            </div>
+
+            <div id="tab-celular" class="tab-content">
+                <h1 style="color: #00ff00;">Terminal Móvel Privado</h1>
+                <div style="background:#111; border:2px solid #333; border-radius:20px; padding:20px; width:100%; max-width:400px; height:60vh; display:flex; flex-direction:column; box-shadow: 0 0 30px rgba(0,210,255,0.1);">
+                    <div style="background:#1a1a24; padding:10px; text-align:center; color:#00d2ff; font-weight:bold; border-bottom: 1px solid #333;">Meu Nº: <span id="myPhoneHeader" class="neon-green"></span></div>
+                    <div id="smsLog" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:10px; background:#050505;"></div>
+                    <div style="display:flex; flex-direction:column; gap:5px; margin-top:10px; background:#1a1a24; padding:10px; border-top:1px solid #333;">
+                        <input type="text" id="smsDestino" placeholder="Nº Destino" style="padding:10px; background:#000; color:#fff; border:1px solid #555;">
+                        <input type="text" id="smsTexto" placeholder="Mensagem..." style="padding:10px; background:#000; color:#fff; border:1px solid #555;">
+                        <button onclick="enviarSMS()" style="padding:10px; background:#00ff00; color:#000; font-weight:bold; border:none; cursor:pointer; border-radius:4px;">Enviar SMS</button>
+                    </div>
+                </div>
             </div>
 
             <div id="tab-principal" class="tab-content">
@@ -137,7 +152,7 @@
                             <select id="embLocal" style="margin-bottom:5px; width:100%;"></select>
                             <input type="text" id="embP1" placeholder="Lutador 1" style="width:48%;"> <input type="text" id="embP2" placeholder="Lutador 2" style="width:48%; float:right;">
                             <input type="number" id="embAposta" placeholder="Aposta do Duelo (¥)" style="width:100%; margin-top:5px;">
-                            <button class="action-btn" onclick="iniciarEmbateMap()" style="width:100%; margin-top:5px;">Declarar Combate Oficial</button>
+                            <button class="action-btn" onclick="iniciarEmbateMap()" style="width:100%; margin-top:5px;">Declarar Combate</button>
                         </div>
                         <div style="flex:1; min-width:250px;">
                             <h4>2. Resolver Combate</h4>
@@ -150,6 +165,10 @@
                             <h4>3. Criar Imóvel</h4>
                             <select id="imovelLocal" style="margin-bottom:5px; width:100%;"></select>
                             <input type="text" id="imovelNome" placeholder="Nome do Imóvel" style="width:100%;">
+                            <div style="display:flex; gap:10px; margin-top:5px;">
+                                <input type="number" id="imovelW" placeholder="Larg(Ex:2)" style="flex:1;">
+                                <input type="number" id="imovelH" placeholder="Alt(Ex:2)" style="flex:1;">
+                            </div>
                             <input type="number" id="imovelPreco" placeholder="Preço ¥" style="width:100%; margin-top:5px;">
                             <button class="action-btn" onclick="criarImovelMestre()" style="width:100%; margin-top:5px; color:var(--accent-blue); border-color:var(--accent-blue);">Anunciar Venda</button>
                         </div>
@@ -164,20 +183,8 @@
                 <div class="igamble-wrapper">
                     <div class="igamble-side">
                         <div class="avatar-maker-panel">
-                            <h4 style="width:100%; text-align:center; color:var(--accent-blue);">Fábrica de Avatares (500¥)</h4>
-                            
-                            <div style="display:flex; align-items:center; justify-content:center; margin-bottom:10px;">
-                                <div style="width:100px; height:100px; border-radius:50%; overflow:hidden; border:2px solid var(--accent-blue); box-shadow: 0 0 15px rgba(0,229,255,0.4);"><img id="avPreviewImg" src="https://api.dicebear.com/7.x/avataaars/svg?seed=Base" style="width:100%; height:100%; object-fit:cover;"></div>
-                            </div>
-                            
-                            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">Cabelo:</div>
-                            <div class="avatar-part-grid" id="gridCabelo"></div>
-                            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">Cor do Cabelo:</div>
-                            <div class="avatar-part-grid" id="gridCor"></div>
-                            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">Boca/Rosto:</div>
-                            <div class="avatar-part-grid" id="gridBoca"></div>
-                            <div style="font-size:11px; color:#aaa; margin-bottom:2px;">Tom de Pele:</div>
-                            <div class="avatar-part-grid" id="gridPele"></div> <button class="action-btn" onclick="salvarAvatarCustom()" style="width:100%; font-size:12px; margin-top:10px;">Pagar Cirurgia (500 ¥)</button>
+                            <h4 style="width:100%; text-align:center; color:var(--accent-blue);">Avatares Oficiais</h4>
+                            <div class="avatar-grid-select" id="avatarGridDisplay"></div>
                         </div>
 
                         <div class="avatar-maker-panel" style="flex-direction:column;">
@@ -191,7 +198,7 @@
                         <div class="chat-messages" id="chatMessages"></div>
                         <div class="chat-input-area">
                             <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
-                            <button class="neon-icon-btn" onclick="document.getElementById('chatImageFile').click()" title="Anexar Imagem">📎</button>
+                            <button class="neon-icon-btn" onclick="document.getElementById('chatImageFile').click()" title="Anexar">📎</button>
                             <input type="text" id="chatInput" placeholder="Mensagem ou Link da imagem..." maxlength="200" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
                             <button class="neon-icon-btn" onclick="prepararEnvioMensagem()" title="Enviar">➤</button>
                         </div>
@@ -208,19 +215,19 @@
             <div id="tab-roleta" class="tab-content">
                 <div style="background:#0a0a0f; border:1px solid var(--accent-blue); padding:20px; border-radius:8px; text-align:center; width:100%; max-width:600px;">
                     <h2 style="margin-top:0;">Seleção de Patrono</h2>
-                    <p style="color:#aaa; font-size:12px;">Custo: 500 ¥. Você pode girar a roleta quando quiser para trocar sua Passiva.</p>
+                    <p style="color:#aaa; font-size:12px;">Custo: 500 ¥. Gire para mudar sua Passiva.</p>
                     
                     <div id="pantheonSavedArea" style="margin: 15px 0; padding:15px; border:1px dashed #ffaa00; display:none;">
                         <p style="color:#fff; margin:0; font-size:12px;">Seu Patrono Atual:</p>
-                        <h2 id="savedGodCard" class="neon-gold" style="margin:5px 0; font-size:30px;">NENHUM</h2>
-                        <p id="savedGodDesc" style="font-size:13px; color:#00ff00; margin:0; font-weight:bold;"></p>
+                        <div id="savedGodCard" class="card" style="margin: 10px auto; border-color:#ffaa00; box-shadow:0 0 20px #ffaa00;"></div>
+                        <p id="savedGodDesc" style="font-size:13px; color:#00ff00; margin:10px 0 0 0; font-weight:bold;"></p>
                     </div>
 
                     <button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar Roleta (500¥)</button>
                     <div class="cards-container" id="roletaCardsArea" style="display:none;"><div class="card" id="card1">?</div><div class="card" id="card2">?</div></div>
                     <div id="actionButtons" style="display: none; justify-content:center; gap:10px;">
-                        <button class="action-btn" onclick="escolherDeus(0)" id="btnGod1">Aceitar 1</button>
-                        <button class="action-btn" onclick="escolherDeus(1)" id="btnGod2">Aceitar 2</button>
+                        <button class="action-btn" onclick="escolherDeus(0)">Aceitar Carta 1</button>
+                        <button class="action-btn" onclick="escolherDeus(1)">Aceitar Carta 2</button>
                     </div>
                 </div>
             </div>
@@ -255,10 +262,13 @@
             
         </div>
 
-        <div class="sidebar"><h2>Agentes Online</h2><div class="user-list" id="userLog"></div></div>
+        <div class="sidebar">
+            <div style="display:flex; justify-content:space-between; align-items:center;"><h2>Agentes</h2><label style="font-size:10px; color:#aaa;"><input type="checkbox" id="checkHideOffline" onchange="window.desenharListaUsuarios()"> Só Online</label></div>
+            <div class="user-list" id="userLog"></div>
+        </div>
     </div>
 
-    <div class="version-tag">Versão do Sistema: V11.0</div>
+    <div class="version-tag">Versão do Sistema: V1.0 Alpha</div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
@@ -266,11 +276,9 @@
         let jogadorAtual = ""; let serialAtual = ""; let connectionRef = null; let isMaster = false; const MASTER_SERIAL = "4053-DC1";
         
         const codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
-        const deuses = [{n:"Oizus", d:"Dobra risco do adversário e reduz o seu."}, {n:"Afrodite", d:"Força acordo não-letal."}, {n:"Athena", d:"Recebe pista dedutiva."}, {n:"Hades", d:"Herda Yenes de mortos."}, {n:"Hermes", d:"Fuga perfeita de embate."}, {n:"Gaia", d:"Ver rotas secretas e ignorar obstáculos no grid."}, {n:"Zeus", d:"Força aposta ou multa."}, {n:"Diogenes", d:"Imune a manipulações."}, {n:"Ares", d:"Ignora dor leve."}, {n:"Poseidon", d:"Anula última transação."}, {n:"Apolo", d:"Força verdade (Sim/Não)."}, {n:"Ártemis", d:"Rastreio infalível."}];
+        const deuses = [{n:"Oizus", d:"Dobra risco do adversário.", s:"♠"}, {n:"Afrodite", d:"Força acordo não-letal.", s:"♥"}, {n:"Athena", d:"Recebe pista dedutiva.", s:"♦"}, {n:"Hades", d:"Herda Yenes de mortos.", s:"♣"}, {n:"Hermes", d:"Fuga perfeita de embate.", s:"♠"}, {n:"Gaia", d:"Ver rotas secretas e ignorar obstáculos.", s:"♥"}, {n:"Zeus", d:"Força aposta ou multa.", s:"♦"}, {n:"Diogenes", d:"Imune a manipulações.", s:"♣"}, {n:"Ares", d:"Ignora dor leve.", s:"♠"}, {n:"Poseidon", d:"Anula última transação.", s:"♥"}, {n:"Apolo", d:"Força verdade.", s:"♦"}, {n:"Ártemis", d:"Rastreio infalível.", s:"♣"}];
         const periciasSistema = [{ nome: "Luta", attr: "for" }, { nome: "Atletismo", attr: "for" }, { nome: "Furtividade", attr: "agi" }, { nome: "Pilotagem", attr: "agi" }, { nome: "Acrobacia", attr: "agi" }, { nome: "Armas", attr: "man" }, { nome: "Mecânica", attr: "man" }, { nome: "Sobrevivência", attr: "vig" }, { nome: "Intimidação", attr: "vig" }, { nome: "Investigação", attr: "int" }, { nome: "Medicina", attr: "int" }, { nome: "Hackear", attr: "int" }];
-        
-        // 70 TITULOS
-        const titulosExtensos = "Novato|com|0,Alvo Fácil|com|500,Rato de Beco|com|800,Corredor|com|1000,Sobrevivente|com|1200,Apostador|com|1500,Batedor de Carteira|com|1600,Olheiro|com|1700,Lutador|inc|2000,Atirador|inc|2500,Sombra|inc|3000,Lobo Solitário|inc|3500,Hustler|inc|4000,Fornecedor|inc|4200,Detetive|inc|4500,Guarda Costas|inc|4800,Estrategista|rar|6000,Investigador|rar|7000,Caçador de Recompensas|rar|8000,Silencioso|rar|9000,Atirador de Elite|rar|9500,Lâmina Cega|rar|10000,Engenheiro|rar|10500,O Especialista|rar|11000,O Hacker|epi|12000,Trapaceiro|epi|15000,Fantasma Digital|epi|18000,Lorde das Armas|epi|20000,O Intocável|epi|25000,Senhor do Crime|epi|26000,Mestre das Marionetes|epi|28000,Ceifador|epi|30000,Assassino Fantasma|leg|35000,Demônio de Neon|leg|40000,Deus das Apostas|leg|45000,Rei do Distrito|leg|50000,A Lenda Viva|leg|60000,A Morte|leg|70000,O Arquear|leg|75000,A Anomalia|leg|80000,Líder Supremo|leg|100000".split(',');
+        const titulosExtensos = "Novato|com|0,Alvo Fácil|com|500,Rato de Beco|com|800,Corredor|com|1000,Sobrevivente|com|1200,Apostador|com|1500,Batedor de Carteira|com|1600,Olheiro|com|1700,Lutador|inc|2000,Atirador|inc|2500,Sombra|inc|3000,Lobo Solitário|inc|3500,Hustler|inc|4000,Fornecedor|inc|4200,Detetive|inc|4500,Guarda Costas|inc|4800,Estrategista|rar|6000,Investigador|rar|7000,Caçador de Recompensas|rar|8000,Silencioso|rar|9000,Atirador de Elite|rar|9500,Lâmina Cega|rar|10000,Engenheiro|rar|10500,O Especialista|rar|11000,O Hacker|epi|12000,Trapaceiro|epi|15000,Fantasma Digital|epi|18000,Lorde das Armas|epi|20000,O Intocável|epi|25000,Senhor do Crime|epi|26000,Mestre das Marionetes|epi|28000,Ceifador|epi|30000,Assassino Fantasma|leg|35000,Demônio de Neon|leg|40000,Deus das Apostas|leg|45000,Rei do Distrito|leg|50000,A Lenda Viva|leg|60000,A Morte|leg|70000,O Arquiteto|leg|75000,A Anomalia|leg|80000,Líder Supremo|leg|100000".split(',');
 
         try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch (error) { console.error(error); }
 
@@ -289,7 +297,6 @@
             fecharSubMapa(); 
         }
 
-        // --- RELÓGIO (10min/sec) ---
         const startTimestamp = 1710000000000;
         setInterval(() => {
             let tempoRPG = new Date(startTimestamp + ((Date.now() - startTimestamp) * 600)); 
@@ -298,7 +305,7 @@
             let elClock = document.getElementById("clockTime"); if(elClock) elClock.style.color = (tempoRPG.getHours() >= 18 || tempoRPG.getHours() < 6) ? "#ff1a55" : "#00e5ff"; 
         }, 1000);
 
-        // --- MAPA GLOBAL E LINHAS ORTOGONAIS ---
+        // --- MAPA GLOBAL ORTOGONAL E VTT ---
         const locaisMapa = {
             "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Fonte", x:4, y:2, w:4, h:4}] }, "p2": { nome: "Ghost Ramen", x: 35, y: 65, salas: [{n:"Salão", x:1, y:1, w:6, h:4}, {n:"Cozinha", x:7, y:1, w:4, h:4}], obs:["2_2","3_2","4_2"] },
             "p3": { nome: "Viela da Fome", x: 20, y: 55, salas: [{n:"Beco", x:2, y:1, w:8, h:6}], obs:["5_3","5_4","5_5"] }, "p4": { nome: "Club Neon", x: 50, y: 85, salas: [{n:"Pista", x:2, y:2, w:6, h:5}, {n:"VIP", x:8, y:2, w:3, h:3}], obs:["7_2","7_3","7_4"] },
@@ -318,22 +325,16 @@
         function drawMapVisuals() {
             const canvas = document.getElementById("mapCanvas"); if(!canvas) return;
             canvas.innerHTML = '<div class="map-overlay-grid"></div><div id="mapArrow" class="map-enter-arrow" onclick="entrarSubMapa()">ENTRAR ⬇️</div>';
-            
             let isGaia = usersGlobais[jogadorAtual]?.deus === "Gaia";
 
-            // Desenha linhas Ortogonais
             conexoesMapa.forEach(con => {
                 let p1 = locaisMapa[con.de]; let p2 = locaisMapa[con.para];
-                let isV = (p1.tipo === "viela" || p2.tipo === "viela"); let cl = isV?'viela':'';
-                
                 let minX = Math.min(p1.x, p2.x); let w = Math.abs(p2.x - p1.x);
-                if(w > 0) canvas.innerHTML += `<div class="map-street ${cl}" style="left:${minX}%; top:${p1.y}%; width:${w}%;"></div>`;
-                
                 let minY = Math.min(p1.y, p2.y); let h = Math.abs(p2.y - p1.y);
-                if(h > 0) canvas.innerHTML += `<div class="map-street ${cl}" style="left:${p2.x}%; top:${minY}%; height:${h}%; width:3px;"></div>`;
+                if(w > 0) canvas.innerHTML += `<div class="map-street" style="left:${minX}%; top:${p1.y}%; width:${w}%; height:4px;"></div>`;
+                if(h > 0) canvas.innerHTML += `<div class="map-street" style="left:${p2.x}%; top:${minY}%; width:4px; height:${h}%;"></div>`;
             });
 
-            // Linhas Diagonais só para Gaia
             if(isGaia || isMaster) {
                 rotasSecretasGaia.forEach(con => {
                     let pDe = locaisMapa[con.de]; let pPara = locaisMapa[con.para];
@@ -410,7 +411,7 @@
 
         window.mudarBgSubMapa = function() {
             if(!isMaster || !currentSubMapKey) return;
-            let url = prompt("URL da Imagem para este Mapa de Batalha (Vazio para resetar):");
+            let url = prompt("URL da Imagem para este Mapa (Vazio para resetar):");
             if(url !== null) db.ref(`tokyoRpg/submapsBGs/${currentSubMapKey}`).set(url);
         }
 
@@ -454,7 +455,6 @@
             let cellId = `${x}_${y}`; let gridTokens = submapasGlobais[currentSubMapKey] || {};
             if(gridTokens[cellId]) return; 
             
-            // O Avatar não precisa mais ser selecionado. Clicou, andou.
             let updates = {}; Object.keys(gridTokens).forEach(k => { if(gridTokens[k] === jogadorAtual) updates[k] = null; }); updates[cellId] = jogadorAtual;
             db.ref(`tokyoRpg/submaps/${currentSubMapKey}`).update(updates);
         }
@@ -488,40 +488,60 @@
         window.selecionarMovel = function(nome, el) { selectedFurniture = nome; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); }
         window.clicarGridCasa = function(x,y) { if(!selectedFurniture) return; let cellId = `${x}_${y}`; db.ref(`tokyoRpg/casasGrid/${jogadorAtual}/${cellId}`).set(selectedFurniture); selectedFurniture = null; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); drawCasaBoard(); renderizarMochila(); }
         window.removerMoveCasa = function(cellId, ev) { ev.stopPropagation(); db.ref(`tokyoRpg/casasGrid/${jogadorAtual}/${cellId}`).remove().then(()=>renderizarMochila()); }
+        window.salvarConfigCasa = function() {
+            if(!jogadorAtual) return; let nome = document.getElementById("casaNomeInp").value; let bg = document.getElementById("casaBgInp").value;
+            db.ref(`tokyoRpg/users/${jogadorAtual}/casaConfig`).update({ nome: nome, bg: bg }); alert("Salvo.");
+        }
 
-        // --- DADOS ANIMADOS OVERLAY ---
-        function mostrarDadoOverlay(nome, rollString, resultFinal) {
+        // --- DADOS ANIMADOS (SEPARADOS) ---
+        function mostrarDadoOverlay(nome, rollString, rolagensIndividuais) {
             let ov = document.getElementById("globalDiceOverlay"); let sp = document.getElementById("diceSpinners"); let res = document.getElementById("diceFinalResult");
-            setElText("diceRollerName", "Agente: " + nome); setElText("diceFormulaLabel", "Formula: " + rollString);
+            setElText("diceRollerName", "Agente: " + nome); setElText("diceFormulaLabel", "Ação: " + rollString);
             sp.style.display = "flex"; res.style.display = "none"; ov.style.display = "flex";
             
-            let interval = setInterval(() => { sp.innerHTML = `<div class="dice-number">${Math.floor(Math.random()*20)}</div><div class="dice-number">${Math.floor(Math.random()*20)}</div><div class="dice-number">${Math.floor(Math.random()*20)}</div>`; }, 50);
-            setTimeout(() => { clearInterval(interval); sp.style.display = "none"; res.style.display = "block"; res.innerText = resultFinal; setTimeout(() => { ov.style.display = "none"; }, 3000); }, 1500);
+            // Cria os spinners baseados na qtd de dados
+            sp.innerHTML = "";
+            let qtd = rolagensIndividuais.length;
+            for(let i=0; i<qtd; i++) sp.innerHTML += `<div class="dice-number">?</div>`;
+
+            let interval = setInterval(() => { 
+                let html = ""; for(let i=0; i<qtd; i++) html += `<div class="dice-number">${Math.floor(Math.random()*20)}</div>`;
+                sp.innerHTML = html;
+            }, 50);
+
+            setTimeout(() => { 
+                clearInterval(interval); sp.style.display = "none"; res.style.display = "flex"; 
+                res.innerHTML = rolagensIndividuais.map(v => `<div style="background:#111; border:2px solid #00ff00; padding:10px 20px; border-radius:8px;">${v}</div>`).join('');
+                setTimeout(() => { ov.style.display = "none"; }, 3000); 
+            }, 1500);
         }
 
         window.lancarDadoPersonalizado = function() {
             if(!jogadorAtual) return; let exp = document.getElementById("diceInput").value.trim().toLowerCase(); if(!exp.includes('d')) return; 
             let p = exp.split('d'); let qtd = parseInt(p[0]) || 1; let r = p[1].split('+'); let faces = parseInt(r[0]); let mod = r[1]?parseInt(r[1]):0;
-            let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random() * faces) + 1; rol.push(d); tot += d; } tot += mod;
-            let txt = `${qtd}d${faces}${mod>0?'+'+mod:''} ➔ [${rol.join(',')}] = ${tot}`;
+            let rol = []; for(let i=0; i<qtd; i++) { rol.push(Math.floor(Math.random() * faces) + 1); }
+            let resultsHtml = rol.map(v => `<span class="dice-result-box">${v}</span>`).join('');
+            let txt = `Rolou ${qtd}d${faces}: ${resultsHtml}`;
             db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: txt }); setElVal("diceInput", "");
-            db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `${qtd}d${faces}${mod>0?'+'+mod:''}`, result: tot, ts: Date.now() });
+            db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `${qtd}d${faces}`, results: rol, ts: Date.now() });
         };
 
         window.rolarAtributo = function(nomeAttr, attrKey) {
             if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); let buffs = calcularBuffsMoveis(usersGlobais[jogadorAtual]);
             let qtd = r[attrKey] + buffs[attrKey]; if(qtd < 1) qtd = 1;
-            let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random()*20)+1; rol.push(d); tot += d; }
-            db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `[${nomeAttr}] (${qtd}d20) ➔ [${rol.join(',')}] = ${tot}` });
-            db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `[${nomeAttr}] ${qtd}d20`, result: tot, ts: Date.now() });
+            let rol = []; for(let i=0; i<qtd; i++) { rol.push(Math.floor(Math.random()*20)+1); }
+            let resultsHtml = rol.map(v => `<span class="dice-result-box">${v}</span>`).join('');
+            db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `[${nomeAttr}] (${qtd}d20): ${resultsHtml}` });
+            db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `[${nomeAttr}] ${qtd}d20`, results: rol, ts: Date.now() });
         };
         
         window.rolarPericia = function(nP, attr) {
             if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); let buffs = calcularBuffsMoveis(usersGlobais[jogadorAtual]);
             let qtd = r[attr] + buffs[attr]; if(qtd < 1) qtd = 1;
-            let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random()*20)+1; rol.push(d); tot += d; }
-            db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `[${nP}] (${qtd}d20) ➔ [${rol.join(',')}] = ${tot}` });
-            db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `[${nP}] ${qtd}d20`, result: tot, ts: Date.now() });
+            let rol = []; for(let i=0; i<qtd; i++) { rol.push(Math.floor(Math.random()*20)+1); }
+            let resultsHtml = rol.map(v => `<span class="dice-result-box">${v}</span>`).join('');
+            db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `[${nP}] (${qtd}d20): ${resultsHtml}` });
+            db.ref('tokyoRpg/currentRoll').set({ nome: jogadorAtual, form: `[${nP}] ${qtd}d20`, results: rol, ts: Date.now() });
         };
 
         // --- RPG E HP ---
@@ -530,8 +550,8 @@
         function calcularBuffsMoveis(u) { let buffs = { for:0, agi:0, int:0, vig:0, man:0 }; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.buffType && i.poder && buffs[i.buffType] !== undefined) buffs[i.buffType] += parseInt(i.poder); }); return buffs; }
 
         function renderizarFicha() {
-            if(!jogadorAtual) return;
-            let u = usersGlobais[jogadorAtual] || {}; let r = getSafeRpg(u); let mInteg = calcularMaxInteg(u); let buffs = calcularBuffsMoveis(u);
+            if(!jogadorAtual || !usersGlobais[jogadorAtual]) return;
+            let u = usersGlobais[jogadorAtual]; let r = getSafeRpg(u); let mInteg = calcularMaxInteg(u); let buffs = calcularBuffsMoveis(u);
             
             setElText("lblNivel", `[ Embate Nv. ${r.nivel} ]`); setElText("lblDef", r.defesa); setElText("lblPts", r.pontosLivres);
             setElText("valFor", r.for + buffs.for); setElText("valAgi", r.agi + buffs.agi); setElText("valMan", r.man + buffs.man); setElText("valVig", r.vig + buffs.vig); setElText("valInt", r.int + buffs.int);
@@ -541,41 +561,29 @@
             let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
             
             let pGrid = document.getElementById("skillsGridQuick"); if(!pGrid) return; pGrid.innerHTML = "";
-            periciasSistema.forEach(p => { let v = r[p.attr] + buffs[p.attr]; pGrid.innerHTML += `<button class="skill-btn" onclick="rolarPericia('${p.nome}', '${p.attr}')">${p.nome} ${v}d</button>`; });
+            periciasSistema.forEach(p => { let v = r[p.attr] + buffs[p.attr]; pGrid.innerHTML += `<button class="skill-btn" onclick="rolarPericia('${p.nome}', '${p.attr}')">${p.nome} [${v}d]</button>`; });
         }
 
         window.atualizarHP = function() { if(!jogadorAtual) return; let nHp = parseInt(document.getElementById("hpInput").value || 0); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/hp`).set(nHp); };
         window.distribuirPonto = function(attr) { if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); if(r.pontosLivres > 0 && r[attr] < 3) { db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(r[attr] + 1); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres - 1); } };
 
-        // --- AVATAR STUDIO ---
-        let hairColors = { Black:"Preto", Blonde:"Loiro", Brown:"Castanho", Red:"Ruivo", Platinum:"Platinado", Blue:"Azul", Pink:"Rosa", Green:"Verde" };
-        let skinColors = { Light:"Clara", Yellow:"Amarelada", Brown:"Parda", DarkBrown:"Escura", Black:"Negra" };
-        let mouths = { smile:"Sorrindo", serious:"Sério", sad:"Triste", screamOpen:"Grito" };
-        let tops = { shortHair:"Cabelo Curto", longHair:"Cabelo Longo", hat:"Chapéu", eyepatch:"Tapa Olho", hijab:"Hijab", turban:"Turbante" };
-        
-        function carregarOpcoesAvatar() {
-            let bC = document.getElementById("gridCabelo"); let bCr = document.getElementById("gridCor"); let bB = document.getElementById("gridBoca"); let bP = document.getElementById("gridPele");
-            if(!bC || !bP) return; // Null Check essencial
-            bC.innerHTML=""; Object.keys(tops).forEach(k => bC.innerHTML += `<div class="part-btn" onclick="setAvatarPart('top','${k}',this)">${tops[k]}</div>`);
-            bCr.innerHTML=""; Object.keys(hairColors).forEach(k => bCr.innerHTML += `<div class="part-btn" onclick="setAvatarPart('hair','${k}',this)">${hairColors[k]}</div>`);
-            bB.innerHTML=""; Object.keys(mouths).forEach(k => bB.innerHTML += `<div class="part-btn" onclick="setAvatarPart('mouth','${k}',this)">${mouths[k]}</div>`);
-            bP.innerHTML=""; Object.keys(skinColors).forEach(k => bP.innerHTML += `<div class="part-btn" onclick="setAvatarPart('skin','${k}',this)">${skinColors[k]}</div>`);
+        // --- AVATAR STUDIO (65 PRÉ CRIADOS) ---
+        function carregarAvatares() {
+            let grid = document.getElementById("avatarGridDisplay"); if(!grid) return;
+            grid.innerHTML = "";
+            // 25 Homens
+            for(let i=1; i<=25; i++) { grid.innerHTML += `<img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Man${i}&hairColor=Black,Brown" class="av-thumb" onclick="selecionarAvatarLoja(this, 'https://api.dicebear.com/7.x/adventurer/svg?seed=Man${i}&hairColor=Black,Brown')">`; }
+            // 25 Mulheres
+            for(let i=1; i<=25; i++) { grid.innerHTML += `<img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Woman${i}&hairColor=Blonde,Pink,Red" class="av-thumb" onclick="selecionarAvatarLoja(this, 'https://api.dicebear.com/7.x/adventurer/svg?seed=Woman${i}&hairColor=Blonde,Pink,Red')">`; }
+            // 15 Bots/Emojis
+            for(let i=1; i<=15; i++) { grid.innerHTML += `<img src="https://api.dicebear.com/7.x/bottts/svg?seed=Bot${i}" class="av-thumb" onclick="selecionarAvatarLoja(this, 'https://api.dicebear.com/7.x/bottts/svg?seed=Bot${i}')">`; }
         }
-
-        let myAvConf = { top:"shortHair", hair:"Black", skin:"Light", mouth:"smile" };
-        window.setAvatarPart = function(type, val, el) { 
-            myAvConf[type] = val; 
-            el.parentElement.querySelectorAll('.part-btn').forEach(e=>e.classList.remove('active')); el.classList.add('active'); 
-            previewAvatar(); 
-        }
-        function previewAvatar() {
-            let url = `https://api.dicebear.com/7.x/avataaars/svg?top=${myAvConf.top}&hairColor=${myAvConf.hair}&skinColor=${myAvConf.skin}&mouth=${myAvConf.mouth}&clothing=graphicShirt`;
-            let img = document.getElementById("avPreviewImg"); if(img) img.src = url; return url;
-        }
+        let urlSelecionadaStudio = "";
+        window.selecionarAvatarLoja = function(el, url) { urlSelecionadaStudio = url; document.querySelectorAll('.av-thumb').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); document.getElementById("avPreviewImg").src = url;}
         window.salvarAvatarCustom = function() {
-            if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira || 0;
+            if(!jogadorAtual || !urlSelecionadaStudio) return; let c = usersGlobais[jogadorAtual].carteira || 0;
             if(c < 500) { alert("Precisa de 500 ¥."); return; }
-            db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c - 500); db.ref(`tokyoRpg/users/${jogadorAtual}/avatarUrl`).set(previewAvatar()); alert("Visual Atualizado!");
+            db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c - 500); db.ref(`tokyoRpg/users/${jogadorAtual}/avatarUrl`).set(urlSelecionadaStudio); alert("Visual Atualizado!");
         }
 
         // --- CHAT PREMIUM E EMOJIS ---
@@ -621,18 +629,26 @@
             if(!usersGlobais[nome] || usersGlobais[nome].carteira === undefined) db.ref('tokyoRpg/users/' + nome).update({ carteira: 0, rpg: getSafeRpg(), local: "p1" });
             
             let pD = usersGlobais[nome]?.deus;
-            if(pD) { setElDisplay("actionButtons", "none"); setElDisplay("pantheonSavedArea", "block"); setElText("savedGodCard", pD); let dObj = deuses.find(x=>x.n===pD); if(dObj) setElText("savedGodDesc", dObj.d); }
+            if(pD) { setElDisplay("actionButtons", "none"); setElDisplay("pantheonSavedArea", "block"); 
+                let dObj = deuses.find(x=>x.n===pD); 
+                if(dObj) { 
+                    setElHTML("savedGodCard", `<div class="card-suit top-left">${dObj.s}</div><div class="card-center">${dObj.n}</div><div class="card-suit bottom-right">${dObj.s}</div>`); 
+                    setElText("savedGodDesc", dObj.d); 
+                    if(dObj.s==='♥'||dObj.s==='♦') document.getElementById("savedGodCard").className = "card red-suit"; else document.getElementById("savedGodCard").className = "card black-suit";
+                } 
+            }
             if(usersGlobais[nome]?.casa) setElDisplay("btnAbaCasa", "inline-block");
+            if(usersGlobais[nome]?.numero) { setElDisplay("btnAbaCelular", "inline-block"); setElText("myPhoneHeader", usersGlobais[nome].numero); }
 
             setElDisplay('masterHomePanel', isMaster ? 'block' : 'none'); setElDisplay('masterShopPanel', isMaster ? 'block' : 'none');
             if(isMaster) { let sel = document.getElementById("embLocal"); let sel2 = document.getElementById("imovelLocal"); sel.innerHTML = "<option value=''>Selecione...</option>"; sel2.innerHTML = "<option value=''>Selecione...</option>"; Object.keys(locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${locaisMapa[k].nome}</option>`; sel2.innerHTML += `<option value="${k}">${locaisMapa[k].nome}</option>`; }); }
             
-            setarOnline(); renderizarFicha(); drawMapVisuals(); renderizarMochila(); previewAvatar(); fecharModal();
+            setarOnline(); renderizarFicha(); drawMapVisuals(); renderizarMochila(); window.desenharListaUsuarios(); fecharModal();
         }
 
         window.logarComSenha = function() { const n = document.getElementById("loginName").value.trim().toUpperCase(); const s = document.getElementById("loginPass").value; if (!n || !s) return; db.ref('tokyoRpg/users/' + n).once('value').then((snap) => { let ud = snap.val(); if(ud) { if (ud.senha !== s) { alert("Senha incorreta."); return; } window.logarSucesso(n, ud.serial); } else { let ns = gerarSerial(); db.ref('tokyoRpg/users/' + n).set({ senha: s, serial: ns, carteira: 0, rpg: getSafeRpg(), local: "p1" }); window.logarSucesso(n, ns); alert(`Criado.`); } }); };
         window.logarComSerial = function() { const s = document.getElementById("loginSerial").value.trim().toUpperCase(); if(!s) return; if(s === MASTER_SERIAL) { db.ref('tokyoRpg/users/MESTRE').update({ serial: MASTER_SERIAL, carteira: 9999999 }); window.logarSucesso("MESTRE", MASTER_SERIAL); return; } let achou = false; Object.keys(usersGlobais).forEach(n => { if(usersGlobais[n].serial === s) { achou = true; window.logarSucesso(n, s); }}); if(!achou) alert("Não encontrado."); };
-        window.deslogar = function() { if(connectionRef) connectionRef.set(false); jogadorAtual = ""; serialAtual = ""; isMaster = false; let btn = document.getElementById("userBtn"); if(btn) btn.classList.remove("logged"); setElVal("loginName", ""); setElVal("loginPass", ""); setElVal("loginSerial", ""); setElDisplay('masterHomePanel', 'none'); setElDisplay('masterShopPanel', 'none'); setElDisplay("btnAbaCasa", "none"); fecharSubMapa(); fecharModal(); drawMapVisuals(); };
+        window.deslogar = function() { if(connectionRef) connectionRef.set(false); jogadorAtual = ""; serialAtual = ""; isMaster = false; let btn = document.getElementById("userBtn"); if(btn) btn.classList.remove("logged"); setElVal("loginName", ""); setElVal("loginPass", ""); setElVal("loginSerial", ""); setElDisplay('masterHomePanel', 'none'); setElDisplay('masterShopPanel', 'none'); setElDisplay("btnAbaCasa", "none"); setElDisplay("btnAbaCelular", "none"); fecharSubMapa(); fecharModal(); drawMapVisuals(); };
 
         window.iniciarEmbateMap = function() { if(!isMaster) return; let locStr = document.getElementById("embLocal").value; let p1 = document.getElementById("embP1").value.trim().toUpperCase(); let p2 = document.getElementById("embP2").value.trim().toUpperCase(); let ap = parseInt(document.getElementById("embAposta").value||0); if(!locStr || !p1 || !p2) return; db.ref('tokyoRpg/mapEmbates').push({ localKey: locStr, p1: p1, p2: p2, aposta: ap }); alert("Embate Trancado."); setElVal("embP1",""); setElVal("embP2",""); setElVal("embAposta",""); }
         window.processarEmbate = function() { if(!isMaster) return; let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase(); let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value; if(!v || !p) return;
@@ -649,7 +665,9 @@
         window.filtrarLoja = function(tipo, btnEl) { filtroLojaAtual = tipo; document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active')); if(btnEl) btnEl.classList.add('active'); renderizarLojaUI(); }
         function renderizarLojaUI() { let b = document.getElementById("shopGrid"); if(!b) return; b.innerHTML=""; if(lojaGlobal) { Object.keys(lojaGlobal).forEach(k => { let i = lojaGlobal[k]; if(filtroLojaAtual === "Tudo" || (filtroLojaAtual==="Arma" && (i.tipo==="Arma"||i.tipo==="Roupa"||i.tipo==="Escudo")) || i.tipo === filtroLojaAtual) { let pd = i.poder ? `<span class="neon-gold"> [${i.buffType?'+'+i.poder+' '+i.buffType: 'Cura '+i.poder}]</span>` : ""; b.innerHTML += `<div class="shop-item"><div><span class="shop-type">${i.tipo}</span><h3 class="neon-blue" style="margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#aaa;">${i.desc}${pd}</p></div><div><h2 class="neon-green" style="margin:10px 0;">${i.preco}¥</h2><button class="action-btn" onclick="comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}', ${i.poder||0}, '${i.buffType||''}')">Comprar</button></div></div>`; }}); } }
         window.criarItemLoja = function() { if(!isMaster) return; let t=document.getElementById("newItemType").value; let n=document.getElementById("newItemName").value.trim(); let d=document.getElementById("newItemDesc").value.trim(); let buff=document.getElementById("newItemBuffType").value; let poder=parseInt(document.getElementById("newItemPoder").value||"0"); let p=parseInt(document.getElementById("newItemPrice").value); if(n && p) { db.ref('tokyoRpg/loja').push({ tipo: t, nome: n, desc: d, preco: p, poder: poder, buffType: buff }); alert("Publicado!"); setElVal("newItemName",""); setElVal("newItemDesc",""); setElVal("newItemPrice",""); setElVal("newItemPoder",""); } }
-        window.comprarItem = function(id, n, p, t, d, poder, buff) { if(!jogadorAtual || isMaster) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<p) {alert("Sem Yenes.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-p); if(t === "Móvel") { db.ref(`tokyoRpg/users/${jogadorAtual}/casa`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); document.getElementById("btnAbaCasa").style.display = "inline-block"; } else db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); alert("Comprado!"); }
+        window.comprarItem = function(id, n, p, t, d, poder, buff) { if(!jogadorAtual || isMaster) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<p) {alert("Sem Yenes.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-p); 
+            if(t === "Tecnologia") { let num = Math.floor(100000 + Math.random() * 900000).toString(); db.ref(`tokyoRpg/users/${jogadorAtual}/numero`).set(num); db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); document.getElementById("btnAbaCelular").style.display = "inline-block"; setElText("myPhoneHeader", num); } 
+            else if(t === "Móvel") { db.ref(`tokyoRpg/users/${jogadorAtual}/casa`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); document.getElementById("btnAbaCasa").style.display = "inline-block"; } else db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff }); alert("Comprado!"); }
         
         window.renderizarMochila = function() {
             let mGrid = document.getElementById("mochilaGrid"); let fTray = document.getElementById("furnitureTray"); if(!mGrid) return;
@@ -666,34 +684,54 @@
         window.removerItemMochila = function(k) { if(confirm("Descartar item?")) db.ref('tokyoRpg/users/' + jogadorAtual + '/mochila/' + k).remove(); }
         
         let roletaInterval;
-        window.tentarGirar = function() { if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<500) return; db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-500); setElDisplay("actionButtons", "none"); document.getElementById("card1").classList.add("spinning"); document.getElementById("card2").classList.add("spinning"); let t = 0; roletaInterval = setInterval(() => { document.getElementById("card1").innerText = deuses[Math.floor(Math.random()*deuses.length)].n; document.getElementById("card2").innerText = deuses[Math.floor(Math.random()*deuses.length)].n; t++; if(t > 15) { clearInterval(roletaInterval); document.getElementById("card1").classList.remove("spinning"); document.getElementById("card2").classList.remove("spinning"); deusesSorteados = [document.getElementById("card1").innerText, document.getElementById("card2").innerText]; setElDisplay("actionButtons", "flex"); } }, 100); }
-        window.escolherDeus = function(i) { let dName = deusesSorteados[i]; db.ref(`tokyoRpg/users/${jogadorAtual}/deus`).set(dName); setElDisplay("actionButtons", "none"); let dObj = deuses.find(x=>x.n===dName); setElDisplay("pantheonSavedArea", "block"); setElText("savedGodCard", dName); setElText("savedGodDesc", dObj.d); alert("Patrono atualizado!"); }
+        window.tentarGirar = function() { if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<500){alert("Sem grana.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-500); setElDisplay("actionButtons", "none"); document.getElementById("card1").classList.add("spinning"); document.getElementById("card2").classList.add("spinning"); let t = 0; roletaInterval = setInterval(() => { 
+            let d1 = deuses[Math.floor(Math.random()*deuses.length)]; let d2 = deuses[Math.floor(Math.random()*deuses.length)];
+            setElHTML("card1", `<div class="card-suit top-left">${d1.s}</div><div class="card-center">${d1.n}</div><div class="card-suit bottom-right">${d1.s}</div>`); document.getElementById("card1").className = (d1.s==='♥'||d1.s==='♦') ? "card red-suit spinning" : "card black-suit spinning";
+            setElHTML("card2", `<div class="card-suit top-left">${d2.s}</div><div class="card-center">${d2.n}</div><div class="card-suit bottom-right">${d2.s}</div>`); document.getElementById("card2").className = (d2.s==='♥'||d2.s==='♦') ? "card red-suit spinning" : "card black-suit spinning";
+            t++; if(t > 15) { clearInterval(roletaInterval); document.getElementById("card1").classList.remove("spinning"); document.getElementById("card2").classList.remove("spinning"); deusesSorteados = [d1.n, d2.n]; setElDisplay("actionButtons", "flex"); } }, 100); 
+        }
+        window.escolherDeus = function(i) { let dName = deusesSorteados[i]; db.ref(`tokyoRpg/users/${jogadorAtual}/deus`).set(dName); setElDisplay("actionButtons", "none"); let dObj = deuses.find(x=>x.n===dName); setElDisplay("pantheonSavedArea", "block"); setElHTML("savedGodCard", `<div class="card-suit top-left">${dObj.s}</div><div class="card-center">${dObj.n}</div><div class="card-suit bottom-right">${dObj.s}</div>`); document.getElementById("savedGodCard").className = (dObj.s==='♥'||dObj.s==='♦') ? "card red-suit" : "card black-suit"; setElText("savedGodDesc", dObj.d); alert("Patrono atualizado!"); }
         window.resgatarCodigo = function() { let c = document.getElementById("sponsorCode").value.trim().toUpperCase(); if(!c) return; if(codigosPromocionais[c]) { let v = codigosPromocionais[c]; let r = db.ref('tokyoRpg/users/' + jogadorAtual); r.once('value').then(s => { let u = s.val(); if(u.codigosUsados && u.codigosUsados[c]) { alert("Já resgatado."); } else { r.child('codigosUsados').update({ [c]: true }); r.update({ carteira: (u.carteira || 0) + v }); alert(`+${v}¥`); setElVal("sponsorCode", ""); } }); } }
 
-        // --- LISTENERS BLINDADOS ---
+        // --- SMS ---
+        window.enviarSMS = function() { if(!jogadorAtual || !usersGlobais[jogadorAtual].numero) return; let dest = document.getElementById("smsDestino").value.trim(); let msg = document.getElementById("smsTexto").value.trim(); let meuNum = usersGlobais[jogadorAtual].numero; if(!dest || !msg) return; let achou = false; Object.keys(usersGlobais).forEach(userKey => { if(usersGlobais[userKey].numero === dest) achou = true; }); if(!achou) { alert("O número não existe."); return; } let timestamp = Date.now(); let pacote = { de: meuNum, para: dest, msg: msg, data: new Date().toLocaleTimeString() }; db.ref('tokyoRpg/sms/' + dest + '/' + timestamp).set(pacote); db.ref('tokyoRpg/sms/' + meuNum + '/' + timestamp).set(pacote); document.getElementById("smsTexto").value = ""; };
+
+        window.desenharListaUsuarios = function() {
+            let b = document.getElementById("userLog"); if(!b) return; b.innerHTML = "";
+            let hideOff = document.getElementById("checkHideOffline")?.checked;
+            
+            // Filtra e Ordena (Online primeiro)
+            let sortedUsers = Object.keys(usersGlobais).filter(n => n !== "MESTRE").sort((a, b) => {
+                let aOn = presenceGlobal[a] === true && usersGlobais[a].status !== "morto";
+                let bOn = presenceGlobal[b] === true && usersGlobais[b].status !== "morto";
+                return (aOn === bOn) ? 0 : aOn ? -1 : 1;
+            });
+
+            sortedUsers.forEach(n => { 
+                let u=usersGlobais[n]; let r = getSafeRpg(u); let isD=(u.status==="morto"); let isO=presenceGlobal[n]===true&&!isD; 
+                if(hideOff && !isO && !isD) return; // Esconde offline
+                b.innerHTML += `<div class="user-item ${isD?'is-dead':''}"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong class="${isO?'neon-blue':''}">${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span><div class="hp-display">❤️ HP: ${r.hp}</div></div>`; 
+            });
+        };
+
+        // --- LISTENERS ---
         if (db) {
             carregarOpcoesAvatar(); carregarTitulos();
             db.ref('tokyoRpg/users').on('value', s => { 
-                usersGlobais = s.val()||{}; renderizarFicha(); renderizarMochila(); drawMapVisuals(); drawTacticalBoard(); drawCasaBoard(); 
-                if(jogadorAtual && usersGlobais[jogadorAtual]) setElText("profileWallet", (usersGlobais[jogadorAtual].carteira||0));
-                let b = document.getElementById("userLog"); if(!b) return; b.innerHTML = "";
-                Object.keys(usersGlobais).forEach(n => { 
-                    if(n!=="MESTRE"){ 
-                        let u=usersGlobais[n]; let r = getSafeRpg(u); let isD=(u.status==="morto"); let isO=presenceGlobal[n]===true&&!isD; 
-                        b.innerHTML += `<div class="user-item ${isD?'is-dead':''}"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong class="${isO?'neon-blue':''}">${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span><div class="hp-display">❤️ HP: ${r.hp}</div></div>`; 
-                    } 
-                });
+                usersGlobais = s.val()||{}; renderizarFicha(); renderizarMochila(); drawMapVisuals(); drawTacticalBoard(); drawCasaBoard(); window.desenharListaUsuarios();
+                if(jogadorAtual && usersGlobais[jogadorAtual]) { setElText("profileWallet", (usersGlobais[jogadorAtual].carteira||0)); if(usersGlobais[jogadorAtual].numero) setElText("myPhoneHeader", usersGlobais[jogadorAtual].numero); }
             });
-            db.ref('tokyoRpg/presence').on('value', s => { presenceGlobal = s.val()||{}; drawMapVisuals(); });
+            db.ref('tokyoRpg/presence').on('value', s => { presenceGlobal = s.val()||{}; drawMapVisuals(); window.desenharListaUsuarios(); });
             db.ref('tokyoRpg/mapEmbates').on('value', s => { embatesGlobais = s.val() || {}; drawMapVisuals(); });
             db.ref('tokyoRpg/submapsBGs').on('value', s => { submapasBGs = s.val() || {}; if(currentSubMapKey && submapasBGs[currentSubMapKey]) { let subCanvas = document.getElementById("subMapCanvas"); subCanvas.style.backgroundImage = `url('${submapasBGs[currentSubMapKey]}')`; subCanvas.style.backgroundColor = "transparent"; }});
             db.ref('tokyoRpg/submaps').on('value', s => { submapasGlobais = s.val() || {}; drawTacticalBoard(); });
             db.ref('tokyoRpg/casasGrid').on('value', s => { casaGlobais = s.val() || {}; drawCasaBoard(); });
             db.ref('tokyoRpg/imoveis').on('value', s => { imoveisGlobais = s.val() || {}; });
-            db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { mostrarDadoOverlay(d.nome, d.form, d.result); } });
+            db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { mostrarDadoOverlay(d.nome, d.form, d.results); } });
             db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div class="dice-msg"><strong class="neon-blue">${x.nome}:</strong> <span class="neon-green">${x.texto}</span></div>`); b.scrollTop = b.scrollHeight; }});
             db.ref('tokyoRpg/loja').on('value', s => { lojaGlobal = s.val(); renderizarLojaUI(); });
             db.ref('tokyoRpg/news').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("newsFeed"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).reverse().forEach(n => { b.innerHTML += `<div class="news-item ${n.tipo==='MORTE'?'news-death':''}"><p class="${n.tipo==='MORTE'?'neon-red':'neon-blue'}" style="margin:0;font-size:12px;">${n.data}</p><h3 style="color:#fff;margin:5px 0;">${n.tipo==='MORTE'?'🚨 ÓBITO NO DISTRITO 🚨':'Confronto Concluído'}</h3><p style="color:#ccc;">${n.vencedor} vs ${n.perdedor}. ${n.tipo==='MORTE'?'Perdedor Eliminado.':'Aposta: '+n.aposta+'¥'}</p>${n.descMorte?`<p style="color:#ffaa00;font-size:12px;">Causa: ${n.descMorte}</p>`:''}${n.imgMorte?`<img src="${n.imgMorte}" class="death-img">`:''}</div>`; }); }});
+            db.ref('tokyoRpg/sms').on('value', snap => { let box = document.getElementById("smsLog"); let todosSms = snap.val(); if(!jogadorAtual || !usersGlobais[jogadorAtual] || !usersGlobais[jogadorAtual].numero) return; let meuNum = usersGlobais[jogadorAtual].numero; if(todosSms && todosSms[meuNum]) { box.innerHTML = ""; let msgs = todosSms[meuNum]; Object.keys(msgs).forEach(key => { let m = msgs[key]; let souEu = (m.de === meuNum); let bolhaClass = souEu ? "sms-sent" : "sms-received"; let numExibido = souEu ? `Para: ${m.para}` : `De: ${m.de}`; box.innerHTML += `<div class="sms-bubble ${bolhaClass}"><div class="sms-info">${numExibido} | ${m.data}</div><div>${m.msg}</div></div>`; }); box.scrollTop = box.scrollHeight; } else { box.innerHTML = "<p style='text-align: center; color: #555; font-size:11px; margin-top:50px;'>Caixa Vazia.</p>"; } });
             
             db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
                 let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
