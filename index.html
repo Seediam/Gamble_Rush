@@ -1,150 +1,621 @@
-:root {
-    --bg-dark: #07070a; --panel-bg: #0c0c14; --accent-red: #ff1a55; --accent-blue: #00e5ff; 
-    --text-main: #e0e0e0; --rarity-com: #aaaaaa; --rarity-inc: #00ff66; --rarity-rar: #0077ff; 
-    --rarity-epi: #aa00ff; --rarity-leg: #ffaa00;
-}
-* { box-sizing: border-box; }
-body { font-family: 'Courier New', Courier, monospace; background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; margin: 0; height: 100vh; overflow: hidden; }
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistema do Distrito - WebApp V8.0</title>
+    <link rel="stylesheet" href="style.css?v=V8.0">
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+</head>
+<body>
 
-/* SCROLLBARS NEON */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: #000; border-left: 1px solid #222; }
-::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 4px; box-shadow: 0 0 10px var(--accent-blue); }
-::-webkit-scrollbar-thumb:hover { background: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
+    <nav class="nav-bar">
+        <button class="nav-btn active" onclick="mudarAba('tab-mapa', this)">Mapa (VTT)</button>
+        <button class="nav-btn" id="btnAbaCasa" onclick="mudarAba('tab-casa', this)" style="display:none; color:var(--accent-gold);">Minha Casa</button>
+        <button class="nav-btn" onclick="mudarAba('tab-principal', this)">Notícias</button>
+        <button class="nav-btn" onclick="mudarAba('tab-igamble', this)">IGamble</button>
+        <button class="nav-btn" onclick="mudarAba('tab-roleta', this)">Panteão</button>
+        <button class="nav-btn" onclick="mudarAba('tab-loja', this)">Mercado</button>
+        <button class="nav-btn" onclick="mudarAba('tab-mochila', this)">Mochila</button>
+    </nav>
 
-/* --- ESTILO GLOBAL NEON --- */
-input, select { appearance: none; -webkit-appearance: none; background: #000 !important; color: #fff !important; border: 1px solid var(--accent-blue) !important; padding: 10px; border-radius: 4px; font-family: 'Courier New', Courier, monospace; text-shadow: 0 0 5px var(--accent-blue); box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.1); outline: none; }
-input:focus, select:focus { border-color: var(--accent-red) !important; text-shadow: 0 0 5px var(--accent-red); box-shadow: inset 0 0 10px rgba(255, 26, 85, 0.2), 0 0 10px var(--accent-red); }
-button { font-family: 'Courier New', Courier, monospace; font-weight: bold; text-transform: uppercase; }
+    <div class="top-bar">
+        <div class="clock-hud"><div id="clockDate" style="font-size: 10px; color: #aaa;">07/03/2026</div><div id="clockTime">--:--</div></div>
+        <div class="user-btn" id="userBtn" onclick="abrirModal()">👤</div>
+    </div>
 
-h1, h2, h3, h4 { color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue); text-transform: uppercase; margin-top: 0;}
-.neon-red { color: var(--accent-red) !important; text-shadow: 0 0 10px var(--accent-red) !important; }
-.neon-green { color: #00ff00 !important; text-shadow: 0 0 10px #00ff00 !important; }
-.neon-gold { color: #ffaa00 !important; text-shadow: 0 0 10px #ffaa00 !important; }
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal-content" id="loginScreen">
+            <h3>Autenticação do Distrito</h3>
+            <input type="text" id="loginName" placeholder="Codinome">
+            <input type="password" id="loginPass" placeholder="Senha">
+            <button onclick="logarComSenha()">Entrar / Registrar</button>
+            <div style="margin: 15px 0; color: #555;">OU</div>
+            <input type="text" id="loginSerial" placeholder="Autenticador Mestre/Agente">
+            <button onclick="logarComSerial()" style="color: var(--accent-blue); border-color: var(--accent-blue);">Acesso Direto</button>
+            <br><span class="close-modal" onclick="fecharModal()">Cancelar</span>
+        </div>
 
-/* MENU E TOPO */
-.nav-bar { position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,0,0,0.9); border-bottom: 2px solid var(--accent-red); box-shadow: 0 0 15px var(--accent-red); display: flex; justify-content: center; padding: 10px 0; z-index: 500; overflow-x: auto; white-space: nowrap;}
-.nav-btn { background: transparent; color: #aaa; border: none; font-size: 14px; padding: 10px 20px; cursor: pointer; transition: 0.3s; margin: 0 5px; text-shadow: none; }
-.nav-btn:hover, .nav-btn.active { color: var(--accent-blue); text-shadow: 0 0 15px var(--accent-blue); border-bottom: 2px solid var(--accent-blue); }
-.nav-btn[style*="display: none"] { display: none !important; }
+        <div class="modal-content" id="profileScreen" style="display: none;">
+            <h3>Terminal Principal</h3>
+            <p class="neon-blue">Agente: <strong id="profileName" style="color:#fff;">---</strong></p>
+            <div class="wallet-box"><p style="margin: 0; font-size: 12px; color: #aaa;">Fundos (¥):</p><h2 id="profileWallet" class="neon-green">0</h2></div>
+            <input type="text" id="sponsorCode" placeholder="Código Patrocinador">
+            <button onclick="resgatarCodigo()" style="background: var(--accent-blue); color: #000; border: none;">Resgatar Fundos</button>
+            <div style="background: #000; padding: 10px; border: 1px dashed var(--accent-red); margin: 15px 0;">
+                <p style="margin: 0; font-size: 11px; color: #aaa;">Seu Autenticador:</p><h3 id="profileSerial" style="margin: 5px 0; color: #fff;">XXXX-DC1</h3>
+            </div>
+            <button onclick="deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
+            <br><span class="close-modal" onclick="fecharModal()">Fechar</span>
+        </div>
+    </div>
 
-.top-bar { position: fixed; top: 10px; right: 20px; z-index: 1000; display: flex; align-items: center; gap: 15px;}
-.clock-hud { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; box-shadow: 0 0 15px rgba(0,229,255,0.4); text-align: center; }
-.user-btn { background: #000; border: 2px solid var(--accent-red); color: var(--accent-red); width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; box-shadow: 0 0 15px rgba(255, 26, 85, 0.5); text-shadow: 0 0 10px var(--accent-red);}
-.user-btn:hover, .user-btn.logged { background: var(--accent-red); color: #fff; box-shadow: 0 0 25px var(--accent-red); text-shadow: none;}
+    <div class="global-layout">
+        <div class="ad-space"><img src="anuncio1.png" class="ad-image" onerror="this.style.display='none'"></div>
 
-/* MODAL E LAYOUT BASE */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 2000; }
-.modal-content { background: #050505; border: 1px solid var(--accent-red); padding: 25px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 0 40px rgba(255, 26, 85, 0.4); text-align: center; max-height: 90vh; overflow-y: auto;}
-.modal-content button { width: 100%; margin: 5px 0; padding: 12px; background: transparent; color: var(--accent-red); border: 2px solid var(--accent-red); cursor: pointer; text-shadow: 0 0 5px var(--accent-red); transition: 0.3s;}
-.modal-content button:hover { background: var(--accent-red); color: #000; box-shadow: 0 0 15px var(--accent-red); text-shadow: none; }
-.wallet-box { background: #000; border: 1px solid #00ff00; padding: 10px; border-radius: 5px; margin: 10px 0; box-shadow: inset 0 0 15px rgba(0,255,0,0.1); }
+        <div class="center-panel">
+            
+            <div id="tab-mapa" class="tab-content active" style="padding: 10px; flex-direction: row; align-items: stretch;">
+                
+                <div class="rpg-hud-map">
+                    <div class="hp-input-container">
+                        <span>❤️ HP</span>
+                        <div><input type="number" id="hpInput" value="100" onchange="atualizarHP()"> / <span id="hpMaxLabel" style="color:#aaa; font-size:12px;">100</span></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;"><span style="font-size: 12px;">Defesa: <strong id="lblDef" class="neon-blue">0</strong></span><span style="font-size: 12px;">Pts Livres: <strong id="lblPts" class="neon-gold">0</strong></span></div>
+                    
+                    <div class="attr-row"><span>Força [F]</span> <div class="attr-controls"><span class="val-display" id="valFor">1</span><div class="btn-attr" onclick="distribuirPonto('for')">+</div></div></div>
+                    <div class="attr-row"><span>Agilidade [A]</span> <div class="attr-controls"><span class="val-display" id="valAgi">1</span><div class="btn-attr" onclick="distribuirPonto('agi')">+</div></div></div>
+                    <div class="attr-row"><span>Manuseio [M]</span> <div class="attr-controls"><span class="val-display" id="valMan">1</span><div class="btn-attr" onclick="distribuirPonto('man')">+</div></div></div>
+                    <div class="attr-row"><span>Vigor [V]</span> <div class="attr-controls"><span class="val-display" id="valVig">1</span><div class="btn-attr" onclick="distribuirPonto('vig')">+</div></div></div>
+                    <div class="attr-row"><span>Inteligência [I]</span> <div class="attr-controls"><span class="val-display" id="valInt">1</span><div class="btn-attr" onclick="distribuirPonto('int')">+</div></div></div>
+                    
+                    <div style="margin-top: 5px; font-size: 11px;">Integridade (<span id="lblIntegMax">100</span>%): <span id="lblIntegVal" class="neon-green">100%</span><div class="integrity-bar-bg"><div class="integrity-bar-fill" id="integrityBar"></div></div></div>
+                    
+                    <div style="margin-top: 15px; border-top: 1px solid #333; padding-top: 10px;">
+                        <h4 style="margin:0 0 5px 0; font-size:12px; color:var(--accent-blue);">Perícias Rápidas</h4>
+                        <div style="display:flex; flex-wrap:wrap; gap:5px;" id="skillsGridQuick"></div>
+                    </div>
+                </div>
 
-.global-layout { display: flex; width: 100%; height: calc(100vh - 50px); margin-top: 50px; }
-.ad-space { width: 250px; background-color: #050505; border-right: 1px dashed #333; border-left: 1px dashed #333; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; overflow-y: auto; }
-.ad-link { display: block; width: 100%; height: 70vh; min-height: 500px; transition: 0.3s; border-radius: 4px; overflow: hidden; border: 1px solid var(--accent-blue); box-shadow: 0 0 15px rgba(0,229,255,0.2);}
-.ad-link:hover { transform: scale(1.02); box-shadow: 0 0 25px var(--accent-red); border-color: var(--accent-red); }
-.ad-image { width: 100%; height: 100%; object-fit: cover; }
-.sidebar { width: 250px; background-color: #050505; border-left: 1px solid var(--accent-blue); box-shadow: inset 10px 0 20px rgba(0,229,255,0.05); padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
+                <div class="map-wrapper">
+                    <div class="map-container-main">
+                        <div class="map-scroll-area">
+                            
+                            <div class="map-canvas" id="mapCanvas">
+                                <div class="map-overlay-grid"></div>
+                                <div id="mapArrow" class="map-enter-arrow" onclick="entrarSubMapa()" title="Entrar no Local">⬇️</div>
+                            </div>
 
-.center-panel { flex: 1; position: relative; overflow-y: auto; background: #07070a;}
-.tab-content { display: none; width: 100%; min-height: 100%; padding: 20px; flex-direction: column; align-items: center; }
-.tab-content.active { display: flex; }
+                            <div class="submap-canvas" id="subMapCanvas">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <div><h2 id="subMapTitle" style="margin:0;">Local</h2><p style="color:#aaa;font-size:11px;margin:0;">VTT Tático. Clique no seu Avatar, depois no chão.</p></div>
+                                    <button class="action-btn" onclick="fecharSubMapa()">Voltar ao Mapa 🌍</button>
+                                </div>
+                                <div id="subMapImoveis" style="display: flex; gap:10px; margin-bottom: 10px;"></div>
+                                
+                                <div class="tactical-board" id="tacticalBoard">
+                                    <div id="roomOverlays"></div>
+                                </div>
+                            </div>
 
-button.action-btn { padding: 10px 20px; font-size: 14px; font-weight: bold; background: transparent; color: var(--accent-red); border: 1px solid var(--accent-red); border-radius: 4px; cursor: pointer; transition: 0.3s; margin: 5px; text-shadow: 0 0 5px var(--accent-red); box-shadow: inset 0 0 10px rgba(255,26,85,0.1);}
-button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow: 0 0 20px var(--accent-red); text-shadow: none; }
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-/* --- HUD DE STATUS ALINHADO --- */
-.rpg-hud-map { width: 260px; background: rgba(0, 0, 0, 0.85); border: 1px solid var(--accent-blue); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 20px rgba(0,229,255,0.2); flex-shrink: 0;}
-.hp-input-container { display: flex; align-items: center; justify-content: space-between; background: #0a0000; border: 1px solid var(--accent-red); padding: 5px 10px; border-radius: 4px; box-shadow: inset 0 0 15px rgba(255,26,85,0.2);}
-.hp-input-container input { width: 60px; text-align: right; font-size: 18px !important; color: var(--accent-red) !important; border: none !important; box-shadow: none !important; padding: 0 !important;}
-.attr-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #ccc; border-bottom: 1px dashed #333; padding-bottom: 5px;}
-.attr-controls { display: flex; align-items: center; gap: 8px; width: 65px; justify-content: flex-end;}
-.val-display { display: inline-block; width: 20px; text-align: center; color: var(--accent-blue); font-weight: bold; text-shadow: 0 0 5px var(--accent-blue);}
-.btn-attr { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); width: 22px; height: 22px; display: flex; justify-content: center; align-items: center; cursor: pointer; border-radius: 3px; font-weight: bold; text-shadow: 0 0 5px var(--accent-blue);}
-.btn-attr:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); text-shadow: none;}
+            <div id="tab-casa" class="tab-content">
+                <h1 class="neon-gold">Sua Propriedade</h1>
+                <div class="map-scroll-area" style="width:100%; height:400px; background:#000;">
+                    <div class="tactical-board" id="casaBoard" style="height:100%;"></div>
+                </div>
+                <div class="furniture-tray" id="furnitureTray">
+                    </div>
+            </div>
 
-/* --- MAPA E VTT (TABULEIRO INTERNO) --- */
-.map-container-main { display: flex; flex: 1; gap: 15px; height: 500px; width: 100%;}
-.map-scroll-area { flex: 1; position: relative; overflow: auto; border: 2px solid var(--accent-blue); border-radius: 8px; box-shadow: inset 0 0 50px rgba(0,229,255,0.2);}
+            <div id="tab-principal" class="tab-content">
+                <h1 class="blink-text">Notícias do Distrito</h1>
+                
+                <div id="masterHomePanel" class="master-panel">
+                    <h3>[ MESTRE ] CONTROLE DE EMBATE</h3>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <div style="flex:1; min-width:250px;">
+                            <h4>1. Iniciar (Tranca Alvos)</h4>
+                            <select id="embLocal" style="margin-bottom:5px;"><option value="">Selecione o Local...</option></select>
+                            <input type="text" id="embP1" placeholder="Lutador 1" style="width:48%;"> <input type="text" id="embP2" placeholder="Lutador 2" style="width:48%;">
+                            <input type="number" id="embAposta" placeholder="Aposta Paga (¥)" style="width:100%;">
+                            <button class="action-btn" onclick="iniciarEmbateMap()" style="width:100%;">Declarar Embate</button>
+                        </div>
+                        <div style="flex:1; min-width:250px;">
+                            <h4>2. Resolver e Noticiar</h4>
+                            <input type="text" id="embVencedor" placeholder="Vencedor" style="width:48%;"> <input type="text" id="embPerdedor" placeholder="Perdedor" style="width:48%;">
+                            <input type="text" id="embMorteDesc" placeholder="Causa Morte (Opcional)" style="width:100%;">
+                            <input type="text" id="embMorteImg" placeholder="Link Imagem Morte" style="width:100%;">
+                            <button class="action-btn" onclick="processarEmbate()" style="width:100%;">Finalizar Combate</button>
+                        </div>
+                        <div style="flex:1; min-width:250px;">
+                            <h4>3. Criar AP/Imóvel no Mapa</h4>
+                            <select id="imovelLocal" style="margin-bottom:5px;"><option value="">Fica em qual Local?</option></select>
+                            <input type="text" id="imovelNome" placeholder="Nome (Ex: APTO 204)" style="width:100%;">
+                            <input type="number" id="imovelComodos" placeholder="Max Móveis" style="width:48%;"> <input type="number" id="imovelPreco" placeholder="Preço ¥" style="width:48%;">
+                            <button class="action-btn" onclick="criarImovelMestre()" style="width:100%; color:var(--accent-blue); border-color:var(--accent-blue);">Colocar a Venda</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="newsFeed" class="news-container"></div>
+            </div>
 
-/* Fundo Translúcido e Setas */
-.map-canvas { position: relative; width: 100%; height: 100%; min-width: 1000px; min-height: 700px; background-color: #000; background-image: url('mapa1.png'); background-size: cover; background-position: center; }
-.map-overlay-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background: rgba(0, 0, 10, 0.4); background-image: linear-gradient(rgba(0, 229, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 229, 255, 0.1) 1px, transparent 1px); background-size: 40px 40px; z-index: 1; }
+            <div id="tab-igamble" class="tab-content">
+                <h1>I-Gamble Store</h1>
+                
+                <div class="igamble-store" id="igambleStoreDisplay">
+                    </div>
 
-.map-street { position: absolute; background: rgba(0,229,255,0.8); height: 3px; transform-origin: top left; z-index: 5; box-shadow: 0 0 10px rgba(0,229,255,1);}
-.map-node { position: absolute; background: rgba(0, 10, 20, 0.9); border: 1px solid var(--accent-blue); color: var(--accent-blue); font-size: 11px; padding: 4px 8px; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 15px var(--accent-blue); z-index: 10; white-space: nowrap; text-shadow: 0 0 5px var(--accent-blue);}
-.map-node:hover { background: var(--accent-blue); color: #000; transform: translate(-50%, -50%) scale(1.1); text-shadow: none;}
-.map-node.danger { border-color: var(--accent-red); color: var(--accent-red); box-shadow: 0 0 20px var(--accent-red); text-shadow: 0 0 5px var(--accent-red);}
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <div class="chat-input-area">
+                        <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
+                        <button class="btn-attach" onclick="document.getElementById('chatImageFile').click()" title="Anexar">📎</button>
+                        <input type="text" id="chatInput" placeholder="Mensagem ou Link da Imagem..." maxlength="200" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
+                        <button class="btn-send" onclick="prepararEnvioMensagem()">ENVIAR</button>
+                    </div>
+                    <div id="emojiPopupDynamic" class="emoji-popup">
+                        <button class="emoji-btn" onclick="executarReacao('🔥')">🔥</button><button class="emoji-btn" onclick="executarReacao('💀')">💀</button>
+                        <button class="emoji-btn" onclick="executarReacao('😂')">😂</button><button class="emoji-btn" onclick="executarReacao('👀')">👀</button>
+                        <button class="emoji-btn" onclick="executarReacao('💯')">💯</button><button class="emoji-btn" onclick="executarReacao('🤡')">🤡</button>
+                    </div>
+                </div>
+            </div>
 
-.avatar-on-map { position: absolute; width: 34px; height: 34px; border-radius: 50%; border: 2px solid #00ff00; object-fit: cover; z-index: 20; box-shadow: 0 0 15px #00ff00; transition: transform 0.3s;}
-.avatar-offline { filter: grayscale(100%); border-color: #555; box-shadow: none; z-index: 15; opacity: 0.7;}
-.token-hp { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #000; color: var(--accent-red); border: 1px solid var(--accent-red); font-size: 10px; font-weight: bold; padding: 1px 4px; border-radius: 3px; z-index: 25; text-shadow: 0 0 5px var(--accent-red); box-shadow: 0 0 5px var(--accent-red);}
+            <div id="tab-roleta" class="tab-content">
+                <div class="roleta-box">
+                    <h2 style="margin-top:0;">Seleção de Patrono</h2>
+                    <p style="color:#aaa; font-size:12px;">Custo: 500 ¥ por giro. Você pode alterar seu Patrono sempre que quiser pagando a taxa.</p>
+                    
+                    <div id="pantheonSavedArea" style="display:none; margin: 15px 0; padding:10px; border:1px dashed var(--accent-blue);">
+                        <p style="color:#fff; margin:0;">Patrono Atual:</p>
+                        <h3 id="savedGodCard" class="neon-blue" style="margin:5px 0;">NENHUM</h3>
+                        <p id="savedGodDesc" style="font-size:12px; color:#aaa; margin:0;"></p>
+                    </div>
 
-/* Seta de Entrar */
-.map-enter-arrow { position: absolute; font-size: 24px; color: #00ff00; text-shadow: 0 0 15px #00ff00; cursor: pointer; z-index: 50; transform: translate(-50%, -100%); animation: bounce 1s infinite; display: none; }
-@keyframes bounce { 0%, 100% { margin-top: 0; } 50% { margin-top: -10px; } }
+                    <button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar Roleta (500¥)</button>
+                    <div class="cards-container"><div class="card" id="card1">?</div><div class="card" id="card2">?</div></div>
+                    <div class="actions" id="actionButtons" style="display: none;">
+                        <button class="action-btn" onclick="escolherDeus(0)" id="btnGod1">Aceitar 1</button>
+                        <button class="action-btn" onclick="escolherDeus(1)" id="btnGod2">Aceitar 2</button>
+                    </div>
+                </div>
+                
+                <div class="god-list-container">
+                    <div class="god-grid">
+                        <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra risco do adversário e reduz o seu.</div></details><details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc">Força acordo não-letal.</div></details>
+                        <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc">Pista dedutiva sobre oponente.</div></details><details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Herda Yenes de mortos.</div></details>
+                        <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Garante fuga ou intercepta msg.</div></details><details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Mostra as melhores rotas conectadas no mapa.</div></details>
+                        <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Força aposta ou causa multa.</div></details><details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a manipulações.</div></details>
+                        <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc">Ignora dor leve e descobre armas.</div></details><details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc">Anula última transação.</div></details>
+                        <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc">Força alvo a dizer a verdade.</div></details><details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc">Rastreio infalível.</div></details>
+                    </div>
+                </div>
+            </div>
 
-/* VTT INTERIOR (Plantas Baixas e Casa) */
-.submap-canvas { display: none; position: relative; width: 100%; height: 100%; min-width: 800px; min-height: 600px; background: #050505; z-index: 100; flex-direction: column; padding: 15px;}
-.tactical-board { flex: 1; display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: repeat(8, 1fr); gap: 2px; background: #111; border: 2px solid var(--accent-blue); padding: 2px; position: relative;}
-.tactical-cell { background: #000; border: 1px dashed #222; position: relative; cursor: crosshair; display: flex; align-items: center; justify-content: center; z-index: 2;}
-.tactical-cell:hover { background: rgba(0,229,255,0.1); border-color: var(--accent-blue); }
-.room-overlay { position: absolute; border: 2px solid var(--accent-blue); background: rgba(0,229,255,0.05); display: flex; align-items: flex-start; justify-content: center; padding-top: 5px; color: var(--accent-blue); font-size: 12px; font-weight: bold; text-shadow: 0 0 5px var(--accent-blue); pointer-events: none; z-index: 1;}
+            <div id="tab-loja" class="tab-content">
+                <h1>Mercado Negro</h1>
+                <div id="masterShopPanel" class="master-panel" style="text-align:left; display:none;">
+                    <h4>[ MASTER ] PUBLICAR MERCADORIA</h4>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="newItemType"><option>Arma</option><option>Roupa</option><option>Comida</option><option>Móvel</option></select>
+                        <input type="text" id="newItemName" placeholder="Nome" style="flex:1;"><input type="text" id="newItemDesc" placeholder="Efeito/Descrição" style="flex:1;">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top:5px;">
+                        <input type="number" id="newItemPoder" placeholder="Poder/Nutrição" style="flex:1;">
+                        <input type="number" id="newItemPrice" placeholder="Preço (¥)" style="flex:1;">
+                        <button class="action-btn" onclick="criarItemLoja()">Publicar</button>
+                    </div>
+                </div>
+                <div class="shop-tabs">
+                    <button class="shop-tab-btn active" onclick="filtrarLoja('Tudo', this)">Tudo</button><button class="shop-tab-btn" onclick="filtrarLoja('Arma', this)">Equipamento</button>
+                    <button class="shop-tab-btn" onclick="filtrarLoja('Comida', this)">Comida</button><button class="shop-tab-btn" onclick="filtrarLoja('Móvel', this)">Decoração</button>
+                </div>
+                <div id="shopGrid" style="width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;"></div>
+            </div>
 
-.tactical-token { width: 80%; height: 80%; border-radius: 50%; background-size: cover; border: 2px solid #00ff00; position: relative; box-shadow: 0 0 10px #00ff00; cursor: pointer; transition: 0.2s;}
-.tactical-token.selected { transform: scale(1.2); border-color: #fff; box-shadow: 0 0 20px #fff; z-index: 10;}
+            <div id="tab-mochila" class="tab-content">
+                <h1 style="color: #00d2ff;">Mochila Tática</h1>
+                <div id="mochilaGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; width: 100%; max-width: 900px;"></div>
+            </div>
+            
+        </div>
 
-.furniture-token { position: absolute; width: 80%; height: 80%; background: #ffaa00; border: 1px solid #fff; opacity: 0.8; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #000; font-weight: bold; pointer-events: none; border-radius: 4px; box-shadow: 0 0 10px #ffaa00;}
-.furniture-tray { display: flex; gap: 10px; padding: 10px; background: #000; border-top: 1px solid var(--accent-blue); overflow-x: auto; margin-top: 10px;}
-.furniture-item { padding: 5px 10px; background: #1a1a24; border: 1px solid #ffaa00; color: #ffaa00; cursor: pointer; font-size: 11px; white-space: nowrap;}
-.furniture-item.selected { background: #ffaa00; color: #000; box-shadow: 0 0 10px #ffaa00;}
+        <div class="sidebar"><h2>Agentes Online</h2><div class="user-list" id="userLog"></div></div>
+    </div>
 
-/* --- IGAMBLE STORE E CHAT PREMIUM --- */
-.igamble-store { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; background: #050505; padding: 15px; border-radius: 8px; border: 1px dashed var(--accent-blue); margin-top: 10px; width: 100%; max-width: 900px;}
-.av-store-card { background: #000; border: 1px solid #333; padding: 10px; text-align: center; border-radius: 4px; width: 100px;}
-.av-store-img { width: 50px; height: 50px; border-radius: 50%; border: 1px solid #555; margin-bottom: 5px;}
-.av-store-price { color: #00ff00; font-size: 11px; font-weight: bold; text-shadow: 0 0 5px #00ff00;}
+    <div class="version-tag">Versão do Sistema: V8.0</div>
 
-.chat-container { display: flex; flex-direction: column; height: 60vh; width: 100%; max-width: 900px; background: #050505; border: 1px solid var(--accent-blue); border-radius: 8px; margin-top: 15px; position: relative; box-shadow: 0 0 20px rgba(0,229,255,0.1);}
-.chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
-.msg-box { display: flex; gap: 15px; align-items: flex-start; }
-.msg-avatar { width: 45px; height: 45px; border-radius: 50%; overflow: hidden; border: 1px solid var(--accent-blue); box-shadow: 0 0 10px rgba(0,229,255,0.5);}
-.msg-content { background: #000; padding: 12px; border-radius: 8px; max-width: 80%; border: 1px solid #333; position: relative;}
-.title-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-weight: bold; text-transform: uppercase; border: 1px solid currentColor;}
-.title-tag.com { color: var(--rarity-com); } .title-tag.inc { color: var(--rarity-inc); text-shadow: 0 0 5px var(--rarity-inc);} .title-tag.rar { color: var(--rarity-rar); text-shadow: 0 0 5px var(--rarity-rar);} .title-tag.epi { color: var(--rarity-epi); text-shadow: 0 0 8px var(--rarity-epi); } .title-tag.leg { color: var(--rarity-leg); text-shadow: 0 0 10px var(--rarity-leg); }
+    <script>
+        const firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
+        let db; let usersGlobais = {}; let presenceGlobal = {}; let embatesGlobais = {}; let lojaGlobal = {}; let imoveisGlobais = {}; let submapasGlobais = {}; let casaGlobais = {};
+        let jogadorAtual = ""; let serialAtual = ""; let connectionRef = null; let isMaster = false; const MASTER_SERIAL = "4053-DC1";
+        
+        const codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
+        const deuses = [{n:"Oizus", d:"Dobra risco do adversário."}, {n:"Afrodite", d:"Acordo não-letal."}, {n:"Athena", d:"Pista dedutiva."}, {n:"Hades", d:"Herda mortos."}, {n:"Hermes", d:"Garante fuga."}, {n:"Gaia", d:"Melhores rotas."}, {n:"Zeus", d:"Força aposta."}, {n:"Diogenes", d:"Imune."}, {n:"Ares", d:"Ignora dor."}, {n:"Poseidon", d:"Anula transação."}, {n:"Apolo", d:"Verdade."}, {n:"Ártemis", d:"Rastreio infalível."}];
+        const periciasSistema = [{ id: "luta", nome: "Luta", attr: "for" }, { id: "atletismo", nome: "Atletismo", attr: "for" }, { id: "furtividade", nome: "Furtividade", attr: "agi" }, { id: "pilotagem", nome: "Pilotagem", attr: "agi" }, { id: "acrobacia", nome: "Acrobacia", attr: "agi" }, { id: "armasfogo", nome: "Armas de Fogo", attr: "man" }, { id: "mecanica", nome: "Mecânica", attr: "man" }, { id: "sobrevivencia", nome: "Sobrevivência", attr: "vig" }, { id: "intimida", nome: "Intimidação", attr: "vig" }, { id: "investigacao", nome: "Investigação", attr: "int" }, { id: "medicina", nome: "Medicina", attr: "int" }, { id: "hackear", nome: "Hackear", attr: "int" }];
 
-.react-btn { background: transparent; border: 1px solid #555; color: #aaa; border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer; transition: 0.2s; margin-right: 5px;}
-.react-btn:hover { background: #333; color: #fff; border-color: var(--accent-blue);}
-.react-add { background: #111; border: 1px dashed var(--accent-blue); color: var(--accent-blue); }
+        try { firebase.initializeApp(firebaseConfig); db = firebase.database(); } catch (error) { console.error(error); }
 
-.emoji-popup { display: none; position: absolute; background: #000; border: 1px solid var(--accent-blue); border-radius: 8px; padding: 5px; z-index: 100; gap: 5px; box-shadow: 0 0 15px var(--accent-blue); flex-wrap: wrap; width: 160px;}
-.emoji-btn { background: none; border: none; font-size: 18px; cursor: pointer; transition: 0.2s;} .emoji-btn:hover { transform: scale(1.3); }
+        function setElText(id, text) { let el = document.getElementById(id); if(el) el.innerText = text; }
+        function setElHTML(id, html) { let el = document.getElementById(id); if(el) el.innerHTML = html; }
+        function setElDisplay(id, display) { let el = document.getElementById(id); if(el) el.style.display = display; }
+        function setElVal(id, val) { let el = document.getElementById(id); if(el) el.value = val; }
 
-/* --- PANTEÃO ROLETA --- */
-.roleta-box { background: #000; border: 2px solid var(--accent-blue); padding: 20px; text-align: center; border-radius: 8px; box-shadow: inset 0 0 30px rgba(0,229,255,0.1); width: 100%; max-width: 600px;}
-.cards-container { display: flex; gap: 20px; margin: 20px 0; justify-content: center; flex-wrap: wrap; perspective: 1000px;}
-.card { width: 140px; height: 210px; background: #050505; border: 2px solid var(--accent-blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; color: var(--accent-blue); transition: 0.1s; box-shadow: 0 0 15px rgba(0,229,255,0.3);}
-.card.spinning { animation: slotMachine 0.1s infinite; border-color: var(--accent-red); color: var(--accent-red); text-shadow: 0 0 10px var(--accent-red); }
-@keyframes slotMachine { 0% { transform: translateY(-5px); } 50% { transform: translateY(5px); } 100% { transform: translateY(-5px); } }
-.god-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; width: 100%; max-width: 900px; margin-top: 15px; }
-details.god-badge { background: #000; padding: 10px; border-radius: 4px; border: 1px solid var(--accent-blue); }
+        function mudarAba(idAba, btnElemento) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            let alvo = document.getElementById(idAba); if(alvo) alvo.classList.add('active');
+            if(btnElemento) btnElemento.classList.add('active');
+            if(idAba === 'tab-mapa') drawMapVisuals();
+            if(idAba === 'tab-casa') drawCasaBoard();
+            fecharSubMapa();
+        }
 
-/* --- MASTER PANEL --- */
-.master-panel { background: #0a0000; border: 1px solid var(--accent-red); padding: 20px; width: 100%; max-width: 900px; margin-bottom: 20px; border-radius: 8px; box-shadow: inset 0 0 30px rgba(255,26,85,0.1); }
-.master-panel h4 { color: var(--accent-blue); margin-bottom: 10px; border-bottom: 1px dashed #333; padding-bottom: 5px;}
+        // --- RELÓGIO (10min/sec) ---
+        const startTimestamp = 1710000000000;
+        setInterval(() => {
+            let tempoRPG = new Date(startTimestamp + ((Date.now() - startTimestamp) * 600)); 
+            let hh = String(tempoRPG.getHours()).padStart(2, '0'); let mm = String(tempoRPG.getMinutes()).padStart(2, '0');
+            setElText("clockTime", `${hh}:${mm}`);
+            let elClock = document.getElementById("clockTime"); if(elClock) elClock.style.color = (tempoRPG.getHours() >= 18 || tempoRPG.getHours() < 6) ? "#ff1a55" : "#00e5ff"; 
+        }, 1000);
 
-.version-tag { position: fixed; bottom: 5px; right: 10px; color: var(--accent-blue); font-size: 12px; z-index: 9999; pointer-events: none; font-weight: bold; text-shadow: 0 0 5px var(--accent-blue);}
+        // --- MAPA E VTT PLANTAS BAIXAS ---
+        const locaisMapa = {
+            "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Monumento", x:4, y:2, w:4, h:4}] },
+            "p2": { nome: "Ghost Ramen", x: 35, y: 65, salas: [{n:"Salão", x:1, y:1, w:6, h:4}, {n:"Cozinha", x:7, y:1, w:4, h:4}] },
+            "p3": { nome: "Viela da Fome", x: 20, y: 55, salas: [{n:"Beco", x:2, y:1, w:8, h:6}] },
+            "p4": { nome: "Club Neon", x: 50, y: 85, salas: [{n:"Pista", x:2, y:2, w:6, h:5}, {n:"VIP", x:8, y:2, w:3, h:3}] },
+            "p5": { nome: "Avenida Ouro", x: 30, y: 35, salas: [{n:"Rua", x:1, y:3, w:10, h:2}] },
+            "p6": { nome: "Bar Submundo", x: 15, y: 25, salas: [{n:"Balcão", x:2, y:2, w:8, h:4}] },
+            "p7": { nome: "Beco Sombrio", x: 10, y: 45, salas: [{n:"Beco", x:4, y:1, w:4, h:7}] },
+            "p8": { nome: "Hideout Alfa", x: 15, y: 80, salas: [{n:"Sala", x:3, y:3, w:6, h:4}] },
+            "p9": { nome: "Shadow Lane", x: 65, y: 35, salas: [{n:"Rua", x:2, y:3, w:8, h:3}] },
+            "p10": { nome: "Safehouse APTS", x: 85, y: 20, salas: [{n:"Lobby", x:3, y:1, w:6, h:6}] },
+            "p11": { nome: "Hacker Den", x: 80, y: 50, salas: [{n:"Servidores", x:2, y:2, w:8, h:5}] },
+            "p12": { nome: "Mercado Negro", x: 85, y: 70, salas: [{n:"Tendas", x:1, y:1, w:10, h:6}] },
+            "p13": { nome: "Yakuza HQ", x: 70, y: 80, salas: [{n:"Dojo", x:2, y:1, w:6, h:6}, {n:"Chefe", x:8, y:2, w:3, h:4}] },
+            "p14": { nome: "Parque Sombrio", x: 80, y: 90, salas: [{n:"Bosque", x:1, y:1, w:10, h:6}] },
+            "p15": { nome: "Cemitério", x: 35, y: 85, salas: [{n:"Túmulos", x:2, y:1, w:8, h:6}] }
+        };
+        const conexoesMapa = [ { de: "p1", para: "p2" }, { de: "p2", para: "p3" }, { de: "p1", para: "p4" }, { de: "p1", para: "p5" }, { de: "p5", para: "p6" }, { de: "p1", para: "p9" }, { de: "p9", para: "p10" }, { de: "p10", para: "p11" }, { de: "p11", para: "p12" }, { de: "p2", para: "p13" }, { de: "p13", para: "p14" }, { de: "p3", para: "p8" }, { de: "p7", para: "p6" }, { de: "p3", para: "p7" }, { de: "p2", para: "p15" }, { de: "p4", para: "p13"} ];
 
-/* FIX MOBILE */
-@media screen and (max-width: 900px) {
-    .nav-bar { justify-content: flex-start; }
-    .global-layout { flex-direction: column; overflow-y: auto; height: auto; }
-    .top-bar { top: auto; bottom: 15px; right: 15px; z-index: 3000; } 
-    .ad-space { width: 100%; height: auto; margin-top: 0; }
-    .ad-link { height: 120px; min-height: auto; }
-    .sidebar { width: 100%; border: none; border-top: 1px solid var(--accent-blue); height: auto; min-height: 300px; }
-    .map-container-main { flex-direction: column; height: auto; }
-    .rpg-hud-map { width: 100%; margin-bottom: 15px; border-radius: 0; border-left: none; border-right: none;}
-    .map-scroll-area { height: 400px; }
-}
+        function isPlayerInEmbate(nome) { let trancado = false; Object.values(embatesGlobais).forEach(emb => { if(emb.p1 === nome || emb.p2 === nome) trancado = true; }); return trancado; }
+
+        let selectedNodeGlobal = null;
+
+        function drawMapVisuals() {
+            const canvas = document.getElementById("mapCanvas"); if(!canvas) return;
+            canvas.innerHTML = '<div class="map-overlay-grid"></div><div id="mapArrow" class="map-enter-arrow" onclick="entrarSubMapa()" title="Entrar">⬇️</div>';
+            
+            conexoesMapa.forEach(con => {
+                let pDe = locaisMapa[con.de]; let pPara = locaisMapa[con.para];
+                let angle = Math.atan2(pPara.y - pDe.y, pPara.x - pDe.x) * 180 / Math.PI; let dist = Math.sqrt(Math.pow(pPara.x - pDe.x, 2) + Math.pow(pPara.y - pDe.y, 2));
+                canvas.innerHTML += `<div class="map-street" style="left:${pDe.x}%; top:${pDe.y}%; width:${dist}%; transform:rotate(${angle}deg);"></div>`;
+            });
+
+            Object.keys(locaisMapa).forEach(k => {
+                let loc = locaisMapa[k]; let temLuta = Object.values(embatesGlobais).some(e => e.localKey === k);
+                canvas.innerHTML += `<div class="map-node ${temLuta?'danger':''}" style="left:${loc.x}%; top:${loc.y}%;" onclick="viajarPara('${k}')">${temLuta?'⚔️ ':''}${loc.nome}</div>`;
+            });
+
+            if(selectedNodeGlobal && locaisMapa[selectedNodeGlobal]) {
+                let loc = locaisMapa[selectedNodeGlobal];
+                let arrow = document.getElementById("mapArrow");
+                arrow.style.display = "block";
+                arrow.style.left = loc.x + "%"; arrow.style.top = (loc.y - 4) + "%";
+            }
+
+            let pByLoc = {};
+            Object.keys(usersGlobais).forEach(n => { if (n === "MESTRE") return; let u = usersGlobais[n]; if (u.status === "morto") return; let loc = u.local || "p1"; if (!pByLoc[loc]) pByLoc[loc] = []; pByLoc[loc].push({ nome: n, user: u }); });
+
+            Object.keys(pByLoc).forEach(lk => {
+                let loc = locaisMapa[lk]; let pls = pByLoc[lk]; let tot = pls.length;
+                pls.forEach((p, i) => {
+                    let a = (i / tot) * Math.PI * 2; let r = tot > 1 ? 30 : 0; let ox = Math.cos(a) * r; let oy = Math.sin(a) * r;
+                    let isO = presenceGlobal[p.nome] === true; let avC = isO ? "" : "avatar-offline"; let isC = isPlayerInEmbate(p.nome);
+                    canvas.innerHTML += `<div style="position:absolute; left:calc(${loc.x}% + ${ox}px); top:calc(${loc.y}% + ${oy}px); transform:translate(-50%, -100%); z-index:${isO?30:15};"><img src="${p.user.avatarUrl || 'https://api.dicebear.com/7.x/identicon/svg?seed='+p.nome}" class="avatar-on-map ${avC}" title="${p.nome}"><div class="token-hp">${p.user.rpg?.hp||100}</div>${isC ? '<div class="avatar-combat-icon">⚔️</div>' : ''}</div>`;
+                });
+            });
+        }
+
+        window.viajarPara = function(k) {
+            if(!jogadorAtual || isMaster) return;
+            if(isPlayerInEmbate(jogadorAtual)) { alert("Você está TRANCADO num EMBATE!"); return; }
+            let user = usersGlobais[jogadorAtual]; let currentLoc = user.local || "p1";
+            if(currentLoc !== k) {
+                let isConn = conexoesMapa.some(c => (c.de === currentLoc && c.para === k) || (c.para === currentLoc && c.de === k));
+                if(!isConn) { alert("Use as linhas de conexão para viajar."); return; }
+            }
+            let r = getSafeRpg(user); if(r.integridade <= 5) { alert("Integridade Crítica. Coma algo."); return; }
+            db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/integridade`).set(r.integridade - 5);
+            db.ref(`tokyoRpg/users/${jogadorAtual}/local`).set(k);
+            selectedNodeGlobal = k; drawMapVisuals();
+        };
+
+        let currentSubMapKey = ""; let selectedToken = null;
+        window.entrarSubMapa = function() { if(selectedNodeGlobal) abrirSubMapa(selectedNodeGlobal); }
+        
+        function abrirSubMapa(k) {
+            currentSubMapKey = k; let loc = locaisMapa[k];
+            setElDisplay("mapCanvas", "none"); setElDisplay("subMapCanvas", "flex"); setElText("subMapTitle", loc.nome);
+            
+            let boxImoveis = document.getElementById("subMapImoveis"); boxImoveis.innerHTML = "";
+            Object.keys(imoveisGlobais).forEach(ki => {
+                let im = imoveisGlobais[ki];
+                if(im.localKey === k && im.dono === "Nenhum") { boxImoveis.innerHTML += `<button class="action-btn" style="border-color:#ffaa00; color:#ffaa00;" onclick="comprarImovelMapa('${ki}', '${im.nome}', ${im.preco})">Comprar Propriedade: ${im.nome} (${im.preco}¥)</button>`; }
+            });
+            drawTacticalBoard();
+            
+            // Coloca o avatar no grid 0_0 se ele não tiver posição lá dentro ainda
+            let idCel = "0_0";
+            db.ref(`tokyoRpg/submaps/${k}`).once('value').then(snap => {
+                let grid = snap.val() || {}; let taLaDentro = false;
+                Object.keys(grid).forEach(gKey => { if(grid[gKey] === jogadorAtual) taLaDentro = true; });
+                if(!taLaDentro) db.ref(`tokyoRpg/submaps/${k}/${idCel}`).set(jogadorAtual);
+            });
+        }
+
+        function drawTacticalBoard() {
+            let b = document.getElementById("tacticalBoard"); if(!b || !currentSubMapKey) return;
+            b.innerHTML = '<div id="roomOverlays"></div>';
+            let gridTokens = submapasGlobais[currentSubMapKey] || {}; 
+
+            // Renderiza as Salas (Blueprints)
+            let loc = locaisMapa[currentSubMapKey];
+            if(loc.salas) {
+                let overlays = document.getElementById("roomOverlays");
+                loc.salas.forEach(s => {
+                    // Calcula % based on 12 col x 8 rows
+                    let left = (s.x / 12) * 100; let top = (s.y / 8) * 100;
+                    let width = (s.w / 12) * 100; let height = (s.h / 8) * 100;
+                    overlays.innerHTML += `<div class="room-overlay" style="left:${left}%; top:${top}%; width:${width}%; height:${height}%;">${s.n}</div>`;
+                });
+            }
+
+            // Renderiza o Grid Clicável e os Tokens
+            for(let y=0; y<8; y++) {
+                for(let x=0; x<12; x++) {
+                    let cellId = `${x}_${y}`; let occupier = gridTokens[cellId];
+                    let cellHtml = `<div class="tactical-cell" onclick="clicarGrid(${x}, ${y})">`;
+                    if(occupier && usersGlobais[occupier]) {
+                        let u = usersGlobais[occupier]; let selClass = (selectedToken === occupier) ? "selected" : "";
+                        cellHtml += `<div class="tactical-token ${selClass}" style="background-image:url('${u.avatarUrl||'https://api.dicebear.com/7.x/identicon/svg?seed='+occupier}')" onclick="selecionarToken('${occupier}', event)"><div class="token-hp">${u.rpg?.hp||100}</div></div>`;
+                    }
+                    cellHtml += `</div>`; b.innerHTML += cellHtml;
+                }
+            }
+        }
+
+        window.selecionarToken = function(nome, ev) { ev.stopPropagation(); if(nome !== jogadorAtual && !isMaster) return; selectedToken = nome; drawTacticalBoard(); }
+        window.clicarGrid = function(x, y) {
+            if(!selectedToken) return; let cellId = `${x}_${y}`; let gridTokens = submapasGlobais[currentSubMapKey] || {};
+            if(gridTokens[cellId]) return;
+            let updates = {}; Object.keys(gridTokens).forEach(k => { if(gridTokens[k] === selectedToken) updates[k] = null; }); updates[cellId] = selectedToken;
+            db.ref(`tokyoRpg/submaps/${currentSubMapKey}`).update(updates); selectedToken = null;
+        }
+        window.fecharSubMapa = function() { 
+            // Limpa o token do submapa ao sair
+            if(currentSubMapKey && jogadorAtual) {
+                db.ref(`tokyoRpg/submaps/${currentSubMapKey}`).once('value').then(snap => {
+                    let grid = snap.val() || {}; let updates = {};
+                    Object.keys(grid).forEach(k => { if(grid[k] === jogadorAtual) updates[k] = null; });
+                    db.ref(`tokyoRpg/submaps/${currentSubMapKey}`).update(updates);
+                });
+            }
+            currentSubMapKey = ""; selectedToken = null; selectedNodeGlobal = null; 
+            setElDisplay("subMapCanvas", "none"); setElDisplay("mapCanvas", "block"); drawMapVisuals(); 
+        };
+
+        // --- MINHA CASA VTT ---
+        let selectedFurniture = null;
+        function drawCasaBoard() {
+            let b = document.getElementById("casaBoard"); if(!b) return;
+            b.innerHTML = ""; let gridCasa = casaGlobais[jogadorAtual] || {}; 
+            for(let y=0; y<8; y++) {
+                for(let x=0; x<12; x++) {
+                    let cellId = `${x}_${y}`; let fItem = gridCasa[cellId];
+                    let cellHtml = `<div class="tactical-cell" onclick="clicarGridCasa(${x}, ${y})">`;
+                    if(fItem) cellHtml += `<div class="furniture-token" onclick="removerMoveCasa('${cellId}', event)">${fItem}</div>`;
+                    cellHtml += `</div>`; b.innerHTML += cellHtml;
+                }
+            }
+        }
+        window.selecionarMovel = function(nome) { selectedFurniture = nome; drawCasaBoard(); }
+        window.clicarGridCasa = function(x,y) { if(!selectedFurniture) return; let cellId = `${x}_${y}`; db.ref(`tokyoRpg/casasGrid/${jogadorAtual}/${cellId}`).set(selectedFurniture); selectedFurniture = null; }
+        window.removerMoveCasa = function(cellId, ev) { ev.stopPropagation(); db.ref(`tokyoRpg/casasGrid/${jogadorAtual}/${cellId}`).remove(); }
+
+        // --- RPG HUD ---
+        window.getSafeRpg = function(u) { let d = { for: 1, agi: 1, man: 1, vig: 1, int: 1, pontosLivres: 3, nivel: 1, integridade: 100, defesa: 0, hp: 100 }; return u && u.rpg ? {...d, ...u.rpg} : d; };
+        function calcularMaxInteg(u) { let m = 100; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.poder) m += parseInt(i.poder); }); return m; }
+        
+        function renderizarFicha() {
+            if(!jogadorAtual || !usersGlobais[jogadorAtual]) return;
+            let r = getSafeRpg(usersGlobais[jogadorAtual]); let mInteg = calcularMaxInteg(usersGlobais[jogadorAtual]);
+            setElText("lblDef", r.defesa); setElText("lblPts", r.pontosLivres);
+            setElText("valFor", r.for); setElText("valAgi", r.agi); setElText("valMan", r.man); setElText("valVig", r.vig); setElText("valInt", r.int);
+            setElText("lblIntegMax", mInteg); setElText("lblIntegVal", r.integridade + "%"); setElText("hpMaxLabel", (r.vig * 10 + 90));
+            let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
+            let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
+            
+            // Renderiza Perícias Rapidas
+            let pGrid = document.getElementById("skillsGridQuick"); if(!pGrid) return; pGrid.innerHTML = "";
+            periciasSistema.forEach(p => { let v = r[p.attr] || 1; pGrid.innerHTML += `<button onclick="rolarPericia('${p.nome}', '${p.attr}')" style="background:#1a1a24; border:1px solid var(--accent-blue); color:#fff; font-size:9px; padding:2px 5px; cursor:pointer;">${p.nome.substring(0,4)} ${v}d</button>`; });
+        }
+        window.atualizarHP = function() { if(!jogadorAtual) return; let nHp = parseInt(document.getElementById("hpInput").value || 0); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/hp`).set(nHp); };
+        window.distribuirPonto = function(attr) { if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); if(r.pontosLivres > 0 && r[attr] < 3) { db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(r[attr] + 1); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres - 1); } };
+        window.lancarDado = function() { if(!jogadorAtual) return; let exp = document.getElementById("diceInput").value.trim().toLowerCase(); if(!exp.includes('d')) return; let p = exp.split('d'); let qtd = parseInt(p[0]) || 1; let r = p[1].split('+'); let faces = parseInt(r[0]); let mod = r[1]?parseInt(r[1]):0; let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random() * faces) + 1; rol.push(d); tot += d; } tot += mod; db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `${qtd}d${faces}${mod>0?'+'+mod:''} ➔ [${rol.join(',')}] = ${tot}` }); setElVal("diceInput", ""); };
+        window.rolarPericia = function(nP, attr) { if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); let qtd = r[attr] || 1; let tot = 0; let rol = []; for(let i=0; i<qtd; i++) { let d = Math.floor(Math.random()*20)+1; rol.push(d); tot += d; } db.ref('tokyoRpg/mapDados').push({ nome: jogadorAtual, texto: `[${nP}] (${qtd}d20) ➔ [${rol.join(',')}] = ${tot}` }); };
+
+        // --- IGAMBLE STORE E CHAT (COM EMOJIS) ---
+        const avataresDB = ["Jack","Leo","Sam","Mia","Jocelyn","Avery","Max","Zoey","Ryder","Luna","Felix","Nova","Ezra","Cora","Silas","Remi","Jude","Piper","Finn","Milo","Cleo","Arlo","Gia","Theo","Eden"];
+        const titulosDB = [ {t:"Novato", r:"com", p:0}, {t:"Sobrevivente", r:"com", p:500}, {t:"Rato de Beco", r:"com", p:800}, {t:"Mercenário", r:"inc", p:2000}, {t:"Atirador", r:"inc", p:2500}, {t:"Sombra", r:"inc", p:3000}, {t:"Estrategista", r:"rar", p:6000}, {t:"Investigador", r:"rar", p:7000}, {t:"O Hacker", r:"epi", p:12000}, {t:"Trapaceiro", r:"epi", p:15000}, {t:"Assassino Fantasma", r:"leg", p:35000}, {t:"Rei do Distrito", r:"leg", p:50000} ]; // Resumido para o script, você pode add mais 30 no array facilmente!
+
+        function renderizarLojaIGamble() {
+            let d = document.getElementById("igambleStoreDisplay"); if(!d) return;
+            let u = usersGlobais[jogadorAtual] || {}; let unlAv = u.avataresUnl || {}; let unlTit = u.titulosUnl || {};
+            
+            let html = `<div style="width:100%;"><h4 style="color:var(--accent-blue); margin:0 0 10px 0;">Skins de Avatar (Permanentes)</h4><div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:10px;">`;
+            avataresDB.forEach((s,i) => {
+                let url = `https://api.dicebear.com/7.x/adventurer/svg?seed=${s}`; let preco = (i<5) ? 0 : 500 + (i*100);
+                let has = (preco === 0 || unlAv[s]);
+                html += `<div class="av-store-card"><img src="${url}" class="av-store-img"><div class="av-store-price">${preco}¥</div><button onclick="comprarEquiparAv('${s}','${url}',${preco})" style="font-size:9px; padding:2px; width:100%; background:${has?'var(--accent-blue)':'#333'}; color:${has?'#000':'#fff'};">${has?'Equipar':'Comprar'}</button></div>`;
+            });
+            html += `</div></div><div style="width:100%; margin-top:10px;"><h4 style="color:#ffaa00; margin:0 0 10px 0;">Títulos de Respeito (Permanentes)</h4><div style="display:flex; gap:5px; flex-wrap:wrap;">`;
+            titulosDB.forEach(t => {
+                let has = (t.p === 0 || unlTit[t.t]);
+                html += `<button onclick="comprarEquiparTit('${t.t}','${t.r}',${t.p})" style="font-size:10px; padding:5px; background:${has?'#111':'#000'}; border:1px solid ${has?'#ffaa00':'#333'}; color:${has?'#ffaa00':'#aaa'}; border-radius:4px;">[${t.p}¥] <span class="title-tag ${t.r}">${t.t}</span></button>`;
+            });
+            html += `</div></div>`; d.innerHTML = html;
+        }
+
+        window.comprarEquiparAv = function(seed, url, p) {
+            let u = usersGlobais[jogadorAtual]; let unl = u.avataresUnl || {};
+            if(!unl[seed] && p > 0) {
+                if((u.carteira||0) < p) { alert("Sem fundos."); return; }
+                db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set((u.carteira||0) - p);
+                db.ref(`tokyoRpg/users/${jogadorAtual}/avataresUnl/${seed}`).set(true);
+            }
+            db.ref(`tokyoRpg/users/${jogadorAtual}/avatarUrl`).set(url);
+            renderizarLojaIGamble(); // Refresh
+        }
+
+        window.comprarEquiparTit = function(txt, rar, p) {
+            let u = usersGlobais[jogadorAtual]; let unl = u.titulosUnl || {};
+            if(!unl[txt] && p > 0) {
+                if((u.carteira||0) < p) { alert("Sem fundos."); return; }
+                db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set((u.carteira||0) - p);
+                db.ref(`tokyoRpg/users/${jogadorAtual}/titulosUnl/${txt}`).set(true);
+            }
+            db.ref(`tokyoRpg/users/${jogadorAtual}/tituloChat`).set({txt:txt, raridade:rar});
+            renderizarLojaIGamble(); // Refresh
+        }
+
+        // --- SISTEMA DE EMOJIS NAS MSGS ---
+        let msgAtualParaReagir = "";
+        window.abrirEmojiReacao = function(msgKey) { msgAtualParaReagir = msgKey; let p = document.getElementById("emojiPopupDynamic"); p.style.display="flex"; }
+        window.executarReacao = function(emoji) {
+            if(!msgAtualParaReagir) return;
+            db.ref(`tokyoRpg/chat/${msgAtualParaReagir}/reacoes/${emoji}`).once('value').then(s => { db.ref(`tokyoRpg/chat/${msgAtualParaReagir}/reacoes/${emoji}`).set((s.val()||0)+1); document.getElementById("emojiPopupDynamic").style.display="none"; });
+        }
+
+        window.prepararEnvioMensagem = function() { if(!jogadorAtual) return; let t = document.getElementById("chatInput").value.trim(); let i = document.getElementById("chatImageFile"); if(!t && i.files.length === 0) return; let u = usersGlobais[jogadorAtual]; let tituloObj = u.tituloChat || null; if(i.files.length > 0) { let f = i.files[0]; if(f.size > 2000000) return; let r = new FileReader(); r.onload = (e) => { db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: e.target.result, data: new Date().toLocaleTimeString() }); i.value = ""; setElVal("chatInput", ""); }; r.readAsDataURL(f); } else { let iLink = null; if(t.match(/\.(jpeg|jpg|gif|png)$/) && t.startsWith("http")) { iLink = t; t = ""; } db.ref('tokyoRpg/chat').push({ nome: jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); setElVal("chatInput", ""); } }
+
+        // --- MESTRE E LOGIN BASE ---
+        function abrirModal() { setElDisplay("loginModal", "flex"); if(jogadorAtual){setElDisplay("loginScreen", "none"); setElDisplay("profileScreen", "block");}else{setElDisplay("loginScreen", "block"); setElDisplay("profileScreen", "none");} }
+        function fecharModal() { setElDisplay("loginModal", "none"); }
+        function gerarSerial() { let c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let k=''; for(let i=0;i<4;i++) k+=c.charAt(Math.floor(Math.random()*c.length)); return k+"-DC1"; }
+
+        window.logarSucesso = function(nome, serial) {
+            jogadorAtual = nome; serialAtual = serial; isMaster = (serial === MASTER_SERIAL);
+            let btn = document.getElementById("userBtn"); if(btn) btn.classList.add("logged");
+            setElHTML("statusJogador", `Conectado: <strong class="neon-blue">${nome}</strong>`); setElText("profileName", nome); setElText("profileSerial", serial);
+            if(!usersGlobais[nome] || usersGlobais[nome].carteira === undefined) db.ref('tokyoRpg/users/' + nome).update({ carteira: 0, rpg: getSafeRpg(), local: "p1" });
+            
+            // Mostra Patrono na Roleta se tiver
+            let pD = usersGlobais[nome]?.deus;
+            if(pD) { setElDisplay("pantheonSavedArea", "block"); setElText("savedGodCard", pD); let dObj = deuses.find(x=>x.n===pD); if(dObj) setElText("savedGodDesc", dObj.d); }
+
+            if(usersGlobais[nome]?.casa) setElDisplay("btnAbaCasa", "inline-block");
+            setElDisplay('masterHomePanel', isMaster ? 'block' : 'none'); setElDisplay('masterShopPanel', isMaster ? 'block' : 'none');
+            
+            if(isMaster) { let sel = document.getElementById("embLocal"); let sel2 = document.getElementById("imovelLocal"); sel.innerHTML = ""; sel2.innerHTML = ""; Object.keys(locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${locaisMapa[k].nome}</option>`; sel2.innerHTML += `<option value="${k}">${locaisMapa[k].nome}</option>`; }); }
+            db.ref('.info/connected').on('value', s => { if (s.val()) { connectionRef = db.ref('tokyoRpg/presence/' + nome); connectionRef.onDisconnect().set(false).then(() => connectionRef.set(true)); }});
+            renderizarFicha(); drawMapVisuals(); renderizarMochila(); renderizarLojaIGamble(); fecharModal();
+        }
+
+        window.logarComSenha = function() { const n = document.getElementById("loginName").value.trim().toUpperCase(); const s = document.getElementById("loginPass").value; if (!n || !s) return; db.ref('tokyoRpg/users/' + n).once('value').then((snap) => { let ud = snap.val(); if(ud) { if (ud.senha !== s) { alert("Senha incorreta."); return; } window.logarSucesso(n, ud.serial); } else { let ns = gerarSerial(); db.ref('tokyoRpg/users/' + n).set({ senha: s, serial: ns, carteira: 0, rpg: getSafeRpg(), local: "p1" }); window.logarSucesso(n, ns); alert(`Criado.`); } }); };
+        window.logarComSerial = function() { const s = document.getElementById("loginSerial").value.trim().toUpperCase(); if(!s) return; if(s === MASTER_SERIAL) { db.ref('tokyoRpg/users/MESTRE').update({ serial: MASTER_SERIAL, carteira: 9999999 }); window.logarSucesso("MESTRE", MASTER_SERIAL); return; } let achou = false; Object.keys(usersGlobais).forEach(n => { if(usersGlobais[n].serial === s) { achou = true; window.logarSucesso(n, s); }}); if(!achou) alert("Não encontrado."); };
+        window.deslogar = function() { if(connectionRef) connectionRef.set(false); jogadorAtual = ""; serialAtual = ""; isMaster = false; document.getElementById("userBtn").classList.remove("logged"); setElVal("loginName", ""); setElVal("loginPass", ""); setElVal("loginSerial", ""); setElDisplay('masterHomePanel', 'none'); setElDisplay('masterShopPanel', 'none'); setElDisplay("btnAbaCasa", "none"); fecharSubMapa(); fecharModal(); drawMapVisuals(); };
+
+        // --- SISTEMA MASTER (EMBATE E IMOVEIS) ---
+        window.iniciarEmbateMap = function() { if(!isMaster) return; let locStr = document.getElementById("embLocal").value; let p1 = document.getElementById("embP1").value.trim().toUpperCase(); let p2 = document.getElementById("embP2").value.trim().toUpperCase(); let ap = parseInt(document.getElementById("embAposta").value||0); if(!locStr || !p1 || !p2) return; db.ref('tokyoRpg/mapEmbates').push({ localKey: locStr, p1: p1, p2: p2, aposta: ap }); alert("Embate Trancado."); }
+        window.processarEmbate = function() { if(!isMaster) return; let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase(); let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value; if(!v || !p) return;
+            // Acha o embate para pegar a aposta
+            let ap = 0; let embKey = null; Object.keys(embatesGlobais).forEach(k => { let e = embatesGlobais[k]; if((e.p1===v||e.p2===v)&&(e.p1===p||e.p2===p)) { ap = e.aposta||0; embKey = k; } });
+            let cVenc = usersGlobais[v]?.carteira || 0; let cPerd = usersGlobais[p]?.carteira || 0; cVenc += ap; cPerd -= ap; let isMorte = (cPerd <= 0);
+            if(usersGlobais[v]) db.ref(`tokyoRpg/users/${v}`).update({ carteira: cVenc, "rpg/nivel": (usersGlobais[v].rpg?.nivel||1)+1, "rpg/pontosLivres": (usersGlobais[v].rpg?.pontosLivres||0)+1 });
+            if(usersGlobais[p]) { if(isMorte) db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" }); else db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd }); }
+            if(embKey) db.ref(`tokyoRpg/mapEmbates/${embKey}`).remove(); db.ref('tokyoRpg/news').push({ tipo: isMorte?"MORTE":"EMBATE", vencedor: v, perdedor: p, aposta: ap, saldoVencedor: cVenc, saldoPerdedor: cPerd, data: new Date().toLocaleTimeString(), descMorte: mDesc, imgMorte: mImg }); alert("Resolvido!");
+        };
+        window.criarImovelMestre = function() { if(!isMaster) return; let kLoc = document.getElementById("imovelLocal").value; let n = document.getElementById("imovelNome").value.trim(); let c = parseInt(document.getElementById("imovelComodos").value); let p = parseInt(document.getElementById("imovelPreco").value); if(!kLoc || !n || isNaN(p)) return; db.ref('tokyoRpg/imoveis').push({ localKey: kLoc, nome: n, comodos: c, preco: p, dono: "Nenhum" }); alert("À venda!"); };
+
+        // --- LOJA, MOCHILA E CASA (Drag&Drop Simplificado) ---
+        window.filtrarLoja = function(tipo, btnEl) { filtroLojaAtual = tipo; document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active')); if(btnEl) btnEl.classList.add('active'); renderizarLojaUI(); }
+        function renderizarLojaUI() { let b = document.getElementById("shopGrid"); if(!b) return; b.innerHTML=""; if(lojaGlobal) { Object.keys(lojaGlobal).forEach(k => { let i = lojaGlobal[k]; if(filtroLojaAtual === "Tudo" || (filtroLojaAtual==="Arma" && (i.tipo==="Arma"||i.tipo==="Roupa"||i.tipo==="Escudo")) || i.tipo === filtroLojaAtual) { let pd = i.poder ? `<span class="neon-gold"> [Poder: ${i.poder}]</span>` : ""; b.innerHTML += `<div class="shop-item"><div><span class="shop-type">${i.tipo}</span><h3 class="neon-blue" style="margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#aaa;">${i.desc}${pd}</p></div><div><h2 class="neon-green" style="margin:10px 0;">${i.preco}¥</h2><button class="action-btn" onclick="comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}', ${i.poder||0})">Comprar</button></div></div>`; }}); } }
+        window.criarItemLoja = function() { if(!isMaster) return; let t=document.getElementById("newItemType").value; let n=document.getElementById("newItemName").value.trim(); let d=document.getElementById("newItemDesc").value.trim(); let poder=parseInt(document.getElementById("newItemPoder").value||"0"); let p=parseInt(document.getElementById("newItemPrice").value); if(n && p) { db.ref('tokyoRpg/loja').push({ tipo: t, nome: n, desc: d, preco: p, poder: poder }); alert("Publicado!"); } }
+        window.comprarItem = function(id, n, p, t, d, poder) { if(!jogadorAtual || isMaster) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<p) return; db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-p); db.ref(`tokyoRpg/users/${jogadorAtual}/mochila`).push({ id: id, nome: n, tipo: t, desc: d, poder: poder }); alert("Comprado!"); }
+        
+        window.renderizarMochila = function() {
+            let mGrid = document.getElementById("mochilaGrid"); let fTray = document.getElementById("furnitureTray"); if(!mGrid) return;
+            let itens = usersGlobais[jogadorAtual]?.mochila; if(!itens) { mGrid.innerHTML = "<p>Mochila vazia.</p>"; if(fTray) fTray.innerHTML=""; return; }
+            mGrid.innerHTML = ""; if(fTray) fTray.innerHTML="";
+            Object.keys(itens).forEach(k => {
+                let i = itens[k];
+                let btn = i.tipo === "Comida" ? `<button onclick="consumirComida('${k}', ${i.poder||0})" style="background:var(--accent-blue);color:#000;padding:5px;cursor:pointer;width:100%;font-weight:bold;border:none;">Consumir (+${i.poder||0} Int)</button>` : `<button onclick="removerItemMochila('${k}')" style="background:transparent;border:1px solid #ff2a5f;color:#ff2a5f;padding:5px;cursor:pointer;width:100%;">Descartar</button>`; 
+                mGrid.innerHTML += `<div class="inv-item"><span style="font-size:10px; color:#aaa;">[ ${i.tipo||"Item"} ]</span><h3 style="color:#00d2ff;margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#eee;margin-bottom:15px;">${i.desc||""}</p>${btn}</div>`;
+                if(i.tipo === "Móvel" && fTray) { fTray.innerHTML += `<div class="furniture-item" onclick="selecionarMovel('${i.nome}')">${i.nome} (Click to Place)</div>`; }
+            });
+        };
+        window.consumirComida = function(k, nutricao) { let u = usersGlobais[jogadorAtual]; let r = getSafeRpg(u); let max = calcularMaxInteg(u); let novaInt = Math.min(r.integridade + nutricao, max); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/integridade`).set(novaInt); db.ref(`tokyoRpg/users/${jogadorAtual}/mochila/${k}`).remove(); }
+        window.removerItemMochila = function(k) { if(confirm("Descartar item?")) db.ref('tokyoRpg/users/' + jogadorAtual + '/mochila/' + k).remove(); }
+        
+        // --- ROLETA ---
+        window.tentarGirar = function() { if(!jogadorAtual) return; let c = usersGlobais[jogadorAtual].carteira||0; if(c<500){alert("Sem grana.");return;} db.ref(`tokyoRpg/users/${jogadorAtual}/carteira`).set(c-500); setElDisplay("actionButtons", "none"); document.getElementById("card1").classList.add("spinning"); document.getElementById("card2").classList.add("spinning"); let t = 0; let rolInt = setInterval(() => { document.getElementById("card1").innerText = deuses[Math.floor(Math.random()*deuses.length)].n; document.getElementById("card2").innerText = deuses[Math.floor(Math.random()*deuses.length)].n; t++; if(t > 15) { clearInterval(rolInt); document.getElementById("card1").classList.remove("spinning"); document.getElementById("card2").classList.remove("spinning"); deusesSorteados = [document.getElementById("card1").innerText, document.getElementById("card2").innerText]; setElDisplay("actionButtons", "block"); } }, 100); }
+        window.escolherDeus = function(i) { let dName = deusesSorteados[i]; db.ref(`tokyoRpg/users/${jogadorAtual}/deus`).set(dName); setElDisplay("actionButtons", "none"); let dObj = deuses.find(x=>x.n===dName); setElDisplay("pantheonSavedArea", "block"); setElText("savedGodCard", dName); setElText("savedGodDesc", dObj.d); alert("Patrono atualizado!"); }
+        window.resgatarCodigo = function() { let c = document.getElementById("sponsorCode").value.trim().toUpperCase(); if(!c) return; if(codigosPromocionais[c]) { let v = codigosPromocionais[c]; let r = db.ref('tokyoRpg/users/' + jogadorAtual); r.once('value').then(s => { let u = s.val(); if(u.codigosUsados && u.codigosUsados[c]) { alert("Já resgatado."); } else { r.child('codigosUsados').update({ [c]: true }); r.update({ carteira: (u.carteira || 0) + v }); alert(`+${v}¥`); setElVal("sponsorCode", ""); } }); } }
+
+        // --- LISTENERS MASTER ---
+        if (db) {
+            db.ref('tokyoRpg/users').on('value', s => { 
+                usersGlobais = s.val()||{}; renderizarFicha(); renderizarMochila(); drawMapVisuals(); drawTacticalBoard(); drawCasaBoard(); renderizarLojaIGamble();
+                if(jogadorAtual && usersGlobais[jogadorAtual]) setElText("profileWallet", (usersGlobais[jogadorAtual].carteira||0));
+                let b = document.getElementById("userLog"); if(!b) return; b.innerHTML = "";
+                Object.keys(usersGlobais).forEach(n => { 
+                    if(n!=="MESTRE"){ 
+                        let u=usersGlobais[n]; let r = getSafeRpg(u); let isD=(u.status==="morto"); let isO=presenceGlobal[n]===true&&!isD; 
+                        b.innerHTML += `<div class="user-item ${isD?'is-dead':''}"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong class="${isO?'neon-blue':''}">${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span><div class="hp-display">❤️ HP: ${r.hp}</div></div>`; 
+                    } 
+                });
+            });
+            db.ref('tokyoRpg/presence').on('value', s => { presenceGlobal = s.val()||{}; drawMapVisuals(); });
+            db.ref('tokyoRpg/mapEmbates').on('value', s => { embatesGlobais = s.val() || {}; drawMapVisuals(); });
+            db.ref('tokyoRpg/submaps').on('value', s => { submapasGlobais = s.val() || {}; drawTacticalBoard(); });
+            db.ref('tokyoRpg/casasGrid').on('value', s => { casaGlobais = s.val() || {}; drawCasaBoard(); });
+            db.ref('tokyoRpg/imoveis').on('value', s => { imoveisGlobais = s.val() || {}; });
+            db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div class="dice-msg"><strong class="neon-blue">${x.nome}:</strong> <span class="neon-green">${x.texto}</span></div>`); b.scrollTop = b.scrollHeight; }});
+            db.ref('tokyoRpg/loja').on('value', s => { lojaGlobal = s.val(); renderizarLojaUI(); });
+            db.ref('tokyoRpg/news').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("newsFeed"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).reverse().forEach(n => { b.innerHTML += `<div class="news-item ${n.tipo==='MORTE'?'news-death':''}"><p class="${n.tipo==='MORTE'?'neon-red':'neon-blue'}" style="margin:0;font-size:12px;">${n.data}</p><h3 style="color:#fff;margin:5px 0;">${n.tipo==='MORTE'?'🚨 ÓBITO NO DISTRITO 🚨':'Confronto Concluído'}</h3><p style="color:#ccc;">${n.vencedor} vs ${n.perdedor}. ${n.tipo==='MORTE'?'Perdedor Eliminado.':'Aposta: '+n.aposta+'¥'}</p>${n.descMorte?`<p style="color:#ffaa00;font-size:12px;">Causa: ${n.descMorte}</p>`:''}${n.imgMorte?`<img src="${n.imgMorte}" class="death-img">`:''}</div>`; }); }});
+            
+            // CHAT AVANÇADO (Lendo o Avatar Direto do Usuário Online)
+            db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
+                let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
+                if(d){ Object.keys(d).forEach(k => { 
+                    let m = d[k]; let rCount = m.reacoes || {};
+                    let uData = usersGlobais[m.nome] || {}; // Pega os dados atuais do usuário!!
+                    let currentAvatar = uData.avatarUrl || `https://api.dicebear.com/7.x/identicon/svg?seed=${m.nome}`;
+                    let currentTitle = uData.tituloChat || m.titulo; // Atualiza o título antigo pro novo também
+                    
+                    let tagHtml = currentTitle ? `<span class="title-tag ${currentTitle.raridade}">${currentTitle.txt}</span>` : "";
+                    let reactHtml = `<button class="react-add" onclick="abrirEmojiReacao('${k}')">+</button>
+                                     ${rCount['🔥']?`<button class="react-btn">🔥 ${rCount['🔥']}</button>`:''}
+                                     ${rCount['💀']?`<button class="react-btn">💀 ${rCount['💀']}</button>`:''}
+                                     ${rCount['😂']?`<button class="react-btn">😂 ${rCount['😂']}</button>`:''}
+                                     ${rCount['👀']?`<button class="react-btn">👀 ${rCount['👀']}</button>`:''}
+                                     ${rCount['💯']?`<button class="react-btn">💯 ${rCount['💯']}</button>`:''}
+                                     ${rCount['🤡']?`<button class="react-btn">🤡 ${rCount['🤡']}</button>`:''}`;
+                    
+                    b.innerHTML += `<div class="msg-box"><div class="msg-avatar-container"><span class="msg-yenes">${m.yenes||0}¥</span><img src="${currentAvatar}" class="msg-avatar"></div><div class="msg-content"><div class="msg-header">${tagHtml}${m.nome} <span style="color:#555;font-size:10px">${m.data}</span></div><p class="msg-text ${m.premium?'neon-red':''}">${m.texto||''}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}<div style="margin-top:5px;">${reactHtml}</div></div></div>`; 
+                }); b.scrollTop = b.scrollHeight; }
+            });
+        }
+    </script>
+</body>
+</html>
