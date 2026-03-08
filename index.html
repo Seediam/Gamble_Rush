@@ -4,11 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sistema do Distrito - V1.0 Alpha</title>
-    <link rel="stylesheet" href="style.css?v=V1.0Alpha">
+    <link rel="stylesheet" href="style.css?v=V1.0A2">
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 </head>
 <body>
+
+    <div id="systemLoader" class="system-loader-overlay">
+        <div class="hacker-loader"></div>
+        <h2 class="neon-blue blink-text">ACESSANDO O DISTRITO...</h2>
+        <p style="color: #555; font-size: 12px;">Criptografando conexão</p>
+    </div>
 
     <nav class="nav-bar">
         <button class="nav-btn active" onclick="mudarAba('tab-mapa', this)">Mapa VTT</button>
@@ -27,8 +33,8 @@
     </div>
 
     <div id="globalDiceOverlay" class="dice-overlay">
-        <h2 style="margin:0; color:var(--accent-blue); text-shadow:0 0 10px var(--accent-blue);">RESULTADO DOS DADOS</h2>
-        <p id="diceRollerName" style="color:#fff; margin:5px 0;">Agent: ---</p>
+        <h2 style="margin:0;">RESULTADO</h2>
+        <p id="diceRollerName" style="color:var(--accent-blue); margin:5px 0;">Agent: ---</p>
         <p id="diceFormulaLabel" style="color:#aaa; font-size:12px; margin:0;">Formula</p>
         <div class="dice-spinners" id="diceSpinners"></div>
         <div id="diceFinalResult" style="display:none; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:10px;"></div>
@@ -39,10 +45,10 @@
             <h3>Autenticação do Distrito</h3>
             <input type="text" id="loginName" placeholder="Codinome" autocomplete="off">
             <input type="password" id="loginPass" placeholder="Senha" autocomplete="off">
-            <button onclick="logarComSenha()">Entrar / Registrar</button>
+            <button class="login-btn" onclick="logarComSenha()">Entrar / Registrar</button>
             <div style="margin: 15px 0; color: #555;">OU</div>
             <input type="text" id="loginSerial" placeholder="Autenticador Mestre/Agente" autocomplete="off">
-            <button onclick="logarComSerial()" style="color: var(--accent-blue); border-color: var(--accent-blue);">Acesso Direto</button>
+            <button class="login-btn login-btn-blue" onclick="logarComSerial()">Acesso Direto</button>
             <br><span class="close-modal" onclick="fecharModal()">Cancelar</span>
         </div>
 
@@ -51,11 +57,11 @@
             <p class="neon-blue" style="margin-bottom:5px;">Agente: <strong id="profileName" style="color:#fff;">---</strong></p>
             <div class="wallet-box"><p style="margin: 0; font-size: 12px; color: #aaa;">Fundos (¥):</p><h2 id="profileWallet" class="neon-green">0</h2></div>
             <input type="text" id="sponsorCode" placeholder="Código Patrocinador">
-            <button onclick="resgatarCodigo()" style="background: var(--accent-blue); color: #000; border: none;">Resgatar Fundos</button>
+            <button class="login-btn login-btn-blue" onclick="resgatarCodigo()">Resgatar Fundos</button>
             <div style="background: #000; padding: 10px; border: 1px dashed var(--accent-red); margin: 15px 0;">
                 <p style="margin: 0; font-size: 11px; color: #aaa;">Seu Autenticador:</p><h3 id="profileSerial" style="margin: 5px 0; color: #fff;">XXXX-DC1</h3>
             </div>
-            <button onclick="deslogar()" style="border-color: #555; color: #aaa;">Desconectar</button>
+            <button class="login-btn" onclick="deslogar()">Desconectar</button>
             <br><span class="close-modal" onclick="fecharModal()">Fechar</span>
         </div>
     </div>
@@ -74,16 +80,16 @@
                         </div>
                         <div style="display: flex; justify-content: space-between; margin-bottom: 5px;"><span style="font-size: 12px;">Defesa: <strong id="lblDef" class="neon-blue">0</strong></span><span style="font-size: 12px;">Pts Livres: <strong id="lblPts" class="neon-gold">0</strong></span></div>
                         
-                        <div class="attr-row"><span>Força [F]</span> <div class="attr-controls"><span class="val-display" id="valFor">1</span><button class="btn-attr" onclick="rolarAtributo('Força', 'for')">🎲</button><button class="btn-attr" onclick="distribuirPonto('for')">+</button></div></div>
-                        <div class="attr-row"><span>Agilidade [A]</span> <div class="attr-controls"><span class="val-display" id="valAgi">1</span><button class="btn-attr" onclick="rolarAtributo('Agilidade', 'agi')">🎲</button><button class="btn-attr" onclick="distribuirPonto('agi')">+</button></div></div>
-                        <div class="attr-row"><span>Manuseio [M]</span> <div class="attr-controls"><span class="val-display" id="valMan">1</span><button class="btn-attr" onclick="rolarAtributo('Manuseio', 'man')">🎲</button><button class="btn-attr" onclick="distribuirPonto('man')">+</button></div></div>
-                        <div class="attr-row"><span>Vigor [V]</span> <div class="attr-controls"><span class="val-display" id="valVig">1</span><button class="btn-attr" onclick="rolarAtributo('Vigor', 'vig')">🎲</button><button class="btn-attr" onclick="distribuirPonto('vig')">+</button></div></div>
-                        <div class="attr-row"><span>Inteligência [I]</span> <div class="attr-controls"><span class="val-display" id="valInt">1</span><button class="btn-attr" onclick="rolarAtributo('Inteligência', 'int')">🎲</button><button class="btn-attr" onclick="distribuirPonto('int')">+</button></div></div>
+                        <div class="attr-row"><span>Força [F]</span> <div class="attr-controls"><span class="val-display" id="valFor">1</span><button class="btn-attr" onclick="rolarAtributo('Força', 'for')" title="Rolar Força">🎲</button><button class="btn-attr" onclick="distribuirPonto('for')">+</button></div></div>
+                        <div class="attr-row"><span>Agilidade [A]</span> <div class="attr-controls"><span class="val-display" id="valAgi">1</span><button class="btn-attr" onclick="rolarAtributo('Agilidade', 'agi')" title="Rolar Agilidade">🎲</button><button class="btn-attr" onclick="distribuirPonto('agi')">+</button></div></div>
+                        <div class="attr-row"><span>Manuseio [M]</span> <div class="attr-controls"><span class="val-display" id="valMan">1</span><button class="btn-attr" onclick="rolarAtributo('Manuseio', 'man')" title="Rolar Manuseio">🎲</button><button class="btn-attr" onclick="distribuirPonto('man')">+</button></div></div>
+                        <div class="attr-row"><span>Vigor [V]</span> <div class="attr-controls"><span class="val-display" id="valVig">1</span><button class="btn-attr" onclick="rolarAtributo('Vigor', 'vig')" title="Rolar Vigor">🎲</button><button class="btn-attr" onclick="distribuirPonto('vig')">+</button></div></div>
+                        <div class="attr-row"><span>Inteligência [I]</span> <div class="attr-controls"><span class="val-display" id="valInt">1</span><button class="btn-attr" onclick="rolarAtributo('Inteligência', 'int')" title="Rolar Inteligência">🎲</button><button class="btn-attr" onclick="distribuirPonto('int')">+</button></div></div>
                         
                         <div style="margin-top: 5px; font-size: 11px;">Saturação (<span id="lblIntegMax">100</span>%): <span id="lblIntegVal" class="neon-green">100%</span><div class="integrity-bar-bg"><div class="integrity-bar-fill" id="integrityBar"></div></div></div>
                         
                         <div class="dice-panel" style="margin-top: auto;">
-                            <div style="background:#1a1a24; padding:5px; text-align:center; font-weight:bold; color:var(--accent-blue); border-bottom:1px solid #333; font-size:11px;">Mesa de Dados</div>
+                            <div style="background:#1a1a24; padding:5px; text-align:center; font-weight:bold; color:var(--accent-blue); border-bottom:1px solid #333; font-size:11px;">Map Dados (Público)</div>
                             <div class="dice-log" id="diceLog"></div>
                         </div>
                     </div>
@@ -96,14 +102,14 @@
 
                         <div class="submap-canvas" id="subMapCanvas">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background:rgba(0,0,0,0.8); padding:10px; border-radius:8px; border:1px solid var(--accent-blue);">
-                                <div><h2 id="subMapTitle" style="margin:0;">Local</h2><p style="color:#00ff00;font-size:11px;margin:0;">Clique num espaço livre do grid para andar. Vermelho bloqueia.</p></div>
+                                <div><h2 id="subMapTitle" style="margin:0;">Local</h2><p style="color:#00ff00;font-size:11px;margin:0;">VTT: Clique num espaço livre para mover. Obstáculos listrados bloqueiam.</p></div>
                                 <div>
-                                    <button id="btnMestreBgMap" class="action-btn" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); font-size:11px;" onclick="mudarBgSubMapa()">[Mestre] Importar Battlemap</button>
-                                    <button class="action-btn" onclick="fecharSubMapa()">Sair 🌍</button>
+                                    <button id="btnMestreBgMap" class="action-btn" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); font-size:11px; padding:5px 10px;" onclick="mudarBgSubMapa()">[Mestre] Fundo URL</button>
+                                    <button class="action-btn" onclick="fecharSubMapa()" style="padding:5px 10px;">Sair 🌍</button>
                                 </div>
                             </div>
                             <div id="subMapImoveis" style="display: flex; gap:10px; justify-content:center;"></div>
-                            <div class="tactical-board" id="tacticalBoard" style="grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(12, 1fr);">
+                            <div class="tactical-board" id="tacticalBoard">
                                 <div id="roomOverlays"></div>
                             </div>
                         </div>
@@ -112,7 +118,7 @@
 
                 <div class="skills-container">
                     <h3 style="color: #fff; margin-top:0; border-bottom: 1px solid #333; padding-bottom: 5px;">Perícias Oficiais</h3>
-                    <p style="font-size: 11px; color: #aaa; margin: 0;">A quantidade de dados depende da sua Ficha. Role para ver as caixas na tela.</p>
+                    <p style="font-size: 11px; color: #aaa; margin: 0;">Os dados baseiam-se na sua ficha do Mapa. Role clicando no botão.</p>
                     <div class="skills-grid-quick" id="skillsGridQuick"></div>
                 </div>
             </div>
@@ -121,53 +127,53 @@
                 <h1 class="neon-gold">Sua Propriedade</h1>
                 <div style="display:flex; gap:10px; margin-bottom:10px; width:100%; max-width:900px;">
                     <input type="text" id="casaNomeInp" placeholder="Nome do Local (Ex: Meu AP)" style="flex:1;">
-                    <input type="text" id="casaBgInp" placeholder="URL da Imagem de Fundo (Ex: planta baixa)" style="flex:2;">
+                    <input type="text" id="casaBgInp" placeholder="URL da Imagem de Fundo (Battlemap)" style="flex:2;">
                     <button class="action-btn" onclick="salvarConfigCasa()" style="margin:0;">Salvar Casa</button>
                 </div>
                 <div style="width:100%; height:50vh; min-height:400px; position:relative; border:2px solid var(--accent-blue); background:#000;">
-                    <div class="tactical-board" id="casaBoard" style="height:100%; grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(12, 1fr);"></div>
+                    <div class="tactical-board" id="casaBoard" style="height:100%;"></div>
                 </div>
                 <div class="furniture-tray" id="furnitureTray"></div>
             </div>
 
             <div id="tab-celular" class="tab-content">
-                <h1 style="color: #00ff00;">Terminal Móvel</h1>
+                <h1 style="color: #00ff00;">Terminal Móvel Privado</h1>
                 <div style="background:#111; border:2px solid #333; border-radius:20px; padding:20px; width:100%; max-width:400px; height:60vh; display:flex; flex-direction:column; box-shadow: 0 0 30px rgba(0,210,255,0.1);">
                     <div style="background:#1a1a24; padding:10px; text-align:center; color:#00d2ff; font-weight:bold; border-bottom: 1px solid #333;">Meu Nº: <span id="myPhoneHeader" class="neon-green"></span></div>
                     <div id="smsLog" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:10px; background:#050505;"></div>
                     <div style="display:flex; flex-direction:column; gap:5px; margin-top:10px; background:#1a1a24; padding:10px; border-top:1px solid #333;">
-                        <input type="text" id="smsDestino" placeholder="Nº Destino" style="padding:10px; background:#000; color:#fff; border:1px solid #555;">
-                        <input type="text" id="smsTexto" placeholder="Mensagem..." style="padding:10px; background:#000; color:#fff; border:1px solid #555;">
-                        <button onclick="enviarSMS()" style="padding:10px; background:#00ff00; color:#000; font-weight:bold; border:none; cursor:pointer; border-radius:4px;">Enviar SMS</button>
+                        <input type="text" id="smsDestino" placeholder="Nº Destino">
+                        <input type="text" id="smsTexto" placeholder="Mensagem...">
+                        <button onclick="enviarSMS()" class="login-btn">Enviar SMS</button>
                     </div>
                 </div>
             </div>
 
             <div id="tab-principal" class="tab-content">
                 <h1 class="blink-text">Notícias do Distrito</h1>
-                <div id="masterHomePanel" class="master-panel" style="display:none; margin: 0 auto;">
+                <div id="masterHomePanel" class="master-panel" style="display:none;">
                     <h3 style="color:var(--accent-red); border-bottom:1px dashed #333; padding-bottom:10px;">[ CENTRAL DO MESTRE ]</h3>
                     <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                         <div style="flex:1; min-width:250px;">
-                            <h4>1. Iniciar Combate (Tranca)</h4>
-                            <select id="embLocal" style="margin-bottom:5px; width:100%;"></select>
+                            <h4>1. Iniciar Combate (Tranca no Mapa)</h4>
+                            <select id="embLocal" style="margin-bottom:5px;"></select>
                             <input type="text" id="embP1" placeholder="Lutador 1" style="width:48%;"> <input type="text" id="embP2" placeholder="Lutador 2" style="width:48%; float:right;">
-                            <input type="number" id="embAposta" placeholder="Aposta Base (¥)" style="width:100%; margin-top:5px;">
-                            <button class="action-btn" onclick="iniciarEmbateMap()" style="width:100%; margin-top:5px;">Declarar Embate</button>
+                            <input type="number" id="embAposta" placeholder="Aposta do Duelo (¥)" style="margin-top:5px;">
+                            <button class="action-btn" onclick="iniciarEmbateMap()" style="width:100%; margin-top:5px;">Declarar Combate Oficial</button>
                         </div>
                         <div style="flex:1; min-width:250px;">
                             <h4>2. Resolver Combate</h4>
                             <input type="text" id="embVencedor" placeholder="Vencedor" style="width:48%;"> <input type="text" id="embPerdedor" placeholder="Perdedor" style="width:48%; float:right;">
-                            <input type="text" id="embMorteDesc" placeholder="Causa Morte (Opcional)" style="width:100%; margin-top:5px;">
-                            <input type="text" id="embMorteImg" placeholder="Link Imagem Morte" style="width:100%; margin-top:5px;">
-                            <button class="action-btn" onclick="processarEmbate()" style="width:100%; margin-top:5px;">Finalizar</button>
+                            <input type="text" id="embMorteDesc" placeholder="Causa Morte (Opcional)" style="margin-top:5px;">
+                            <input type="text" id="embMorteImg" placeholder="Link Imagem Morte" style="margin-top:5px;">
+                            <button class="action-btn" onclick="processarEmbate()" style="width:100%; margin-top:5px;">Finalizar e Noticiar</button>
                         </div>
                         <div style="flex:1; min-width:250px;">
-                            <h4>3. Vender Imóvel</h4>
-                            <select id="imovelLocal" style="margin-bottom:5px; width:100%;"></select>
-                            <input type="text" id="imovelNome" placeholder="Nome do Imóvel" style="width:100%;">
+                            <h4>3. Criar Imóvel no Grid</h4>
+                            <select id="imovelLocal" style="margin-bottom:5px;"></select>
+                            <input type="text" id="imovelNome" placeholder="Nome do Imóvel">
                             <div style="display:flex; gap:10px; margin-top:5px;">
-                                <input type="number" id="imovelPreco" placeholder="Preço ¥" style="flex:1;">
+                                <input type="number" id="imovelPreco" placeholder="Preço ¥">
                             </div>
                             <button class="action-btn" onclick="criarImovelMestre()" style="width:100%; margin-top:5px; color:var(--accent-blue); border-color:var(--accent-blue);">Anunciar Venda</button>
                         </div>
@@ -183,7 +189,7 @@
                     <div class="igamble-side">
                         <div class="avatar-maker-panel">
                             <h4 style="width:100%; text-align:center; color:var(--accent-blue);">Galeria de Avatares</h4>
-                            <p style="font-size:10px; color:#aaa; margin:0 0 5px 0;">Selecione e equipe para alterar em todo o site.</p>
+                            <p style="font-size:10px; color:#aaa; margin:0 0 5px 0;">Selecione um e clique em Equipar.</p>
                             <div class="avatar-grid-select" id="avatarGridDisplay">
                                 </div>
                             <button class="action-btn" onclick="salvarAvatarCustom()" style="width:100%; font-size:12px; margin-top:10px;">Equipar Avatar (500 ¥)</button>
@@ -191,7 +197,7 @@
 
                         <div class="avatar-maker-panel" style="flex-direction:column;">
                             <h4 style="color:#ffaa00; margin:0;">Títulos de Respeito</h4>
-                            <select id="lojaTitulos" style="width:100%; font-size:11px;"></select>
+                            <select id="lojaTitulos" style="font-size:11px;"></select>
                             <button class="action-btn" onclick="comprarTituloChat()" style="width:100%; border-color:#ffaa00; color:#ffaa00; font-size:12px;">Comprar / Equipar</button>
                         </div>
                     </div>
@@ -201,7 +207,7 @@
                         <div class="chat-input-area">
                             <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
                             <button class="neon-icon-btn" onclick="document.getElementById('chatImageFile').click()" title="Anexar Imagem">📎</button>
-                            <input type="text" id="chatInput" placeholder="Mensagem ou URL da imagem (.png)..." maxlength="200" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
+                            <input type="text" id="chatInput" placeholder="Mensagem ou Link (http... .png)" maxlength="200" onkeypress="if(event.key === 'Enter') prepararEnvioMensagem()">
                             <button class="neon-icon-btn" onclick="prepararEnvioMensagem()" title="Enviar">➤</button>
                         </div>
                         <div id="emojiPopupDynamic" class="emoji-popup">
@@ -215,9 +221,9 @@
             </div>
 
             <div id="tab-roleta" class="tab-content">
-                <div style="background:#0a0a0f; border:1px solid var(--accent-purple); padding:20px; border-radius:8px; text-align:center; width:100%; max-width:600px; box-shadow: 0 0 20px rgba(176,0,255,0.2);">
-                    <h2 class="neon-purple" style="margin-top:0;">Seleção de Patrono</h2>
-                    <p style="color:#aaa; font-size:12px;">Custo: 500 ¥. Gire para mudar sua Passiva.</p>
+                <div style="background:#0a0a0f; border:1px solid var(--accent-blue); padding:20px; border-radius:8px; text-align:center; width:100%; max-width:600px;">
+                    <h2 style="margin-top:0;">Seleção de Patrono</h2>
+                    <p style="color:#aaa; font-size:12px;">Custo: 500 ¥. Gire para mudar sua Passiva a qualquer momento.</p>
                     
                     <div id="pantheonSavedArea" style="margin: 15px 0; padding:15px; border:1px dashed #ffaa00; display:none;">
                         <p style="color:#fff; margin:0; font-size:12px;">Seu Patrono Atual:</p>
@@ -225,44 +231,33 @@
                         <p id="savedGodDesc" style="font-size:13px; color:#00ff00; margin:10px 0 0 0; font-weight:bold;"></p>
                     </div>
 
-                    <button class="action-btn" id="spinBtn" style="color:var(--accent-purple); border-color:var(--accent-purple);" onclick="tentarGirar()">Sortear Cartas (500¥)</button>
+                    <button class="action-btn" id="spinBtn" onclick="tentarGirar()">Girar Roleta (500¥)</button>
                     <div class="cards-container" id="roletaCardsArea" style="display:none;"><div class="card" id="card1">?</div><div class="card" id="card2">?</div></div>
                     <div id="actionButtons" style="display: none; justify-content:center; gap:10px;">
-                        <button class="action-btn" style="color:var(--accent-purple); border-color:var(--accent-purple);" onclick="escolherDeus(0)">Aceitar Carta 1</button>
-                        <button class="action-btn" style="color:var(--accent-purple); border-color:var(--accent-purple);" onclick="escolherDeus(1)">Aceitar Carta 2</button>
-                    </div>
-                </div>
-
-                <div class="god-list-container" style="margin-top:20px;">
-                    <h3 class="neon-purple">O Panteão</h3>
-                    <div class="god-grid">
-                        <details class="god-badge"><summary>Oizus (Miséria)</summary><div class="passive-desc">Dobra risco do adversário.</div></details><details class="god-badge"><summary>Afrodite (Desejo)</summary><div class="passive-desc">Força acordo não-letal.</div></details>
-                        <details class="god-badge"><summary>Athena (Estratégia)</summary><div class="passive-desc">Pista dedutiva sobre oponente.</div></details><details class="god-badge"><summary>Hades (Submundo)</summary><div class="passive-desc">Herda Yenes de mortos.</div></details>
-                        <details class="god-badge"><summary>Hermes (Tráfico)</summary><div class="passive-desc">Garante fuga perfeita.</div></details><details class="god-badge"><summary>Gaia (Território)</summary><div class="passive-desc">Ver rotas secretas (diagonais) e ignorar obstáculos no grid.</div></details>
-                        <details class="god-badge"><summary>Zeus (Autoridade)</summary><div class="passive-desc">Força aposta ou causa multa.</div></details><details class="god-badge"><summary>Diogenes (Cinismo)</summary><div class="passive-desc">Imune a manipulações.</div></details>
-                        <details class="god-badge"><summary>Ares (Violência)</summary><div class="passive-desc">Ignora dor leve.</div></details><details class="god-badge"><summary>Poseidon (Maré)</summary><div class="passive-desc">Anula última transação.</div></details>
-                        <details class="god-badge"><summary>Apolo (Verdade)</summary><div class="passive-desc">Força alvo a dizer a verdade.</div></details><details class="god-badge"><summary>Ártemis (Caçada)</summary><div class="passive-desc">Rastreio infalível.</div></details>
+                        <button class="action-btn" onclick="escolherDeus(0)">Aceitar Carta 1</button>
+                        <button class="action-btn" onclick="escolherDeus(1)">Aceitar Carta 2</button>
                     </div>
                 </div>
             </div>
 
             <div id="tab-loja" class="tab-content">
                 <h1>Mercado Negro</h1>
-                <div id="masterShopPanel" class="master-panel" style="text-align:left; display:none; margin: 0 auto;">
-                    <h4>[ MASTER ] PUBLICAR MERCADORIA</h4>
-                    <div style="display: flex; gap: 10px;">
+                <div id="masterShopPanel" class="master-panel" style="display:none; text-align:left; margin: 0 auto;">
+                    <h4 style="color:var(--accent-blue); border-bottom:1px dashed #333; padding-bottom:5px;">[ MASTER ] PUBLICAR MERCADORIA</h4>
+                    <div class="master-loja-grid">
                         <select id="newItemType"><option>Arma</option><option>Roupa</option><option>Comida</option><option>Móvel</option><option>Tecnologia</option></select>
-                        <input type="text" id="newItemName" placeholder="Nome" style="flex:1;">
+                        <input type="text" id="newItemName" placeholder="Nome do Item">
                     </div>
-                    <div style="display: flex; gap: 10px; margin-top:5px;">
-                        <input type="text" id="newItemDesc" placeholder="Descrição/Dano" style="flex:1;">
-                        <select id="newItemBuffType" style="border-color:#ffaa00;"><option value="integ">+ Integridade Máx</option><option value="for">+ Força</option><option value="agi">+ Agilidade</option><option value="int">+ Inteligência</option><option value="cura">+ Cura (Saturação)</option></select>
-                        <input type="number" id="newItemPoder" placeholder="Poder/Bônus" style="width:120px; border-color:#ffaa00;">
-                        <input type="number" id="newItemSize" placeholder="Tam Grid (1 a 4)" style="width:120px; border-color:#ffaa00;" title="Quantos quadrados do VTT o móvel ocupa">
-                        <input type="number" id="newItemPrice" placeholder="Preço ¥" style="width:120px; border-color:#00ff00;">
+                    <input type="text" id="newItemDesc" placeholder="Descrição/Dano" style="margin-bottom: 10px;">
+                    <div class="master-loja-grid-bottom">
+                        <select id="newItemBuffType" style="border-color:#ffaa00;"><option value="integ">+ Integridade Máx</option><option value="for">+ Força</option><option value="agi">+ Agilidade</option><option value="int">+ Inteligência</option><option value="cura">+ Cura Saturação</option></select>
+                        <input type="number" id="newItemPoder" placeholder="Poder/Bônus" style="border-color:#ffaa00;">
+                        <input type="number" id="newItemSize" placeholder="Tamanho Grid (1 a 4)" style="border-color:#ffaa00;" title="Apenas para móveis">
+                        <input type="number" id="newItemPrice" placeholder="Preço ¥" style="border-color:#00ff00;">
                     </div>
-                    <button class="action-btn" onclick="criarItemLoja()" style="margin-top:10px; width:100%;">Publicar</button>
+                    <button class="action-btn" onclick="criarItemLoja()" style="margin-top:15px; width:100%; border-color:#00ff00; color:#00ff00;">+ Publicar Item</button>
                 </div>
+                
                 <div class="shop-tabs" style="margin-top:20px;">
                     <button class="shop-tab-btn active" onclick="filtrarLoja('Tudo', this)">Tudo</button><button class="shop-tab-btn" onclick="filtrarLoja('Arma', this)">Equipamento</button>
                     <button class="shop-tab-btn" onclick="filtrarLoja('Comida', this)">Comida</button><button class="shop-tab-btn" onclick="filtrarLoja('Móvel', this)">Decoração (Buffs)</button>
@@ -284,7 +279,7 @@
         </div>
     </div>
 
-    <div class="version-tag">Versão do Sistema: V1.0 Alpha</div>
+    <div class="version-tag">Versão do Sistema: V1.0 Alpha (Patch 1)</div>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
@@ -325,16 +320,15 @@
 
         // --- MAPA GLOBAL ORTOGONAL E VTT ---
         const locaisMapa = {
-            "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Fonte", x:6, y:4, w:4, h:4}] }, "p2": { nome: "Ghost Ramen", x: 35, y: 65, salas: [{n:"Salão", x:1, y:1, w:8, h:6}, {n:"Cozinha", x:10, y:1, w:5, h:6}], obs:["2_2","3_2","4_2","5_2"] },
-            "p3": { nome: "Viela da Fome", x: 15, y: 65, salas: [{n:"Beco", x:2, y:2, w:12, h:8}], obs:["6_4","6_5","6_6"] }, "p4": { nome: "Club Neon", x: 50, y: 80, salas: [{n:"Pista", x:2, y:2, w:8, h:8}, {n:"VIP", x:11, y:2, w:4, h:4}], obs:["10_3","10_4","10_5"] },
-            "p5": { nome: "Avenida Ouro", x: 35, y: 35, salas: [{n:"Rua", x:1, y:4, w:14, h:4}] }, "p6": { nome: "Bar Submundo", x: 15, y: 35, salas: [{n:"Balcão", x:2, y:2, w:10, h:5}], obs:["4_4","5_4","6_4","7_4"] },
-            "p7": { nome: "Beco Sombrio", x: 15, y: 50, salas: [{n:"Beco", x:6, y:1, w:4, h:10}] }, "p8": { nome: "Hideout Alfa", x: 15, y: 80, salas: [{n:"Sala", x:4, y:4, w:8, h:6}] },
-            "p9": { nome: "Shadow Lane", x: 65, y: 35, salas: [{n:"Rua", x:2, y:4, w:12, h:4}] }, "p10": { nome: "Safehouse APTS", x: 85, y: 35, salas: [{n:"Lobby", x:4, y:2, w:8, h:8}] },
-            "p11": { nome: "Hacker Den", x: 85, y: 50, salas: [{n:"Servidores", x:2, y:2, w:12, h:8}], obs:["5_5","5_6","6_5","6_6"] }, "p12": { nome: "Mercado Negro", x: 85, y: 65, salas: [{n:"Tendas", x:1, y:1, w:14, h:10}] },
-            "p13": { nome: "Yakuza HQ", x: 65, y: 80, salas: [{n:"Dojo", x:2, y:2, w:8, h:8}, {n:"Chefe", x:11, y:2, w:4, h:5}], obs:["10_3","10_4","10_5","10_6"] }, "p14": { nome: "Parque Sombrio", x: 85, y: 80, salas: [{n:"Bosque", x:1, y:1, w:14, h:10}] },
-            "p15": { nome: "Cemitério", x: 35, y: 80, salas: [{n:"Túmulos", x:2, y:2, w:12, h:8}], obs:["5_3","8_5","4_7"] }
+            "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Fonte", x:4, y:2, w:4, h:4}] }, "p2": { nome: "Ghost Ramen", x: 35, y: 65, salas: [{n:"Salão", x:1, y:1, w:6, h:4}, {n:"Cozinha", x:7, y:1, w:4, h:4}], obs:["2_2","3_2","4_2"] },
+            "p3": { nome: "Viela da Fome", x: 20, y: 55, salas: [{n:"Beco", x:2, y:1, w:8, h:6}], obs:["5_3","5_4","5_5"] }, "p4": { nome: "Club Neon", x: 50, y: 85, salas: [{n:"Pista", x:2, y:2, w:6, h:5}, {n:"VIP", x:8, y:2, w:3, h:3}], obs:["7_2","7_3","7_4"] },
+            "p5": { nome: "Avenida Ouro", x: 30, y: 35, salas: [{n:"Rua", x:1, y:3, w:10, h:2}] }, "p6": { nome: "Bar Submundo", x: 15, y: 25, salas: [{n:"Balcão", x:2, y:2, w:8, h:4}], obs:["3_3","4_3","5_3","6_3"] },
+            "p7": { nome: "Beco Sombrio", x: 10, y: 45, salas: [{n:"Beco", x:4, y:1, w:4, h:7}] }, "p8": { nome: "Hideout Alfa", x: 15, y: 80, salas: [{n:"Sala", x:3, y:3, w:6, h:4}] },
+            "p9": { nome: "Shadow Lane", x: 65, y: 35, salas: [{n:"Rua", x:2, y:3, w:8, h:3}] }, "p10": { nome: "Safehouse APTS", x: 85, y: 20, salas: [{n:"Lobby", x:3, y:1, w:6, h:6}] },
+            "p11": { nome: "Hacker Den", x: 80, y: 50, salas: [{n:"Servidores", x:2, y:2, w:8, h:5}], obs:["4_4","4_5","5_4","5_5"] }, "p12": { nome: "Mercado Negro", x: 85, y: 70, salas: [{n:"Tendas", x:1, y:1, w:10, h:6}] },
+            "p13": { nome: "Yakuza HQ", x: 70, y: 80, salas: [{n:"Dojo", x:2, y:1, w:6, h:6}, {n:"Chefe", x:8, y:2, w:3, h:4}], obs:["7_2","7_3","7_4","7_5"] }, "p14": { nome: "Parque Sombrio", x: 80, y: 90, salas: [{n:"Bosque", x:1, y:1, w:10, h:6}] },
+            "p15": { nome: "Cemitério", x: 35, y: 85, salas: [{n:"Túmulos", x:2, y:1, w:8, h:6}], obs:["4_2","6_4","3_5"] }
         };
-        
         const conexoesMapa = [ { de: "p1", para: "p2" }, { de: "p2", para: "p3" }, { de: "p1", para: "p4" }, { de: "p1", para: "p5" }, { de: "p5", para: "p6" }, { de: "p1", para: "p9" }, { de: "p9", para: "p10" }, { de: "p10", para: "p11" }, { de: "p11", para: "p12" }, { de: "p2", para: "p13" }, { de: "p13", para: "p14" }, { de: "p3", para: "p8" }, { de: "p7", para: "p6" }, { de: "p3", para: "p7" }, { de: "p2", para: "p15" }, { de: "p4", para: "p13"} ];
         const rotasSecretasGaia = [ { de: "p1", para: "p6" }, { de: "p15", para: "p10" }, { de: "p8", para: "p14" } ];
 
@@ -347,7 +341,7 @@
             
             let uData = usersGlobais[jogadorAtual]; let isGaia = uData && uData.deus === "Gaia";
 
-            // Desenha linhas Ortogonais
+            // Desenha linhas Ortogonais (X, e depois Y)
             conexoesMapa.forEach(con => {
                 let p1 = locaisMapa[con.de]; let p2 = locaisMapa[con.para];
                 let minX = Math.min(p1.x, p2.x); let w = Math.abs(p2.x - p1.x);
@@ -447,15 +441,15 @@
             if(loc.salas) {
                 let overlays = document.getElementById("roomOverlays");
                 loc.salas.forEach(s => {
-                    let left = (s.x / 16) * 100; let top = (s.y / 12) * 100; let width = (s.w / 16) * 100; let height = (s.h / 12) * 100;
+                    let left = (s.x / 12) * 100; let top = (s.y / 8) * 100; let width = (s.w / 12) * 100; let height = (s.h / 8) * 100;
                     overlays.innerHTML += `<div class="room-overlay" style="left:${left}%; top:${top}%; width:${width}%; height:${height}%;">${s.n}</div>`;
                 });
             }
 
             let obsList = loc.obs || [];
 
-            for(let y=0; y<12; y++) {
-                for(let x=0; x<16; x++) {
+            for(let y=0; y<8; y++) {
+                for(let x=0; x<12; x++) {
                     let cellId = `${x}_${y}`; let occupier = gridTokens[cellId];
                     let isObs = obsList.includes(cellId);
                     let classObs = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
@@ -500,8 +494,8 @@
         function drawCasaBoard() {
             let b = document.getElementById("casaBoard"); if(!b) return;
             b.innerHTML = ""; let gridCasa = casaGlobais[jogadorAtual] || {}; 
-            for(let y=0; y<12; y++) {
-                for(let x=0; x<16; x++) {
+            for(let y=0; y<8; y++) {
+                for(let x=0; x<12; x++) {
                     let cellId = `${x}_${y}`; let fItem = gridCasa[cellId];
                     let cellHtml = `<div class="tactical-cell" onclick="clicarGridCasa(${x}, ${y})">`;
                     if(fItem) {
@@ -539,7 +533,7 @@
 
             setTimeout(() => { 
                 clearInterval(interval); sp.style.display = "none"; res.style.display = "flex"; 
-                res.innerHTML = rolagensIndividuais.map(v => `<div class="dice-result-box" style="font-size:24px; padding:15px 25px;">${v}</div>`).join('');
+                res.innerHTML = rolagensIndividuais.map(v => `<div style="background:#111; border:2px solid #00ff00; padding:10px 20px; border-radius:8px;">${v}</div>`).join('');
                 setTimeout(() => { ov.style.display = "none"; }, 3000); 
             }, 1500);
         }
@@ -592,9 +586,9 @@
         }
 
         window.atualizarHP = function() { if(!jogadorAtual) return; let nHp = parseInt(document.getElementById("hpInput").value || 0); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/hp`).set(nHp); };
-        window.distribuirPonto = function(attr) { if(!jogadorAtual) return; let r = getSafeRpg(usersGlobais[jogadorAtual]); if(r.pontosLivres > 0 && r[attr] < 3) { db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(r[attr] + 1); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres - 1); } };
+        window.distribuirPonto = function(attr) { if(!jogadorAtual) return; let u = usersGlobais[jogadorAtual] || {}; let r = getSafeRpg(u); if(r.pontosLivres > 0 && r[attr] < 3) { db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/${attr}`).set(r[attr] + 1); db.ref(`tokyoRpg/users/${jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres - 1); } };
 
-        // --- AVATARES PRONTOS (65 ÍCONES REAIS DA API) ---
+        // --- AVATARES PRONTOS (CORRIGIDO) ---
         window.carregarAvatares = function() {
             let grid = document.getElementById("avatarGridDisplay"); if(!grid) return;
             grid.innerHTML = "";
@@ -649,30 +643,37 @@
         function setarOnline() { if(!db || !jogadorAtual) return; db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { connectionRef = db.ref('tokyoRpg/presence/' + jogadorAtual); connectionRef.onDisconnect().set(false).then(() => { connectionRef.set(true); }); }}); }
 
         window.logarSucesso = function(nome, serial) {
-            jogadorAtual = nome; serialAtual = serial; isMaster = (serial === MASTER_SERIAL);
-            let btn = document.getElementById("userBtn"); if(btn) btn.classList.add("logged");
-            setElText("profileName", nome); setElText("profileSerial", serial);
-            if(!usersGlobais[nome] || usersGlobais[nome].carteira === undefined) db.ref('tokyoRpg/users/' + nome).update({ carteira: 0, rpg: getSafeRpg(), local: "p1" });
+            setElDisplay("loginModal", "none"); // Fecha imediatamente e abre loader
+            let loader = document.getElementById("systemLoader"); if(loader) loader.style.display = "flex";
             
-            let pD = usersGlobais[nome]?.deus;
-            if(pD) { setElDisplay("actionButtons", "none"); setElDisplay("pantheonSavedArea", "block"); 
-                let dObj = deuses.find(x=>x.n===pD); 
-                if(dObj) { 
-                    setElHTML("savedGodCard", `<div class="card-suit top-left">${dObj.s}</div><div class="card-center">${dObj.n}</div><div class="card-suit bottom-right">${dObj.s}</div>`); 
-                    setElText("savedGodDesc", dObj.d); 
-                    if(dObj.s==='♥'||dObj.s==='♦') document.getElementById("savedGodCard").className = "card red-suit"; else document.getElementById("savedGodCard").className = "card black-suit";
-                } 
-            }
-            if(usersGlobais[nome]?.casa) setElDisplay("btnAbaCasa", "inline-block");
-            if(usersGlobais[nome]?.numero) { setElDisplay("btnAbaCelular", "inline-block"); setElText("myPhoneHeader", usersGlobais[nome].numero); }
+            setTimeout(() => {
+                if(loader) loader.style.display = "none";
+                
+                jogadorAtual = nome; serialAtual = serial; isMaster = (serial === MASTER_SERIAL);
+                let btn = document.getElementById("userBtn"); if(btn) btn.classList.add("logged");
+                setElText("profileName", nome); setElText("profileSerial", serial);
+                if(!usersGlobais[nome] || usersGlobais[nome].carteira === undefined) db.ref('tokyoRpg/users/' + nome).update({ carteira: 0, rpg: getSafeRpg(), local: "p1" });
+                
+                let pD = usersGlobais[nome]?.deus;
+                if(pD) { setElDisplay("actionButtons", "none"); setElDisplay("pantheonSavedArea", "block"); 
+                    let dObj = deuses.find(x=>x.n===pD); 
+                    if(dObj) { 
+                        setElHTML("savedGodCard", `<div class="card-suit top-left">${dObj.s}</div><div class="card-center">${dObj.n}</div><div class="card-suit bottom-right">${dObj.s}</div>`); 
+                        setElText("savedGodDesc", dObj.d); 
+                        if(dObj.s==='♥'||dObj.s==='♦') document.getElementById("savedGodCard").className = "card red-suit"; else document.getElementById("savedGodCard").className = "card black-suit";
+                    } 
+                }
+                if(usersGlobais[nome]?.casa) setElDisplay("btnAbaCasa", "inline-block");
+                if(usersGlobais[nome]?.numero) { setElDisplay("btnAbaCelular", "inline-block"); setElText("myPhoneHeader", usersGlobais[nome].numero); }
 
-            setElDisplay('masterHomePanel', isMaster ? 'block' : 'none'); setElDisplay('masterShopPanel', isMaster ? 'block' : 'none');
-            if(isMaster) { let sel = document.getElementById("embLocal"); let sel2 = document.getElementById("imovelLocal"); sel.innerHTML = "<option value=''>Selecione...</option>"; sel2.innerHTML = "<option value=''>Selecione...</option>"; Object.keys(locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${locaisMapa[k].nome}</option>`; sel2.innerHTML += `<option value="${k}">${locaisMapa[k].nome}</option>`; }); }
-            
-            setarOnline(); renderizarFicha(); drawMapVisuals(); renderizarMochila(); window.desenharListaUsuarios(); fecharModal();
+                setElDisplay('masterHomePanel', isMaster ? 'block' : 'none'); setElDisplay('masterShopPanel', isMaster ? 'block' : 'none');
+                if(isMaster) { let sel = document.getElementById("embLocal"); let sel2 = document.getElementById("imovelLocal"); sel.innerHTML = "<option value=''>Selecione...</option>"; sel2.innerHTML = "<option value=''>Selecione...</option>"; Object.keys(locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${locaisMapa[k].nome}</option>`; sel2.innerHTML += `<option value="${k}">${locaisMapa[k].nome}</option>`; }); }
+                
+                setarOnline(); renderizarFicha(); drawMapVisuals(); renderizarMochila(); window.desenharListaUsuarios();
+            }, 1500);
         }
 
-        window.logarComSenha = function() { const n = document.getElementById("loginName").value.trim().toUpperCase(); const s = document.getElementById("loginPass").value; if (!n || !s) return; db.ref('tokyoRpg/users/' + n).once('value').then((snap) => { let ud = snap.val(); if(ud) { if (ud.senha !== s) { alert("Senha incorreta."); return; } window.logarSucesso(n, ud.serial); } else { let ns = gerarSerial(); db.ref('tokyoRpg/users/' + n).set({ senha: s, serial: ns, carteira: 0, rpg: getSafeRpg(), local: "p1" }); window.logarSucesso(n, ns); alert(`Criado.`); } }); };
+        window.logarComSenha = function() { const n = document.getElementById("loginName").value.trim().toUpperCase(); const s = document.getElementById("loginPass").value; if (!n || !s) return; db.ref('tokyoRpg/users/' + n).once('value').then((snap) => { let ud = snap.val(); if(ud) { if (ud.senha !== s) { alert("Senha incorreta."); return; } window.logarSucesso(n, ud.serial); } else { let ns = gerarSerial(); db.ref('tokyoRpg/users/' + n).set({ senha: s, serial: ns, carteira: 0, rpg: getSafeRpg(), local: "p1" }); window.logarSucesso(n, ns); } }); };
         window.logarComSerial = function() { const s = document.getElementById("loginSerial").value.trim().toUpperCase(); if(!s) return; if(s === MASTER_SERIAL) { db.ref('tokyoRpg/users/MESTRE').update({ serial: MASTER_SERIAL, carteira: 9999999 }); window.logarSucesso("MESTRE", MASTER_SERIAL); return; } let achou = false; Object.keys(usersGlobais).forEach(n => { if(usersGlobais[n].serial === s) { achou = true; window.logarSucesso(n, s); }}); if(!achou) alert("Não encontrado."); };
         window.deslogar = function() { if(connectionRef) connectionRef.set(false); jogadorAtual = ""; serialAtual = ""; isMaster = false; let btn = document.getElementById("userBtn"); if(btn) btn.classList.remove("logged"); setElVal("loginName", ""); setElVal("loginPass", ""); setElVal("loginSerial", ""); setElDisplay('masterHomePanel', 'none'); setElDisplay('masterShopPanel', 'none'); setElDisplay("btnAbaCasa", "none"); setElDisplay("btnAbaCelular", "none"); fecharSubMapa(); fecharModal(); drawMapVisuals(); };
 
@@ -687,7 +688,6 @@
         };
         window.criarImovelMestre = function() { if(!isMaster) return; let kLoc = document.getElementById("imovelLocal").value; let n = document.getElementById("imovelNome").value.trim(); let c = parseInt(document.getElementById("imovelComodos").value); let p = parseInt(document.getElementById("imovelPreco").value); if(!kLoc || !n || isNaN(p)) return; db.ref('tokyoRpg/imoveis').push({ localKey: kLoc, nome: n, comodos: c, preco: p, dono: "Nenhum" }); alert("À venda!"); setElVal("imovelNome",""); setElVal("imovelPreco",""); setElVal("imovelComodos",""); };
 
-        // --- LOJA E MOCHILA ---
         window.filtrarLoja = function(tipo, btnEl) { filtroLojaAtual = tipo; document.querySelectorAll('.shop-tab-btn').forEach(b => b.classList.remove('active')); if(btnEl) btnEl.classList.add('active'); renderizarLojaUI(); }
         function renderizarLojaUI() { let b = document.getElementById("shopGrid"); if(!b) return; b.innerHTML=""; if(lojaGlobal) { Object.keys(lojaGlobal).forEach(k => { let i = lojaGlobal[k]; if(filtroLojaAtual === "Tudo" || (filtroLojaAtual==="Arma" && (i.tipo==="Arma"||i.tipo==="Roupa"||i.tipo==="Escudo")) || i.tipo === filtroLojaAtual) { let pd = i.poder ? `<span class="neon-gold"> [${i.buffType?'+'+i.poder+' '+i.buffType: 'Cura '+i.poder}]</span>` : ""; b.innerHTML += `<div class="shop-item"><div><span class="shop-type">${i.tipo}</span><h3 class="neon-blue" style="margin:5px 0;">${i.nome}</h3><p style="font-size:12px;color:#aaa;">${i.desc}${pd}</p></div><div><h2 class="neon-green" style="margin:10px 0;">${i.preco}¥</h2><button class="action-btn" onclick="comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}', ${i.poder||0}, '${i.buffType||''}', ${i.size||1})">Comprar</button></div></div>`; }}); } }
         window.criarItemLoja = function() { if(!isMaster) return; let t=document.getElementById("newItemType").value; let n=document.getElementById("newItemName").value.trim(); let d=document.getElementById("newItemDesc").value.trim(); let buff=document.getElementById("newItemBuffType").value; let poder=parseInt(document.getElementById("newItemPoder").value||"0"); let sz=parseInt(document.getElementById("newItemSize").value||"1"); let p=parseInt(document.getElementById("newItemPrice").value); if(n && p) { db.ref('tokyoRpg/loja').push({ tipo: t, nome: n, desc: d, preco: p, poder: poder, buffType: buff, size: sz }); alert("Publicado!"); setElVal("newItemName",""); setElVal("newItemDesc",""); setElVal("newItemPrice",""); setElVal("newItemPoder",""); } }
@@ -738,7 +738,7 @@
             });
         };
 
-        // --- LISTENERS BLINDADOS ---
+        // --- INICIALIZAÇÃO E LISTENERS ---
         if (db) {
             window.carregarAvatares(); carregarTitulos();
             db.ref('tokyoRpg/users').on('value', s => { 
