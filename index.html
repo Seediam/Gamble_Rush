@@ -3,171 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema do Distrito - V4.2 Master</title>
+    <title>Sistema do Distrito - OS V6.0 Master</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
     <style>
-        /* === VARIÁVEIS E BASE === */
+        /* === VARIÁVEIS CYBERPUNK E RESET === */
         :root {
             --bg-dark: #030305; --panel-bg: #0a0a0f; --accent-red: #ff1a55; --accent-blue: #00e5ff; 
             --accent-purple: #b000ff; --text-main: #e0e0e0; 
             --rarity-com: #aaaaaa; --rarity-inc: #00ff66; --rarity-rar: #0077ff; --rarity-epi: #aa00ff; --rarity-leg: #ffaa00;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Courier New', Courier, monospace; background-color: var(--bg-dark); color: var(--text-main); display: flex; flex-direction: column; margin: 0; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; }
+        body { font-family: 'Courier New', Courier, monospace; background-color: var(--bg-dark); color: var(--text-main); margin: 0; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; }
 
-        /* SCROLLBARS NEON */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        /* SCROLLBARS */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #000; border-left: 1px solid #111; }
         ::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 10px; box-shadow: inset 0 0 10px rgba(0,229,255,0.8); }
 
+        /* INPUTS */
         input, select { appearance: none; -webkit-appearance: none; background: #000 !important; color: #fff !important; border: 1px solid var(--accent-blue) !important; padding: 10px; border-radius: 4px; font-family: inherit; outline: none; width: 100%; box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.1); }
         select { background: url('data:image/svg+xml;utf8,<svg fill="%2300e5ff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 10px center; }
         input:focus, select:focus { border-color: var(--accent-red) !important; box-shadow: inset 0 0 10px rgba(255, 26, 85, 0.3), 0 0 10px var(--accent-red); }
-        button { font-family: inherit; cursor: pointer; transition: 0.3s; }
+        button { font-family: inherit; cursor: pointer; transition: 0.3s; outline: none; }
 
+        /* TEXTOS NEON */
         h1, h2, h3, h4 { color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue); text-transform: uppercase; margin-top: 0;}
         .neon-red { color: var(--accent-red) !important; text-shadow: 0 0 10px var(--accent-red) !important; }
         .neon-green { color: #00ff00 !important; text-shadow: 0 0 10px #00ff00 !important; }
         .neon-gold { color: #ffaa00 !important; text-shadow: 0 0 10px #ffaa00 !important; }
         .neon-purple { color: var(--accent-purple) !important; text-shadow: 0 0 15px var(--accent-purple) !important; }
 
-        /* === MENUS E LAYOUT === */
-        .nav-bar { position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,0,0,0.95); border-bottom: 2px solid var(--accent-red); box-shadow: 0 0 15px var(--accent-red); display: flex; justify-content: center; padding: 10px 0; z-index: 500; overflow-x: auto; white-space: nowrap;}
-        .nav-btn { background: transparent; color: #aaa; border: none; font-size: 13px; font-weight: bold; text-transform: uppercase; padding: 8px 16px; margin: 0 5px; }
-        .nav-btn:hover, .nav-btn.active { color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue); border-bottom: 2px solid var(--accent-blue); }
-
-        .bottom-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; background: rgba(0,0,0,0.95); border-top: 2px solid var(--accent-blue); box-shadow: 0 -5px 15px rgba(0,229,255,0.2); z-index: 2000; justify-content: space-around; align-items: center; }
-        .b-nav-btn { background: transparent; border: none; color: #555; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; width: 20%; height: 100%; text-transform: uppercase; padding: 5px; }
-        .b-nav-btn.active { color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue); }
-        .b-nav-icon { font-size: 20px; margin-bottom: 2px; }
-
-        .top-bar { position: fixed; top: 10px; right: 20px; z-index: 1000; display: flex; align-items: center; gap: 15px;}
-        .clock-hud { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; box-shadow: 0 0 10px rgba(0,229,255,0.4); text-align: center; }
-        .user-btn { background: #000; border: 2px solid var(--accent-red); color: var(--accent-red); width: 45px; height: 45px; border-radius: 50%; font-size: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 10px rgba(255, 26, 85, 0.5); text-shadow: 0 0 10px var(--accent-red); cursor:pointer;}
-
-        /* ESTRUTURA GLOBAL DASHBOARD */
-        .global-layout { display: flex; width: 100%; height: calc(100vh - 50px); margin-top: 50px; overflow: hidden; }
-        .ad-space { width: 180px; background-color: #030305; border-right: 1px solid #111; border-left: 1px solid #111; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px; overflow-y: auto; flex-shrink: 0; }
-        .ad-image { width: 100%; height: auto; object-fit: cover; border-radius: 4px; border: 1px solid var(--accent-blue); box-shadow: 0 0 15px rgba(0,229,255,0.15);}
-        
-        .sidebar { width: 260px; background-color: #050508; border-left: 1px solid var(--accent-blue); padding: 15px; display: flex; flex-direction: column; overflow-y: auto; position:relative; transition: width 0.3s ease, padding 0.3s ease; z-index: 2500; flex-shrink: 0;}
-        .sidebar.minimized { width: 40px; padding: 15px 5px; }
-        .sidebar.minimized .user-item, .sidebar.minimized h2, .sidebar.minimized label, .sidebar.minimized .version-tag { display: none; }
-        .btn-toggle-sidebar { background: transparent; color: var(--accent-blue); border: none; font-size: 20px; font-weight: bold; cursor: pointer; display: block; margin-bottom: 10px; text-shadow: 0 0 5px var(--accent-blue); }
-        .sidebar.minimized .btn-toggle-sidebar { transform: rotate(180deg); margin: 0 auto; }
-
-        .btn-floating-agents { display: none; position: fixed; bottom: 80px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: var(--bg-dark); color: var(--accent-blue); font-size: 24px; justify-content: center; align-items: center; box-shadow: 0 0 15px var(--accent-blue); z-index: 2600; cursor: pointer; border: 2px solid var(--accent-blue); }
-
-        .center-panel { flex: 1; position: relative; overflow-y: auto; background: #07070a; display: flex; flex-direction: column; padding: 15px; min-width: 0;}
-        .tab-content { display: none; width: 100%; flex: 1; flex-direction: column; animation: fadeIn 0.3s; min-height: 0;}
-        .tab-content.active { display: flex; }
-        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
-
         button.action-btn { padding: 10px 15px; font-size: 12px; font-weight: bold; text-transform: uppercase; background: transparent; color: var(--accent-red); border: 1px solid var(--accent-red); border-radius: 4px; text-shadow: 0 0 5px var(--accent-red); box-shadow: inset 0 0 10px rgba(255,26,85,0.1);}
         button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow: 0 0 20px var(--accent-red); text-shadow: none; }
 
-        /* === MODAIS E LOADING === */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: none; justify-content: center; align-items: center; z-index: 3000; }
+        /* === MODAIS DE SISTEMA E TOAST NEON === */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 5000; }
         .modal-content { background: #050505; border: 2px solid var(--accent-blue); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 0 40px rgba(0, 229, 255, 0.2), inset 0 0 20px rgba(0, 229, 255, 0.1); text-align: center; position: relative; overflow: hidden; }
         .modal-content::before { content: ''; position:absolute; top:0; left:0; width:100%; height:4px; background:var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
         
-        #loadingTerminal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:4000; flex-direction:column; justify-content:center; align-items:center; color:#0f0; font-family:'Courier New', Courier, monospace; text-align:left; font-size:14px; text-shadow: 0 0 5px #0f0; }
-        .cursor-blink { display:inline-block; width:10px; height:15px; background:#0f0; animation: blink 1s infinite step-end; margin-left:5px;}
-        @keyframes blink { 50% { opacity: 0; } }
+        #loadingTerminal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9000; flex-direction:column; justify-content:center; align-items:center; color:#0f0; font-family:'Courier New', Courier, monospace; text-align:left; font-size:14px; text-shadow: 0 0 5px #0f0; }
 
-        /* === MAPA VTT E LINHAS SVG === */
-        .rpg-hud-map { width: 260px; background: rgba(5, 5, 10, 0.95); border: 1px solid var(--accent-blue); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 20px rgba(0,229,255,0.1); flex-shrink: 0; margin-right: 15px; overflow-y: auto; max-height: calc(100vh - 100px);}
-        .hp-input-container { display: flex; align-items: center; justify-content: space-between; background: #0a0000; border: 1px solid var(--accent-red); padding: 5px 10px; border-radius: 4px;}
-        .hp-input-container input { width: 60px; text-align: right; font-size: 18px !important; color: var(--accent-red) !important; border: none !important; padding: 0 !important; font-weight: bold;}
-        
-        .ar-container { display: flex; justify-content: space-between; margin-bottom: 10px; background: #0a0a0f; padding: 5px 10px; border: 1px solid var(--accent-blue); border-radius: 4px;}
-        
-        .attr-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #ccc; border-bottom: 1px dashed #222; padding-bottom: 5px;}
-        .val-display { color: var(--accent-blue); font-weight: bold; width: 15px; text-align: center; }
-        .btn-attr { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); width: 20px; height: 20px; display: flex; justify-content: center; align-items: center; border-radius: 3px; font-weight: bold; font-size: 10px;}
-        .btn-attr:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 5px var(--accent-blue); }
-        
-        .integrity-bar-bg { width: 100%; background: #222; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 5px;}
-        .integrity-bar-fill { height: 100%; background: #00ff00; width: 0%; transition: 0.5s; }
+        /* AVISOS NEON NA TELA */
+        #neonToast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #000; border: 2px solid var(--accent-red); color: var(--accent-red); padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 0 30px var(--accent-red), inset 0 0 15px rgba(255,26,85,0.4); z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s, top 0.3s; text-align: center; text-transform: uppercase; }
+        #neonToast.show { opacity: 1; top: 50px; }
 
-        .skills-container { background: #111; padding: 10px; border: 1px dashed var(--accent-blue); border-radius: 4px; margin-top: 10px; display:flex; gap:5px; flex-direction:column;}
+        /* === DESKTOP BASE === */
+        #base-desktop { width: 100%; height: 100vh; background: #000; position: absolute; top:0; left:0; z-index: 1;}
+
+        /* GAVETA DE AGENTES (DIREITA) */
+        .sidebar { width: 260px; background-color: rgba(5,5,8,0.95); border-left: 1px solid var(--accent-blue); padding: 15px; display: flex; flex-direction: column; transition: transform 0.3s ease; position: fixed; right: 0; top: 0; height: 100vh; z-index: 4500; backdrop-filter: blur(5px);}
+        .sidebar.minimized { transform: translateX(100%); }
+        .btn-toggle-sidebar { position: absolute; left: -40px; top: 20px; background: rgba(5,5,8,0.95); border: 1px solid var(--accent-blue); border-right: none; color: var(--accent-blue); width: 40px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px 0 0 8px; }
+        .user-list { flex: 1; overflow-y: auto; margin-bottom: 20px; margin-top: 10px;}
+        .user-item { background-color: rgba(0,0,0,0.5); padding: 10px; margin-bottom: 8px; border-left: 3px solid #555; font-size: 13px; border-radius: 4px;}
+        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+        .status-dot.online { background-color: #00ff00; box-shadow: 0 0 8px #00ff00; }
+        .hp-display { font-weight: bold; color: var(--accent-red); font-size: 12px; margin-top: 5px; text-shadow: 0 0 5px var(--accent-red);}
+
+        /* BOTÕES FLUTUANTES GLOBAIS (ESQUERDA INFERIOR) */
+        .floating-controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 15px; z-index: 4500; }
+        .btn-floating { width: 55px; height: 55px; background: rgba(0,0,0,0.85); border: 2px solid var(--accent-blue); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 26px; cursor: pointer; box-shadow: 0 0 20px rgba(0,229,255,0.5); transition: transform 0.2s;}
+        .btn-floating:hover { transform: scale(1.1); background: var(--accent-blue); color:#000; text-shadow: none; }
+        #btnHomeApp { border-color: var(--accent-red); color: var(--accent-red); box-shadow: 0 0 15px rgba(255,26,85,0.5); display: none; font-weight: bold;}
+        #btnHomeApp:hover { background: var(--accent-red); color: #000; }
+
+        /* === SISTEMA OPERACIONAL (SMARTPHONE UI) === */
+        #phoneOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.8); z-index: 4000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);}
         
-        /* Botões Rapidos de Dado Livres */
-        .dice-quick-btn { background: #000; border: 1px dashed var(--accent-blue); color: var(--accent-blue); padding: 5px; font-size: 11px; cursor: pointer; border-radius: 3px; flex: 1; text-align: center; font-weight: bold;}
+        .phone-frame { 
+            position: relative;
+            width: 100%; 
+            max-width: 400px; 
+            aspect-ratio: 9 / 18.5; /* Mantém a proporção real de um celular */
+            max-height: 90vh; /* Não deixa vazar no PC */
+            background-image: url('bg.png'); 
+            background-size: 100% 100%; 
+            border-radius: 35px; 
+            box-shadow: 0 0 60px rgba(0,229,255,0.2), inset 0 0 20px rgba(0,0,0,0.8); 
+        }
+
+        @media(max-width: 500px) { 
+            .phone-frame { border-radius: 0; max-width: none; max-height: none; height: 100vh; aspect-ratio: auto; background-size: cover; background-position: center;} 
+        }
+        
+        /* THE HITBOX GRID FOR BG.PNG APPS - Totalmente Invisíveis */
+        .phone-apps-grid { 
+            position: absolute; 
+            top: 10%; bottom: 20%; left: 8%; right: 8%; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: repeat(4, 1fr); 
+            gap: 15px; 
+        }
+        
+        .app-hitbox { background: transparent; border: none; cursor: pointer; border-radius: 20px; transition: 0.1s; }
+        .app-hitbox:active { background: rgba(255,255,255,0.2); transform: scale(0.95); }
+
+        .close-phone-btn { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); color: #fff; background: rgba(0,0,0,0.8); border: 1px solid var(--accent-red); width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px var(--accent-red);}
+
+        /* === ESTRUTURA DOS APPLICATIVOS (FULLSCREEN) === */
+        #gameContainer { display: none; width: 100%; height: 100vh; position: absolute; top:0; left:0; background: #07070a; overflow-y: auto; z-index: 1000; padding: 20px; padding-bottom: 90px;}
+        
+        .tab-content { display: none; width: 100%; max-width: 1200px; margin: 0 auto; flex-direction: column; animation: fadeIn 0.3s; }
+        .tab-content.active { display: flex; }
+        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+
+        /* HUD DO TOPO (MY GAMBLE / GERAL) */
+        .profile-header-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: #0a0a0f; padding: 15px; border: 1px dashed var(--accent-blue); border-radius: 8px; margin-bottom: 15px;}
+        .profile-stat-box { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; border: 1px solid #333; padding: 10px; border-radius: 4px; text-align: center;}
+        
+        .attr-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #ccc; border-bottom: 1px dashed #222; padding: 10px 0;}
+        .val-display { color: var(--accent-blue); font-weight: bold; width: 25px; text-align: center; font-size: 16px;}
+        .btn-attr { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); width: 28px; height: 28px; display: flex; justify-content: center; align-items: center; border-radius: 4px; font-weight: bold; font-size: 14px;}
+        .btn-attr:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); }
+
+        .dice-quick-btn { background: #000; border: 1px dashed var(--accent-blue); color: var(--accent-blue); padding: 8px; font-size: 12px; cursor: pointer; border-radius: 4px; flex: 1; text-align: center; font-weight: bold;}
         .dice-quick-btn:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); }
 
-        .map-container-main { display: flex; flex: 1; position: relative; min-height: 500px;}
-        .map-visual-area { flex: 1; position: relative; overflow: hidden; border: 2px solid var(--accent-blue); border-radius: 8px; box-shadow: inset 0 0 50px rgba(0,229,255,0.2);}
+        .integrity-bar-bg { width: 100%; background: #222; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; border: 1px solid #0f0;}
+        .integrity-bar-fill { height: 100%; background: #00ff00; width: 0%; transition: width 0.5s linear; box-shadow: 0 0 10px #00ff00;}
+
+        /* --- MAPA E VTT ORTOGONAL --- */
+        .map-container-main { display: flex; flex-direction: column; gap: 15px; width: 100%; min-height: 80vh;}
+        @media(min-width: 900px) { .map-container-main { flex-direction: row; align-items: stretch;} }
+
+        .rpg-hud-map { width: 100%; background: rgba(5, 5, 10, 0.95); border: 1px solid var(--accent-blue); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 20px rgba(0,229,255,0.1); flex-shrink: 0;}
+        @media(min-width: 900px) { .rpg-hud-map { width: 300px; max-height: 80vh; overflow-y: auto;} }
+
+        .map-visual-area { flex: 1; position: relative; overflow: hidden; border: 2px solid var(--accent-blue); border-radius: 8px; box-shadow: inset 0 0 50px rgba(0,229,255,0.2); min-height: 60vh;}
+        
         .map-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; background-image: url('mapa1.png'); background-size: cover; background-position: center; transition: 0.5s; cursor: pointer;}
         .map-overlay-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background: rgba(0, 0, 10, 0.7); background-image: linear-gradient(rgba(0, 229, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 229, 255, 0.15) 1px, transparent 1px); background-size: 40px 40px; z-index: 1; }
 
         .svg-lines-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; display: block; }
-        .map-node { position: absolute; width: 24px; height: 24px; border-radius: 50%; border: 3px solid var(--accent-blue); background: #000; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 10px var(--accent-blue), inset 0 0 10px var(--accent-blue); z-index: 10; display: flex; justify-content: center; align-items: center; transition: 0.2s;}
-        .map-node::after { content: ''; width: 8px; height: 8px; background: var(--accent-blue); border-radius: 50%; }
+        .map-node { position: absolute; width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--accent-blue); background: #000; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 10px var(--accent-blue), inset 0 0 10px var(--accent-blue); z-index: 10; display: flex; justify-content: center; align-items: center; transition: 0.2s;}
+        .map-node::after { content: ''; width: 10px; height: 10px; background: var(--accent-blue); border-radius: 50%; }
         .map-node.danger { border-color: var(--accent-red); box-shadow: 0 0 20px var(--accent-red), inset 0 0 10px var(--accent-red); animation: pulseDanger 1s infinite;}
         
-        .node-label { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 3px 6px; border-radius: 4px; white-space: nowrap; border: 1px solid #333; pointer-events: none;}
+        .node-label { position: absolute; top: 35px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 3px 8px; border-radius: 4px; white-space: nowrap; border: 1px solid #333; pointer-events: none;}
         
-        /* Avatar não bloqueia o clique no mapa (fantasma) */
-        .avatar-on-map { position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #00ff00; object-fit: cover; z-index: 20; box-shadow: 0 0 15px #00ff00; transition: top 0.4s ease-out, left 0.4s ease-out; background:#111; pointer-events: none; }
+        .avatar-on-map { position: absolute; width: 36px; height: 36px; border-radius: 50%; border: 2px solid #00ff00; object-fit: cover; z-index: 20; box-shadow: 0 0 15px #00ff00; transition: top 0.4s ease-out, left 0.4s ease-out; background:#111; pointer-events: none; }
         .avatar-offline { filter: grayscale(100%); border-color: #555; opacity: 0.6; box-shadow: none;}
-        .token-hp { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: #000; color: var(--accent-red); border: 1px solid var(--accent-red); font-size: 10px; font-weight: bold; padding: 1px 4px; border-radius: 4px; z-index: 25; text-shadow: 0 0 5px var(--accent-red); pointer-events: none; }
+        .token-hp { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); background: #000; color: var(--accent-red); border: 1px solid var(--accent-red); font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; z-index: 25; text-shadow: 0 0 5px var(--accent-red); pointer-events: none; }
 
         @keyframes pulseDanger { 0% { box-shadow: 0 0 5px #f00; } 50% { box-shadow: 0 0 20px #f00; } 100% { box-shadow: 0 0 5px #f00; } }
 
-        /* === VTT INTERIOR E TÁTICAS (ALCANCE / SLIDE) === */
+        /* VTT INTERIOR E TÁTICAS (ALCANCE / SLIDE) */
         .submap-canvas { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505; z-index: 100; flex-direction: column; padding: 15px; background-size: cover; background-position: center;}
         
-        /* Grid Tático Reformulado para Animação/Glide */
-        .tactical-board { flex: 1; position: relative; background: rgba(0,0,0,0.6); border: 2px solid var(--accent-blue); overflow: hidden;}
+        .tactical-board { flex: 1; position: relative; background: rgba(0,0,0,0.7); border-top: 2px solid var(--accent-blue); overflow: hidden;}
         .grid-cells-container { display: grid; grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(12, 1fr); width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2; }
         .tokens-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 
         .tactical-cell { border: 1px solid rgba(0, 229, 255, 0.15); transition: background-color 0.2s; position: relative;}
         .tactical-cell:hover { background: rgba(0,229,255,0.3); }
-        .tactical-cell.in-range { background: rgba(0, 255, 100, 0.2); box-shadow: inset 0 0 15px rgba(0, 255, 100, 0.5); cursor: pointer; border: 1px dashed #0f0; }
-
+        
+        .tactical-cell.in-range { background: rgba(0, 255, 100, 0.25); box-shadow: inset 0 0 15px rgba(0, 255, 100, 0.6); cursor: pointer; border: 1px dashed #0f0; z-index: 3;}
+        .tactical-cell.in-range-blocked { background: rgba(255, 26, 85, 0.25); box-shadow: inset 0 0 15px rgba(255, 26, 85, 0.6); cursor: not-allowed; border: 1px dashed #f00; z-index: 3;}
+        
         .cell-obstacle { background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255, 26, 85, 0.3) 5px, rgba(255, 26, 85, 0.3) 10px); border: 1px solid rgba(255, 26, 85, 0.5); cursor: not-allowed;}
         .cell-obstacle-gaia { border-color: #00ff00 !important; cursor: crosshair !important; box-shadow: inset 0 0 10px rgba(0,255,0,0.2);}
 
-        /* O Pulo do Gato (Transition pra fazer o avatar deslizar) */
-        .tactical-token { position: absolute; width: 6.25%; height: 8.33%; background-size: cover; border-radius: 50%; border: 2px solid #00ff00; box-shadow: 0 0 10px #00ff00; transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), top 0.4s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: none;}
+        .tactical-token { position: absolute; width: 6.25%; height: 8.33%; background-size: cover; border-radius: 50%; border: 2px solid #00ff00; box-shadow: 0 0 15px #00ff00; transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), top 0.4s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: none;}
         
-        .room-overlay { position: absolute; border: 2px solid var(--accent-blue); background: rgba(0,229,255,0.08); display: flex; align-items: flex-start; justify-content: center; padding-top: 5px; color: #fff; font-size: 14px; font-weight: bold; text-shadow: 0 0 8px var(--accent-blue); pointer-events: none; z-index: 1;}
+        .room-overlay { position: absolute; border: 2px solid var(--accent-blue); background: rgba(0,229,255,0.05); display: flex; align-items: flex-start; justify-content: center; padding-top: 5px; color: #fff; font-size: 14px; font-weight: bold; text-shadow: 0 0 8px var(--accent-blue); pointer-events: none; z-index: 1;}
 
-        .turn-order-bar { display:flex; gap:10px; overflow-x:auto; background:rgba(0,0,0,0.8); padding:10px; border:1px solid var(--accent-red); margin-bottom:10px; border-radius:4px; align-items:center; }
-        .turn-avatar { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #555; opacity: 0.5; transition: 0.3s; }
+        .turn-order-bar { display:flex; gap:10px; overflow-x:auto; background:rgba(0,0,0,0.8); padding:5px; border:1px solid var(--accent-red); align-items:center; border-radius: 4px; max-width: 100%;}
+        .turn-avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #555; opacity: 0.5; transition: 0.3s; flex-shrink: 0;}
         .turn-avatar.active { border-color: #00ff00; opacity: 1; box-shadow: 0 0 15px #00ff00; transform: scale(1.1); }
 
-        .food-action-bar { display: flex; gap: 10px; z-index: 200; flex-wrap:wrap; margin-bottom: 10px;}
+        .food-action-bar { display: flex; gap: 10px; z-index: 200; flex-wrap:wrap; padding: 10px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--accent-blue);}
         .btn-eat { background: rgba(0,255,100,0.2); border: 1px solid #00ff00; color: #00ff00; padding: 10px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; text-shadow: 0 0 5px #00ff00; backdrop-filter: blur(5px);}
+        
+        .eating-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9000; display:none; flex-direction:column; justify-content:center; align-items:center; pointer-events: all; }
+        .eating-text { color: #00ff00; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px #00ff00; margin-bottom: 20px; animation: pulseDanger 1s infinite; }
+        .eating-bar-bg { width: 300px; height: 25px; border: 2px solid #00ff00; border-radius: 12px; padding: 3px; background: #111; }
+        .eating-bar-fill { height: 100%; background: #00ff00; width: 0%; box-shadow: 0 0 20px #00ff00; border-radius: 8px; }
 
-        .eating-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9000; display:none; flex-direction:column; justify-content:center; align-items:center; pointer-events: all; }
-        .eating-text { color: #00ff00; font-size: 24px; font-weight: bold; text-shadow: 0 0 15px #00ff00; margin-bottom: 20px; animation: pulseDanger 1s infinite; }
-        .eating-bar-bg { width: 300px; height: 20px; border: 2px solid #00ff00; border-radius: 10px; padding: 2px; }
-        .eating-bar-fill { height: 100%; background: #00ff00; width: 0%; box-shadow: 0 0 20px #00ff00; border-radius: 6px; }
-
-        /* DADOS OVERLAY */
-        .dice-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; display: none; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
-        .dice-box-panel { background: rgba(5,5,10,0.95); border: 2px solid var(--accent-blue); border-radius: 10px; padding: 40px; box-shadow: 0 0 50px rgba(0,229,255,0.5); text-align: center; min-width: 350px;}
-        .dice-spinners { display: flex; gap: 15px; margin: 20px 0; font-size: 32px; font-weight: bold; color: var(--accent-red); text-shadow: 0 0 15px var(--accent-red); font-family: monospace; flex-wrap: wrap; justify-content: center;}
-        .dice-number { background: #111; border: 2px solid var(--accent-red); border-radius: 8px; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 15px rgba(255,26,85,0.4);}
-        .dice-result-box { display: inline-block; background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 10px 15px; border-radius: 6px; margin: 5px; font-weight: bold; font-size: 24px; box-shadow: 0 0 10px rgba(0,255,0,0.4), inset 0 0 5px rgba(0,255,0,0.2);}
+        /* DADOS OVERLAY (SKIP CLICÁVEL) */
+        .dice-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 8000; display: none; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        .dice-box-panel { background: rgba(5,5,10,0.95); border: 2px solid var(--accent-blue); border-radius: 15px; padding: 40px; box-shadow: 0 0 60px rgba(0,229,255,0.5); text-align: center; width: 90%; max-width: 400px; pointer-events: none;}
+        .dice-spinners { display: flex; gap: 15px; margin: 25px 0; font-size: 36px; font-weight: bold; color: var(--accent-red); text-shadow: 0 0 20px var(--accent-red); font-family: monospace; flex-wrap: wrap; justify-content: center;}
+        .dice-number { background: #111; border: 2px solid var(--accent-red); border-radius: 10px; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 20px rgba(255,26,85,0.4);}
+        .dice-result-box { display: inline-block; background: #000; border: 2px solid #00ff00; color: #00ff00; padding: 15px 25px; border-radius: 10px; margin: 5px; font-weight: bold; font-size: 28px; box-shadow: 0 0 15px rgba(0,255,0,0.5), inset 0 0 10px rgba(0,255,0,0.3);}
 
         /* === TETRIS (PERSONAGEM / INVENTÁRIO) === */
         .tetris-wrapper { display: flex; justify-content: center; margin-top: 15px; overflow-x: auto; padding: 10px; }
         .tetris-grid { position: relative; display: grid; gap: 1px; background: #111; border: 2px solid var(--accent-blue); box-shadow: 0 0 20px rgba(0,229,255,0.2); touch-action: none; box-sizing: content-box; min-width: max-content; margin: 0 auto; }
         .grid-cell { background: #050505; width: 45px; height: 45px; border: 1px dashed #333; }
         
-        .item-tetris { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; text-align: center; border-radius: 2px; cursor: grab; touch-action: none; z-index: 100; transition: box-shadow 0.1s; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 0 5px rgba(0,0,0,0.8); flex-direction: column; overflow: visible; margin: 0; box-sizing: border-box;}
+        .item-tetris { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; text-align: center; border-radius: 4px; cursor: grab; touch-action: none; z-index: 100; transition: transform 0.1s, box-shadow 0.1s; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 0 5px rgba(0,0,0,0.8); flex-direction: column; overflow: visible; margin: 0; box-sizing: border-box;}
         .item-tetris span { pointer-events: none; } 
-        .item-tetris.dragging { z-index: 999; opacity: 0.9; cursor: grabbing; box-shadow: 0 15px 25px rgba(0,0,0,0.9); }
+        .item-tetris.dragging { z-index: 999; opacity: 0.9; cursor: grabbing; box-shadow: 0 15px 30px rgba(0,0,0,0.9); transform: scale(1.05); }
         
-        .btn-excluir-item { position:absolute; top:-6px; right:-6px; font-size:10px; width:18px; height:18px; background:#000; color:var(--accent-gold); border:1px solid var(--accent-gold); border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:10; box-shadow:0 0 5px var(--accent-gold); text-shadow:0 0 5px var(--accent-gold); padding:0; }
-        .btn-excluir-item.discard { color:var(--accent-red); border-color:var(--accent-red); box-shadow:0 0 5px var(--accent-red); text-shadow:0 0 5px var(--accent-red); }
+        .btn-excluir-item { position:absolute; top:-8px; right:-8px; font-size:12px; width:22px; height:22px; background:#000; color:var(--accent-gold); border:1px solid var(--accent-gold); border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:10; box-shadow:0 0 8px var(--accent-gold); text-shadow:0 0 5px var(--accent-gold); padding:0; }
+        .btn-excluir-item.discard { color:var(--accent-red); border-color:var(--accent-red); box-shadow:0 0 8px var(--accent-red); text-shadow:0 0 5px var(--accent-red); }
 
         .item-tetris.Arma { background: rgba(255, 26, 85, 0.8); border: 1px solid var(--accent-red); }
         .item-tetris.Roupa { background: rgba(0, 119, 255, 0.8); border: 1px solid var(--rarity-rar); }
@@ -180,20 +213,21 @@
         .inv-itens-soltos { display: flex; flex-wrap: wrap; gap: 10px; min-height: 80px; padding: 15px; background: #0a0a0f; border: 1px dashed var(--accent-blue); border-radius: 8px; margin-top: 15px;}
         .inv-itens-soltos .item-tetris { position: relative !important; left: auto !important; top: auto !important;}
 
-        /* PANTEÃO ROLETA GACHA */
+        /* PANTEÃO ROLETA GACHA E LISTA */
         .gacha-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px; margin-bottom: 20px; }
-        .gacha-display { width: 100%; max-width:500px; min-height: 200px; display: flex; gap:20px; align-items: center; justify-content: center; background:#050505; border: 2px dashed var(--accent-purple); padding:20px; border-radius:12px; box-shadow: inset 0 0 30px rgba(176,0,255,0.1);}
+        .gacha-display { width: 100%; max-width:600px; min-height: 220px; display: flex; gap:20px; align-items: center; justify-content: center; background:#050505; border: 2px dashed var(--accent-purple); padding:20px; border-radius:12px; box-shadow: inset 0 0 30px rgba(176,0,255,0.1); flex-wrap: wrap;}
         
-        .god-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; width: 100%; max-width: 900px; margin: 0 auto; }
-        .card { width: 160px; height: 240px; background: #1a0033; border: 2px solid var(--accent-purple); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(176,0,255,0.4); text-align: center; padding: 15px; transition: 0.2s;}
+        .god-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; width: 100%; max-width: 900px; margin: 0 auto; }
+        .card { background: #1a0033; border: 2px solid var(--accent-purple); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(176,0,255,0.4); text-align: center; padding: 15px; transition: 0.2s;}
         .card.spinning { animation: slotMachine 0.1s infinite; border-color: #fff; box-shadow: 0 0 30px #fff;}
         .card.selected { border-color: #0f0; box-shadow: 0 0 30px #0f0;}
         @keyframes slotMachine { 0% { transform: translateY(-2px); } 50% { transform: translateY(2px); } 100% { transform: translateY(-2px); } }
 
         /* IGAMBLE CHAT PREMIUM */
-        .igamble-wrapper { display: flex; gap: 20px; width: 100%; flex: 1; min-height: 500px;}
-        .igamble-side { flex: 1; min-width: 300px; max-width: 350px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto;}
-        .igamble-chat { flex: 2; display: flex; flex-direction: column; background: #050508; border: 1px solid var(--accent-blue); border-radius: 8px; box-shadow: 0 0 20px rgba(0,229,255,0.1); height: 100%; overflow: hidden;}
+        .igamble-wrapper { display: flex; flex-direction: column; gap: 20px; width: 100%; height: 100%;}
+        @media(min-width: 768px) { .igamble-wrapper { flex-direction: row; } }
+        .igamble-side { flex: 1; min-width: 250px; max-width: 350px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto;}
+        .igamble-chat { flex: 2; display: flex; flex-direction: column; background: #050508; border: 1px solid var(--accent-blue); border-radius: 8px; box-shadow: 0 0 20px rgba(0,229,255,0.1); height: 100%; overflow: hidden; min-height: 500px;}
 
         .avatar-maker-panel { background: #0a0a0f; border: 1px dashed var(--accent-blue); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px;}
         .avatar-grid-select { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #333; border-radius: 4px;}
@@ -229,38 +263,14 @@
         .shop-item { background: #111; border: 1px solid #333; padding: 15px; border-radius: 5px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; position:relative;}
         .shop-item.master-edit:hover { border-color: var(--accent-red); cursor:pointer; box-shadow: 0 0 15px rgba(255,26,85,0.3);}
 
-        .user-list { flex: 1; overflow-y: auto; margin-bottom: 20px; }
-        .user-item { background-color: #111; padding: 10px; margin-bottom: 8px; border-left: 3px solid #555; font-size: 13px;}
-        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
-        .status-dot.online { background-color: #00ff00; box-shadow: 0 0 8px #00ff00; }
-        .hp-display { font-weight: bold; color: var(--accent-red); font-size: 12px; margin-top: 5px; text-shadow: 0 0 5px var(--accent-red);}
-
         .master-panel { background: #0a0000; border: 1px solid var(--accent-red); padding: 20px; width: 100%; max-width: 900px; margin-bottom: 20px; border-radius: 8px; box-shadow: inset 0 0 30px rgba(255,26,85,0.1); margin-left: auto; margin-right: auto;}
-        .version-tag { position: absolute; bottom: 10px; right: 15px; color: var(--accent-blue); font-size: 11px; z-index: 1000; pointer-events: none; font-weight: bold; text-shadow: 0 0 5px var(--accent-blue);}
-
-        /* FIX MOBILE / APP LAYOUT */
-        @media screen and (max-width: 900px) {
-            .nav-bar { display: none; } 
-            .bottom-nav { display: flex; } 
-            .global-layout { flex-direction: column; overflow-y: auto; height: 100vh; margin-top: 0; padding-top: 55px; padding-bottom: 70px;}
-            .top-bar { top: 10px; right: 15px; z-index: 3000; } 
-            .sidebar { position: fixed; right: -300px; top: 0; height: 100vh; width: 260px; z-index: 3500; background: rgba(5,5,8,0.98); box-shadow: -5px 0 20px rgba(0,0,0,0.8); transition: right 0.3s ease; border-left: 2px solid var(--accent-blue);}
-            .sidebar.show-sidebar { right: 0; }
-            .btn-floating-agents { display: flex; } 
-            .map-container-main { flex-direction: column; height: auto; }
-            .rpg-hud-map { width: 100%; border-radius: 0; border-right: none; border-bottom: 1px solid var(--accent-blue); margin-right:0; max-height:none;}
-            .map-visual-area { height: 400px; }
-            .igamble-wrapper { flex-direction: column; height: auto; overflow: visible; }
-            .igamble-chat { height: 600px; }
-            .version-tag { position: fixed; bottom: 70px; left: 10px; }
-        }
     </style>
 </head>
 <body>
 
     <!-- OVERLAYS E CARREGAMENTO -->
     <div id="eatingOverlay" class="eating-overlay">
-        <h2 id="eatingTitle" style="color:#0f0; margin-bottom:15px; text-shadow:0 0 10px #0f0;">CONSUMINDO...</h2>
+        <h2 id="eatingTitle" class="eating-text">CONSUMINDO...</h2>
         <div class="eating-bar-bg"><div id="eatingFill" class="eating-bar-fill"></div></div>
     </div>
 
@@ -270,6 +280,9 @@
         </div>
     </div>
 
+    <div id="neonToast">---</div>
+
+    <!-- PAINEL DE DADOS (ROLETA) -->
     <div id="globalDiceOverlay" class="dice-overlay" onclick="window.fecharDadoOverlay()">
         <div class="dice-box-panel">
             <h2 style="margin:0; color:var(--accent-blue); text-shadow:0 0 10px var(--accent-blue);">RESULTADO DOS DADOS</h2>
@@ -277,28 +290,11 @@
             <p id="diceFormulaLabel" style="color:#aaa; font-size:12px; margin:0;"></p>
             <div class="dice-spinners" id="diceSpinners"></div>
             <div id="diceFinalResult" style="display:none; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:10px;"></div>
-            <p style="color:#555; font-size:10px; margin-top:15px;">Clique em qualquer lugar para fechar</p>
+            <p style="color:#555; font-size:10px; margin-top:25px;">[ Clique em qualquer lugar para pular animação ]</p>
         </div>
     </div>
 
-    <!-- NAVEGAÇÃO -->
-    <nav class="nav-bar">
-        <button class="nav-btn active" onclick="window.mudarAba('tab-mapa', this)">Mapa VTT</button>
-        <button class="nav-btn" id="btnAbaCasa" onclick="window.mudarAba('tab-casa', this)" style="display:none; color:var(--accent-gold);">Minha Casa</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-principal', this)">Notícias</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-igamble', this)">IGamble</button>
-        <button class="nav-btn" id="btnAbaCelular" onclick="window.mudarAba('tab-celular', this)" style="display:none; color:#00ff00;">Celular</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-loja', this)">Mercado</button>
-        <button class="nav-btn" onclick="window.mudarAba('tab-personagem', this)">Personagem</button>
-        <button class="nav-btn" style="color:var(--accent-purple);" onclick="window.mudarAba('tab-panteao', this)">Panteão</button>
-    </nav>
-
-    <div class="top-bar">
-        <div class="clock-hud"><div id="clockDate" style="font-size: 9px; color:#888;">09/03/2026</div><div id="clockTime">--:--</div></div>
-        <div class="user-btn" id="userBtn" onclick="window.abrirModal()">👤</div>
-    </div>
-
-    <!-- MODAL DE LOGIN/PERFIL -->
+    <!-- TELA DE LOGIN / LOCKSCREEN -->
     <div class="modal-overlay" id="loginModal">
         <div class="modal-content" id="loginScreen">
             <h2 style="color:var(--accent-blue); margin-bottom:20px; font-weight:bold;">DISTRICT <span style="color:#fff;">AUTH</span></h2>
@@ -312,299 +308,307 @@
                 <input type="text" id="loginSerial" placeholder="4053" autocomplete="off" maxlength="4" style="border-color:#333; text-align:center; font-size:18px; width:120px;">
                 <span style="color:var(--accent-red); font-weight:bold; font-size:18px;">-DC1</span>
             </div>
-            <button onclick="window.dispararLoadingLogin(true)" style="width:100%; background:transparent; color:var(--accent-red); border:1px solid var(--accent-red); font-weight:bold; padding:12px; border-radius:4px; text-transform:uppercase;">Sobrescrever Auth</button>
-            <br><span class="close-modal" onclick="window.fecharModal()" style="cursor:pointer; color:#aaa; margin-top:20px; display:inline-block; font-size:12px;">[ Cancelar ]</span>
-        </div>
-
-        <div class="modal-content" id="profileScreen" style="display: none;">
-            <h3 style="color:var(--accent-blue); margin-bottom:10px;">Perfil de Agente</h3>
-            <p>Agente: <strong id="profileName" style="color:#fff;">---</strong></p>
-            <div style="background:#000; border:1px solid #0f0; padding:10px; margin:10px 0;"><p style="margin: 0; font-size: 12px; color: #aaa;">Fundos (¥):</p><h2 id="profileWallet" class="neon-green">0</h2></div>
-            <input type="text" id="sponsorCode" placeholder="Código Promo (Ex: CASH4053)">
-            <button onclick="window.resgatarCodigo()" style="width:100%; background:var(--accent-blue); margin-top:5px; color:#000; font-weight:bold;">Injetar Fundos</button>
-            <div style="background: #000; padding: 10px; border: 1px dashed var(--accent-red); margin: 15px 0;">
-                <p style="margin: 0; font-size: 11px; color: #aaa;">Serial de Acesso:</p><h3 id="profileSerial" style="margin: 5px 0; color: #fff;">XXXX-DC1</h3>
-            </div>
-            <button class="action-btn" onclick="window.deslogar()" style="width:100%;">Desconectar</button>
-            <br><span class="close-modal" onclick="window.fecharModal()" style="cursor:pointer; color:#aaa; margin-top:15px; display:inline-block; font-size:12px;">Fechar</span>
+            <button onclick="window.dispararLoadingLogin(true)" style="width:100%; background:transparent; border:1px solid var(--accent-red); color:var(--accent-red); font-weight:bold; padding:12px; border-radius:4px; text-transform:uppercase;">Sobrescrever Auth</button>
         </div>
     </div>
 
-    <!-- POPUP REACTS FIXO -->
-    <div id="emojiPopupDynamic" class="emoji-popup">
-        <button class="emoji-btn" onclick="window.executarReacao('🔥')">🔥</button><button class="emoji-btn" onclick="window.executarReacao('💀')">💀</button>
-        <button class="emoji-btn" onclick="window.executarReacao('😂')">😂</button><button class="emoji-btn" onclick="window.executarReacao('👀')">👀</button>
-        <button class="emoji-btn" onclick="window.executarReacao('💯')">💯</button><button class="emoji-btn" onclick="window.executarReacao('🤡')">🤡</button>
-        <button class="emoji-btn" onclick="window.executarReacao('💔')">💔</button><button class="emoji-btn" onclick="window.executarReacao('💰')">💰</button>
-    </div>
-
-    <div class="btn-floating-agents" onclick="window.toggleSidebarAgents()">👥</div>
-
-    <div class="global-layout">
+    <!-- BASE DESKTOP (FUNDO QUANDO O CELULAR ESTÁ MINIMIZADO) -->
+    <div id="base-desktop">
         
-        <div class="ad-space"><img src="anuncio1.png" class="ad-image" onerror="this.style.display='none'"></div>
-
-        <div class="center-panel">
+        <!-- CONTROLES FLUTUANTES GLOBAIS -->
+        <div class="floating-controls">
+            <!-- BOTÃO PARA ABRIR O CELULAR -->
+            <div class="btn-floating" id="btnPhoneToggle" onclick="window.abrirCelularMain()">📱</div>
             
-            <!-- ABA MAPA E VTT -->
-            <div id="tab-mapa" class="tab-content active">
-                <h2 style="margin-bottom: 10px;">Monitoramento VTT</h2>
-                <div class="map-container-main">
-                    
-                    <!-- HUD LATERAL -->
-                    <div class="rpg-hud-map">
-                        <div class="hp-input-container"><span>❤️ HP</span><div><input type="number" id="hpInput" value="100" onchange="window.atualizarHP()"> / <span id="hpMaxLabel" style="color:#aaa; font-size:12px;">100</span></div></div>
+            <!-- BOTÃO HOME (Voltar pro Celular quando em um APP) -->
+            <div class="btn-floating" id="btnHomeApp" onclick="window.fecharApp()">⌂</div>
+        </div>
+
+        <!-- GAVETA LATERAL DE AGENTES -->
+        <div class="sidebar minimized" id="sidebarAgents">
+            <button class="btn-toggle-sidebar" onclick="window.toggleDesktopSidebar()">👥</button>
+            <h2 style="margin:0; color:var(--accent-blue);">Agentes</h2>
+            <label style="font-size:10px; color:#888; cursor:pointer;"><input type="checkbox" id="checkOnline" onchange="window.desenharListaUsuarios()"> Só Online</label>
+            <div id="userLog" class="user-list"></div>
+        </div>
+
+        <!-- SISTEMA OPERACIONAL (SMARTPHONE UI) -->
+        <div id="phoneOverlay">
+            <div class="phone-frame">
+                
+                <!-- TELA INICIAL (APPS NO BG.PNG) -->
+                <div class="phone-apps-grid">
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-loja')" title="Gamblezon"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-mapa')" title="Gamble Maps"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-igamble')" title="iGAMBLE"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-personagem')" title="My Gamble"></button>
+                    <button class="app-hitbox locked" onclick="window.abrirApp('none', true, 'NuGamble está Fora do Ar!')" title="NuGamble"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-panteao')" title="Patronos"></button>
+                    <button class="app-hitbox locked" id="hb-casa" title="Gamble House"></button>
+                    <button class="app-hitbox locked" id="hb-celular" title="Gamblenger"></button>
+                </div>
+                
+                <button class="close-phone-btn" onclick="window.deslogar()">✖</button>
+            </div>
+        </div>
+
+        <!-- MAIN GAME CONTAINER (APPS IN FULLSCREEN) -->
+        <div id="gameContainer">
+
+            <!-- CONTAINER CENTRAL (TABS) -->
+            <div id="appContainer">
+
+                <!-- ABA MAPA E VTT -->
+                <div id="tab-mapa" class="tab-content active">
+                    <div class="map-container-main">
                         
-                        <div class="ar-container">
-                            <span style="font-size: 12px; color: var(--accent-blue); text-shadow: 0 0 5px var(--accent-blue);">🛡️ AR: <strong id="lblDef" class="neon-blue">0</strong></span>
-                            <span style="font-size: 12px;">Pts Livres: <strong id="lblPts" class="neon-gold">0</strong></span>
-                        </div>
-                        
-                        <div class="attr-row"><span>Força [F]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valFor" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Força','for')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('for')">+</button></div></div>
-                        <div class="attr-row"><span>Agilidade [A]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valAgi" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Agilidade','agi')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('agi')">+</button></div></div>
-                        <div class="attr-row"><span>Manuseio [M]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valMan" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Manuseio','man')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('man')">+</button></div></div>
-                        <div class="attr-row"><span>Vigor [V]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valVig" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Vigor','vig')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('vig')">+</button></div></div>
-                        <div class="attr-row"><span>Inteligência [I]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valInt" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Inteligência','int')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('int')">+</button></div></div>
-                        
-                        <div style="margin-top:10px; font-size: 11px;">Saturação (<span id="lblIntegMax">100</span>%): <span id="lblIntegVal" class="neon-green">100%</span><div class="integrity-bar-bg"><div id="integrityBar" class="integrity-bar-fill"></div></div></div>
-                        
-                        <div class="skills-container">
-                            <span style="color:#fff; font-size:12px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:5px; display:block;">Perícias Oficiais</span>
-                            <div style="display:flex; gap:5px; margin-top:5px;">
-                                <select id="comboPericias">
-                                    <option value="Luta|for">Luta (For)</option><option value="Atletismo|for">Atletismo (For)</option>
-                                    <option value="Furtividade|agi">Furtividade (Agi)</option><option value="Pilotagem|agi">Pilotagem (Agi)</option>
-                                    <option value="Acrobacia|agi">Acrobacia (Agi)</option><option value="Armas|man">Armas (Man)</option>
-                                    <option value="Mecânica|man">Mecânica (Man)</option><option value="Sobrevivência|vig">Sobrevivência (Vig)</option>
-                                    <option value="Intimidação|vig">Intimidação (Vig)</option><option value="Investigação|int">Investigação (Int)</option>
-                                    <option value="Medicina|int">Medicina (Int)</option><option value="Hackear|int">Hackear (Int)</option>
-                                </select>
-                                <button class="action-btn" style="padding: 5px; margin:0;" onclick="window.rolarPericiaSelect()">Rolar</button>
+                        <!-- HUD LATERAL VTT -->
+                        <div class="rpg-hud-map">
+                            <div class="hp-input-container"><span>❤️ HP</span><div><input type="number" id="hpInput" value="100" onchange="window.atualizarHP()"> / <span id="hpMaxLabel" style="color:#aaa; font-size:12px;">100</span></div></div>
+                            
+                            <div class="ar-container">
+                                <span style="font-size: 12px; color: var(--accent-blue); text-shadow: 0 0 5px var(--accent-blue);">🛡️ AR: <strong id="lblDef" class="neon-blue">0</strong></span>
+                                <span style="font-size: 12px;">Pts Livres: <strong id="lblPts" class="neon-gold">0</strong></span>
                             </div>
-                        </div>
-
-                        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
-                            <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d4')">d4</button>
-                            <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d6')">d6</button>
-                            <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d8')">d8</button>
-                            <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d10')">d10</button>
-                            <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d12')">d12</button>
-                            <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d20')">d20</button>
-                            <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d100')">d100</button>
-                        </div>
-
-                        <div class="dice-panel" style="margin-top: auto;">
-                            <div style="background:#1a1a24; padding:5px; text-align:center; font-weight:bold; color:var(--accent-blue); border-bottom:1px solid #333; font-size:11px;">Mesa de Dados</div>
-                            <div id="diceLog" style="flex:1; overflow-y:auto; font-size:11px; padding:5px; background:#000; min-height: 80px; max-height: 120px;"></div>
-                        </div>
-                    </div>
-
-                    <!-- AREA VISUAL -->
-                    <div class="map-visual-area">
-                        <!-- MAPA GLOBAL -->
-                        <div class="map-canvas" id="mapCanvas">
-                            <!-- MAP DRAWN VIA JS -->
-                        </div>
-                        
-                        <!-- TABULEIRO VTT INTERNO -->
-                        <div class="submap-canvas" id="subMapCanvas">
-                            <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.85); padding:10px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-                                <div><h2 id="subMapTitle" style="margin:0;">Campo</h2><p id="movRestantes" style="color:#0f0;font-size:11px;margin:0; font-weight:bold;">Passos Livres: 0</p></div>
-                                <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0;"></div>
-                                <div style="display:flex; gap:5px; align-items:center;">
-                                    <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
-                                    <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim de Turno</button>
-                                    
-                                    <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px;">
-                                        <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Rolar Iniciativas</button>
-                                        <input type="text" id="vttBgInp" placeholder="URL da Imagem Fundo..." style="width:120px; padding:5px; font-size:10px;">
-                                        <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Aplicar</button>
-                                    </div>
-                                    <button class="action-btn" style="margin-left:auto;" onclick="window.fecharSubMapa()">Sair 🌍</button>
+                            
+                            <div class="attr-row"><span>Força [F]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valFor" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Força','for')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('for')">+</button></div></div>
+                            <div class="attr-row"><span>Agilidade [A]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valAgi" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Agilidade','agi')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('agi')">+</button></div></div>
+                            <div class="attr-row"><span>Manuseio [M]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valMan" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Manuseio','man')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('man')">+</button></div></div>
+                            <div class="attr-row"><span>Vigor [V]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valVig" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Vigor','vig')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('vig')">+</button></div></div>
+                            <div class="attr-row"><span>Inteligência [I]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valInt" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Inteligência','int')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('int')">+</button></div></div>
+                            
+                            <div style="margin-top:10px; font-size: 11px;">Saturação (<span id="lblIntegMax">100</span>%): <span id="lblIntegVal" class="neon-green">100%</span><div class="integrity-bar-bg"><div id="integrityBar" class="integrity-bar-fill"></div></div></div>
+                            
+                            <div class="skills-container">
+                                <span style="color:#fff; font-size:12px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:5px; display:block;">Perícias Oficiais</span>
+                                <div style="display:flex; gap:5px; margin-top:5px;">
+                                    <select id="comboPericias">
+                                        <option value="Luta|for">Luta (For)</option><option value="Atletismo|for">Atletismo (For)</option>
+                                        <option value="Furtividade|agi">Furtividade (Agi)</option><option value="Pilotagem|agi">Pilotagem (Agi)</option>
+                                        <option value="Acrobacia|agi">Acrobacia (Agi)</option><option value="Armas|man">Armas (Man)</option>
+                                        <option value="Mecânica|man">Mecânica (Man)</option><option value="Sobrevivência|vig">Sobrevivência (Vig)</option>
+                                        <option value="Intimidação|vig">Intimidação (Vig)</option><option value="Investigação|int">Investigação (Int)</option>
+                                        <option value="Medicina|int">Medicina (Int)</option><option value="Hackear|int">Hackear (Int)</option>
+                                    </select>
+                                    <button class="action-btn" style="padding: 5px; margin:0;" onclick="window.rolarPericiaSelect()">Rolar</button>
                                 </div>
                             </div>
+
+                            <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
+                                <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d4')">d4</button>
+                                <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d6')">d6</button>
+                                <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d8')">d8</button>
+                                <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d10')">d10</button>
+                                <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d12')">d12</button>
+                                <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d20')">d20</button>
+                                <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d100')">d100</button>
+                            </div>
+
+                            <div class="dice-panel" style="margin-top: auto;">
+                                <div style="background:#1a1a24; padding:5px; text-align:center; font-weight:bold; color:var(--accent-blue); border-bottom:1px solid #333; font-size:11px;">Mesa de Dados</div>
+                                <div id="diceLog" style="flex:1; overflow-y:auto; font-size:11px; padding:5px; background:#000; min-height: 80px; max-height: 120px;"></div>
+                            </div>
+                        </div>
+
+                        <!-- AREA VISUAL MAPA E TABULEIRO -->
+                        <div class="map-visual-area">
+                            <!-- MAPA GLOBAL -->
+                            <div class="map-canvas" id="mapCanvas">
+                                <!-- MAP DRAWN VIA JS -->
+                            </div>
                             
-                            <div id="vttFoodActions" class="food-action-bar"></div>
-                            
-                            <!-- ESTRUTURA REFORMULADA PARA O GRID E DESLIZAMENTO -->
-                            <div class="tactical-board" id="tacticalBoard">
-                                <div id="roomOverlays"></div>
-                                <div id="gridCells" class="grid-cells-container"></div>
-                                <div id="tokensLayer" class="tokens-layer"></div>
+                            <!-- TABULEIRO VTT INTERNO -->
+                            <div class="submap-canvas" id="subMapCanvas">
+                                <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.85); padding:10px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+                                    <div><h2 id="subMapTitle" style="margin:0; font-size:14px;">Local</h2><p id="movRestantes" style="color:#0f0;font-size:11px;margin:0; font-weight:bold;">Passos Livres: 0</p></div>
+                                    <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0;"></div>
+                                    <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+                                        <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
+                                        <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim de Turno</button>
+                                        
+                                        <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px;">
+                                            <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Rolar Iniciativas</button>
+                                            <input type="text" id="vttBgInp" placeholder="URL da Imagem Fundo..." style="width:120px; padding:5px; font-size:10px;">
+                                            <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Aplicar Fundo</button>
+                                        </div>
+                                        <button class="action-btn" style="margin-left:auto;" onclick="window.fecharSubMapa()">Sair 🌍</button>
+                                    </div>
+                                </div>
+                                
+                                <div id="vttFoodActions" class="food-action-bar"></div>
+                                
+                                <div class="tactical-board" id="tacticalBoard">
+                                    <div id="roomOverlays"></div>
+                                    <div id="gridCells" class="grid-cells-container"></div>
+                                    <div id="tokensLayer" class="tokens-layer"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ABA PERSONAGEM -->
-            <div id="tab-personagem" class="tab-content">
-                <h1 style="color: #00d2ff; text-align:center;">Inventário e Equipamento</h1>
-                <p style="text-align:center; font-size:11px; color:#aaa;">Arraste os itens da mochila para equipar no corpo.</p>
-                
-                <div id="statusPeso" style="text-align:center; color:var(--accent-gold); font-size:14px; font-weight:bold; margin:10px auto; background:#111; padding:5px 15px; border-radius:4px; border:1px solid var(--accent-gold); width:max-content;">Peso Atual: 0 / 10 kg</div>
-                
-                <div class="tetris-wrapper"><div class="tetris-grid" id="grid-personagem"></div></div>
-                
-                <h3 style="margin-top:30px; color:var(--accent-red); border-bottom:1px dashed var(--accent-red); padding-bottom:5px;">Mochila (Não Equipados)</h3>
-                <div class="inv-itens-soltos" id="lista-itens-soltos"></div>
-            </div>
-
-            <!-- ABA PANTEÃO -->
-            <div id="tab-panteao" class="tab-content">
-                <h1 class="neon-purple" style="text-align:center;">Panteão dos Deuses</h1>
-                <p style="text-align:center; color:#aaa; font-size:12px; margin-bottom: 20px;">Faça uma doação de 500¥ para girar a Roleta Divina e descobrir seu Patrono. Algumas escolhas liberam passivas no mapa e em combate.</p>
-                
-                <div class="gacha-container">
-                    <div id="gachaDisplay" class="gacha-display">
-                        <h2 style="color:#555; margin:0;">[ ROLETA DIVINA ]</h2>
+                <!-- ABA MY GAMBLE (PERSONAGEM) -->
+                <div id="tab-personagem" class="tab-content">
+                    <div class="profile-header-grid">
+                        <div style="grid-column: span 2; text-align:center; border-bottom:1px solid #333; padding-bottom:10px;">
+                            <img id="myAvatarImg" src="" style="width:60px; height:60px; border-radius:50%; border:2px solid var(--accent-blue); background:#111; object-fit:cover;">
+                            <h2 style="margin:5px 0 0 0;" id="fichaNome">---</h2>
+                            <p style="font-size:10px; color:#aaa;" id="fichaSerial">---</p>
+                        </div>
+                        <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Sobrenome</span><input type="text" id="perfilSobrenome" onchange="window.salvarPerfil('sobrenome', this.value)" style="text-align:center; border:none!important; font-weight:bold; font-size:14px; padding:5px!important;"></div>
+                        <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Idade</span><input type="number" id="perfilIdade" onchange="window.salvarPerfil('idade', this.value)" style="text-align:center; border:none!important; font-weight:bold; font-size:14px; padding:5px!important;"></div>
+                        <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Telefone</span><span id="perfilTelefone" class="neon-green" style="font-size:14px; font-weight:bold; padding:5px;">---</span></div>
+                        <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Pts Livres</span><span id="lblPtsOS" class="neon-gold" style="font-size:18px; font-weight:bold;">3</span></div>
                     </div>
-                    <button id="btnRoletaDeus" class="action-btn" style="margin-top:20px; font-size:16px; padding:15px 30px; border-color:var(--accent-purple); color:var(--accent-purple); box-shadow: 0 0 15px rgba(176,0,255,0.4);" onclick="window.girarRoletaPanteao()">Girar Roleta (500 ¥)</button>
+
+                    <h1 style="color: #00d2ff; text-align:center; margin-top:20px;">Inventário e Equipamento</h1>
+                    <p style="text-align:center; font-size:11px; color:#aaa;">Arraste os itens da mochila para equipar no corpo.</p>
+                    
+                    <div id="statusPeso" style="text-align:center; color:var(--accent-gold); font-size:14px; font-weight:bold; margin:10px auto; background:#111; padding:5px 15px; border-radius:4px; border:1px solid var(--accent-gold); width:max-content;">Peso Atual: 0 / 10 kg</div>
+                    
+                    <div class="tetris-wrapper"><div class="tetris-grid" id="grid-personagem"></div></div>
+                    
+                    <h3 style="margin-top:30px; color:var(--accent-red); border-bottom:1px dashed var(--accent-red); padding-bottom:5px;">Mochila (Não Equipados)</h3>
+                    <div class="inv-itens-soltos" id="lista-itens-soltos"></div>
                 </div>
 
-                <h3 style="color:#fff; text-align:center; margin-top:40px; border-bottom:1px solid #333; padding-bottom:10px;">Todos os Patronos</h3>
-                <div class="god-grid" id="allGodsList"></div>
-            </div>
+                <!-- ABA PANTEÃO -->
+                <div id="tab-panteao" class="tab-content">
+                    <h1 class="neon-purple" style="text-align:center;">Panteão dos Deuses</h1>
+                    <p style="text-align:center; color:#aaa; font-size:12px; margin-bottom: 20px;">Faça uma doação de 500¥ para girar a Roleta Divina e descobrir seu Patrono. Algumas escolhas liberam passivas no mapa e em combate.</p>
+                    
+                    <div class="gacha-container">
+                        <div id="gachaDisplay" class="gacha-display">
+                            <h2 style="color:#555; margin:0;">[ ROLETA DIVINA ]</h2>
+                        </div>
+                        <button id="btnRoletaDeus" class="action-btn" style="margin-top:20px; font-size:16px; padding:15px 30px; border-color:var(--accent-purple); color:var(--accent-purple); box-shadow: 0 0 15px rgba(176,0,255,0.4);" onclick="window.girarRoletaPanteao()">Girar Roleta (500 ¥)</button>
+                    </div>
 
-            <!-- ABA MERCADO -->
-            <div id="tab-loja" class="tab-content">
-                <h1 style="text-align:center;">Mercado Negro</h1>
-                
-                <div id="masterShopPanel" class="master-panel" style="display:none; margin: 0 auto 20px auto;">
-                    <h4>[ MASTER ] CRIAR / EDITAR MERCADORIA</h4>
-                    <div style="display: flex; gap: 10px; flex-wrap:wrap; margin-top:10px;">
-                        <select id="niType" style="flex:1; min-width:120px;"><option>Arma</option><option>Roupa</option><option>Comida</option><option>Móvel</option><option>Tecnologia</option><option>Acessório</option><option>Mochila</option></select>
-                        <input type="text" id="niName" placeholder="Nome" style="flex:2; min-width:200px;">
-                        <input type="text" id="niDesc" placeholder="Descrição ou Efeito" style="flex:2; min-width:200px;">
-                    </div>
-                    <div style="display: flex; gap: 10px; margin-top:10px; flex-wrap:wrap;">
-                        <select id="niBuffType" style="border-color:#ffaa00; flex:1; min-width:120px;"><option value="">Nenhum Buff</option><option value="integ">+ Saturação Máx</option><option value="defesa">+ Defesa (Roupa)</option><option value="for">+ Força</option><option value="agi">+ Agilidade</option><option value="man">+ Manuseio</option><option value="int">+ Inteligência</option><option value="vig">+ Vigor</option></select>
-                        <input type="number" id="niPoder" placeholder="Poder / Bônus" style="flex:1; min-width:100px; border-color:#ffaa00;">
-                        
-                        <div style="display:flex; gap:5px; flex:2; align-items:center; border:1px dashed #ffaa00; padding:5px; border-radius:4px;">
-                            <span style="font-size:10px; color:#ffaa00; white-space:nowrap;">Grade (Tetris):</span>
-                            <input type="number" id="niW" placeholder="W" value="1" style="border-color:#ffaa00; width:50px; padding:5px;" title="Largura">
-                            <span style="color:#aaa;">x</span>
-                            <input type="number" id="niH" placeholder="H" value="1" style="border-color:#ffaa00; width:50px; padding:5px;" title="Altura">
-                        </div>
-                        <div style="display:flex; gap:5px; flex:2; align-items:center; border:1px dashed #00e5ff; padding:5px; border-radius:4px;">
-                            <span style="font-size:10px; color:#00e5ff; white-space:nowrap;">Bolsa (+Grid):</span>
-                            <input type="number" id="niExW" placeholder="+Cols" value="0" style="border-color:#00e5ff; width:50px; padding:5px;">
-                            <span style="color:#aaa;">x</span>
-                            <input type="number" id="niExH" placeholder="+Lins" value="0" style="border-color:#00e5ff; width:50px; padding:5px;">
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:10px; margin-top:10px; align-items:center;">
-                        <div style="display:flex; gap:5px; flex:1; align-items:center; border:1px dashed #ff1a55; padding:5px; border-radius:4px;">
-                            <span style="font-size:10px; color:#ff1a55; white-space:nowrap;">Peso (Kg):</span>
-                            <input type="number" id="niPeso" placeholder="Kg" value="1" style="border-color:#ff1a55; width:60px; padding:5px;">
-                        </div>
-                        <div style="display:flex; gap:5px; flex:1; align-items:center; border:1px dashed #0f0; padding:5px; border-radius:4px;">
-                            <span style="font-size:10px; color:#0f0; white-space:nowrap;">CD (Seg):</span>
-                            <input type="number" id="niCD" placeholder="Seg" value="2" style="border-color:#0f0; width:60px; padding:5px;">
-                        </div>
-                        <input type="number" id="niPrice" placeholder="Preço ¥" style="flex:1; min-width:100px; border-color:#00ff00; font-weight:bold;">
-                        <button class="action-btn" id="btnSalvarLoja" onclick="window.criarItemLoja()" style="flex:2;">Publicar no Mercado</button>
-                        <button class="action-btn" id="btnCancelarEdicao" onclick="window.cancelarEdicaoLoja()" style="display:none; border-color:#aaa; color:#aaa; flex:1;">Cancelar</button>
-                    </div>
+                    <h3 style="color:#fff; text-align:center; margin-top:40px; border-bottom:1px solid #333; padding-bottom:10px;">Todos os Patronos</h3>
+                    <div class="god-grid" id="allGodsList"></div>
                 </div>
 
-                <div class="shop-tabs">
-                    <button class="shop-tab-btn active" onclick="window.filtrarLoja('Tudo', this)">Tudo</button>
-                    <button class="shop-tab-btn" onclick="window.filtrarLoja('Arma', this)">Armamento 🔫</button>
-                    <button class="shop-tab-btn" onclick="window.filtrarLoja('Roupa', this)">Roupas 🦺</button>
-                    <button class="shop-tab-btn" onclick="window.filtrarLoja('Comida', this)">Comida 🍫</button>
-                    <button class="shop-tab-btn" onclick="window.filtrarLoja('Móvel', this)">Decoração 🪑</button>
-                    <button class="shop-tab-btn" onclick="window.filtrarLoja('Tecnologia', this)">Tech 📱</button>
-                    <button class="shop-tab-btn" onclick="window.filtrarLoja('Mochila', this)">Bolsas 🎒</button>
-                </div>
-                <div id="shopGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:15px; margin-top:15px;"></div>
-            </div>
-
-            <!-- IGAMBLE CHAT E AVATARES -->
-            <div id="tab-igamble" class="tab-content">
-                <h1 style="color: #00d2ff; margin-bottom: 10px;">I-Gamble Hub</h1>
-                <div class="igamble-wrapper">
-                    <div class="igamble-side">
-                        <div class="avatar-maker-panel">
-                            <h4 style="width:100%; text-align:center; color:var(--accent-blue);">Galeria de Avatares</h4>
-                            <p style="font-size:10px; color:#aaa; margin:0 0 5px 0;">Selecione para alterar em todo o site.</p>
-                            <div class="avatar-grid-select" id="avatarGridDisplay"></div>
-                            <button class="action-btn" onclick="window.salvarAvatarCustom()" style="width:100%; font-size:12px; margin-top:10px;">Equipar Avatar (500 ¥)</button>
+                <!-- ABA MERCADO -->
+                <div id="tab-loja" class="tab-content">
+                    <h1 style="text-align:center;">Mercado Negro</h1>
+                    
+                    <div id="masterShopPanel" class="master-panel" style="display:none; margin: 0 auto 20px auto;">
+                        <h4 style="color:#f00;">MASTER: CRIAR ITEM</h4>
+                        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap:10px; margin-top:10px;">
+                            <select id="niType"><option>Arma</option><option>Roupa</option><option>Comida</option><option>Móvel</option><option>Tecnologia</option><option>Acessório</option><option>Mochila</option></select>
+                            <input type="text" id="niName" placeholder="Nome">
+                            <input type="number" id="niPrice" placeholder="Preço ¥">
+                            <input type="number" id="niW" placeholder="Largura (1-5)" value="1">
+                            <input type="number" id="niH" placeholder="Altura (1-3)" value="1">
+                            <input type="number" id="niPeso" placeholder="Peso (Kg)" value="1">
+                            <input type="number" id="niPoder" placeholder="Nutrição/Dano">
+                            <input type="number" id="niCD" placeholder="CD (s)" value="2">
+                            <input type="number" id="niExW" placeholder="+Cols Bolsa" value="0">
+                            <input type="number" id="niExH" placeholder="+Lins Bolsa" value="0">
                         </div>
-                        <div class="avatar-maker-panel" style="flex-direction:column;">
-                            <h4 style="color:#ffaa00; margin:0;">Títulos de Respeito</h4>
-                            <select id="lojaTitulos" style="width:100%; font-size:11px;"></select>
-                            <button class="action-btn" onclick="window.comprarTituloChat()" style="width:100%; border-color:#ffaa00; color:#ffaa00; font-size:12px;">Comprar / Equipar</button>
-                        </div>
+                        <button class="action-btn" style="width:100%; margin-top:10px;" onclick="window.criarItemLoja()">Publicar</button>
                     </div>
+                    <div class="shop-tabs">
+                        <button class="shop-tab-btn active" onclick="window.filtrarLoja('Tudo', this)">Tudo</button>
+                        <button class="shop-tab-btn" onclick="window.filtrarLoja('Arma', this)">Armas</button>
+                        <button class="shop-tab-btn" onclick="window.filtrarLoja('Roupa', this)">Roupas</button>
+                        <button class="shop-tab-btn" onclick="window.filtrarLoja('Comida', this)">Comida</button>
+                        <button class="shop-tab-btn" onclick="window.filtrarLoja('Móvel', this)">Móveis</button>
+                        <button class="shop-tab-btn" onclick="window.filtrarLoja('Tecnologia', this)">Tech</button>
+                        <button class="shop-tab-btn" onclick="window.filtrarLoja('Mochila', this)">Bolsas</button>
+                    </div>
+                    <div id="shopGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:15px; margin-top:15px;"></div>
+                </div>
 
-                    <div class="igamble-chat">
-                        <div id="chatMessages" class="chat-messages"></div>
-                        <div class="chat-input-area">
-                            <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
-                            <button class="neon-icon-btn" onclick="document.getElementById('chatImageFile').click()" title="Anexar Imagem">📎</button>
-                            <input type="text" id="chatInp" placeholder="Sua mensagem..." onkeypress="if(event.key==='Enter') window.prepararEnvioMensagem()">
-                            <button class="neon-icon-btn" onclick="window.prepararEnvioMensagem()">➤</button>
+                <!-- IGAMBLE CHAT -->
+                <div id="tab-igamble" class="tab-content">
+                    <h1 style="color: #00d2ff; margin-bottom: 10px;">I-Gamble Hub</h1>
+                    <div class="igamble-wrapper">
+                        <div class="igamble-side">
+                            <div class="avatar-maker-panel">
+                                <h4 style="width:100%; text-align:center; color:var(--accent-blue);">Galeria de Avatares</h4>
+                                <p style="font-size:10px; color:#aaa; margin:0 0 5px 0;">Selecione para alterar em todo o site.</p>
+                                <div class="avatar-grid-select" id="avatarGridDisplay"></div>
+                                <button class="action-btn" onclick="window.salvarAvatarCustom()" style="width:100%; font-size:12px; margin-top:10px;">Equipar Avatar (500 ¥)</button>
+                            </div>
+                            <div class="avatar-maker-panel" style="flex-direction:column;">
+                                <h4 style="color:#ffaa00; margin:0;">Títulos de Respeito</h4>
+                                <select id="lojaTitulos" style="width:100%; font-size:11px;"></select>
+                                <button class="action-btn" onclick="window.comprarTituloChat()" style="width:100%; border-color:#ffaa00; color:#ffaa00; font-size:12px;">Comprar / Equipar</button>
+                            </div>
+                        </div>
+
+                        <div class="igamble-chat">
+                            <div id="chatMessages" class="chat-messages"></div>
+                            <div class="chat-input-area">
+                                <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
+                                <button class="neon-icon-btn" onclick="document.getElementById('chatImageFile').click()" title="Anexar Imagem">📎</button>
+                                <input type="text" id="chatInp" placeholder="Sua mensagem..." onkeypress="if(event.key==='Enter') window.prepararEnvioMensagem()">
+                                <button class="neon-icon-btn" onclick="window.prepararEnvioMensagem()">➤</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- NOTÍCIAS MESTRE -->
-            <div id="tab-principal" class="tab-content">
-                <h1 class="blink-text" style="text-align:center;">Notícias</h1>
-                <div id="masterHomePanel" class="master-panel" style="display:none; margin: 0 auto 20px auto;">
-                    <h3 style="color:var(--accent-red); border-bottom:1px dashed #333; padding-bottom:10px;">[ CENTRAL DO MESTRE ]</h3>
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                        <div style="flex:1; min-width:250px;">
-                            <h4>1. Iniciar Combate</h4>
-                            <select id="embLocal" style="margin-bottom:5px; width:100%;"></select>
-                            <input type="text" id="embP1" placeholder="Lutador 1" style="width:48%;"> <input type="text" id="embP2" placeholder="Lutador 2" style="width:48%; float:right;">
-                            <input type="number" id="embAposta" placeholder="Aposta Base (¥)" style="width:100%; margin-top:5px;">
-                            <button class="action-btn" onclick="window.iniciarEmbateMap()" style="width:100%; margin-top:5px;">Declarar Embate</button>
-                        </div>
-                        <div style="flex:1; min-width:250px;">
-                            <h4>2. Resolver Combate</h4>
-                            <input type="text" id="embVencedor" placeholder="Vencedor" style="width:48%;"> <input type="text" id="embPerdedor" placeholder="Perdedor" style="width:48%; float:right;">
-                            <input type="text" id="embMorteDesc" placeholder="Causa Morte" style="width:100%; margin-top:5px;">
-                            <input type="text" id="embMorteImg" placeholder="Link Imagem Morte" style="width:100%; margin-top:5px;">
-                            <button class="action-btn" onclick="window.processarEmbate()" style="width:100%; margin-top:5px;">Finalizar</button>
+                <!-- CASA E CELULAR APPS -->
+                <div id="tab-casa" class="tab-content">
+                    <h1 class="neon-gold" style="text-align:center;">Gamble House</h1>
+                    <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+                        <input type="text" id="casaNomeInp" placeholder="Nome do Local" style="flex:1; min-width:150px;">
+                        <input type="text" id="casaBgInp" placeholder="URL da Planta Baixa" style="flex:2; min-width:200px;">
+                        <button class="action-btn" onclick="window.salvarConfigCasa()" style="margin:0;">Salvar Casa</button>
+                    </div>
+                    <div style="width:100%; height:50vh; min-height:400px; position:relative; border:2px solid var(--accent-blue); background:#000;">
+                        <div class="tactical-board" id="casaBoard" style="height:100%; grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(12, 1fr);"></div>
+                    </div>
+                    <div class="furniture-tray" id="furnitureTray"></div>
+                </div>
+
+                <div id="tab-celular" class="tab-content">
+                    <h1 style="color: #00ff00; text-align:center;">Gamblenger</h1>
+                    <div style="background:#111; border:2px solid #333; border-radius:10px; padding:20px; width:100%; max-width:400px; height:60vh; display:flex; flex-direction:column; margin: 0 auto;">
+                        <div style="background:#1a1a24; padding:10px; text-align:center; font-weight:bold; border-bottom: 1px solid #333;">Meu Nº: <span id="myPhoneHeader" class="neon-green"></span></div>
+                        <div id="smsLog" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:10px;"></div>
+                        <div style="display:flex; flex-direction:column; gap:5px; margin-top:10px;">
+                            <input type="text" id="smsDestino" placeholder="Nº Destino">
+                            <input type="text" id="smsTexto" placeholder="Mensagem...">
+                            <button class="action-btn" style="border-color:#0f0; color:#0f0;" onclick="window.enviarSMS()">Enviar SMS</button>
                         </div>
                     </div>
                 </div>
-                <div id="newsFeed" style="max-width:800px; margin: 0 auto; width: 100%;"></div>
-            </div>
 
+                <!-- NOTÍCIAS MESTRE -->
+                <div id="tab-principal" class="tab-content">
+                    <h1 class="blink-text" style="text-align:center;">Notícias</h1>
+                    <div id="masterHomePanel" class="master-panel" style="display:none; margin: 0 auto 20px auto;">
+                        <h3 style="color:var(--accent-red); border-bottom:1px dashed #333; padding-bottom:10px;">[ CENTRAL DO MESTRE ]</h3>
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                            <div style="flex:1; min-width:250px;">
+                                <h4>1. Iniciar Combate</h4>
+                                <select id="embLocal" style="margin-bottom:5px; width:100%;"></select>
+                                <input type="text" id="embP1" placeholder="Lutador 1" style="width:48%;"> <input type="text" id="embP2" placeholder="Lutador 2" style="width:48%; float:right;">
+                                <input type="number" id="embAposta" placeholder="Aposta Base (¥)" style="width:100%; margin-top:5px;">
+                                <button class="action-btn" onclick="window.iniciarEmbateMap()" style="width:100%; margin-top:5px;">Declarar Embate</button>
+                            </div>
+                            <div style="flex:1; min-width:250px;">
+                                <h4>2. Resolver Combate</h4>
+                                <input type="text" id="embVencedor" placeholder="Vencedor" style="width:48%;"> <input type="text" id="embPerdedor" placeholder="Perdedor" style="width:48%; float:right;">
+                                <input type="text" id="embMorteDesc" placeholder="Causa Morte" style="width:100%; margin-top:5px;">
+                                <input type="text" id="embMorteImg" placeholder="Link Imagem Morte" style="width:100%; margin-top:5px;">
+                                <button class="action-btn" onclick="window.processarEmbate()" style="width:100%; margin-top:5px;">Finalizar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="newsFeed" style="max-width:800px; margin: 0 auto; width: 100%;"></div>
+                </div>
+
+            </div>
         </div>
-
-        <!-- SIDEBAR DE JOGADORES -->
-        <div class="sidebar" id="sidebarAgents">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <button onclick="window.toggleDesktopSidebar()" class="btn-toggle-sidebar" title="Minimizar">></button>
-                <h2 style="margin:0;">Agentes</h2>
-                <label style="font-size:10px; color:#888; cursor:pointer;"><input type="checkbox" id="checkOnline" onchange="window.desenharListaUsuarios()"> Só Online</label>
-            </div>
-            <div id="userLog" class="user-list"></div>
-            <div class="version-tag">OS V4.2 Master Premium</div>
-        </div>
-        
-        <div class="ad-space"><img src="anuncio2.png" class="ad-image" onerror="this.style.display='none'"></div>
     </div>
 
-    <!-- BOTTOM NAV MOBILE -->
-    <div class="bottom-nav">
-        <button class="b-nav-btn active" id="btnAbaMapaMob" onclick="window.mudarAba('tab-mapa', this, true)"><span class="b-nav-icon">🗺️</span>Mapa</button>
-        <button class="b-nav-btn" id="btnAbaIGambleMob" onclick="window.mudarAba('tab-igamble', this, true)"><span class="b-nav-icon">💬</span>Hub</button>
-        <button class="b-nav-btn" id="btnAbaLojaMob" onclick="window.mudarAba('tab-loja', this, true)"><span class="b-nav-icon">🛒</span>Loja</button>
-        <button class="b-nav-btn" id="btnAbaPersonagemMob" onclick="window.mudarAba('tab-personagem', this, true)"><span class="b-nav-icon">🧍</span>Char</button>
-        <button class="b-nav-btn" id="btnAbaCasaMob" onclick="window.mudarAba('tab-casa', this, true)" style="display:none; color:var(--accent-gold);"><span class="b-nav-icon">🏠</span>Casa</button>
-        <button class="b-nav-btn" id="btnAbaCelularMob" onclick="window.mudarAba('tab-celular', this, true)" style="display:none; color:#00ff00;"><span class="b-nav-icon">📱</span>Cel</button>
-    </div>
-
-    <!-- SCRIPT BLINDADO (TUDO DECLARADO COM ESCOPO SEGURO) -->
+    <!-- SCRIPT GLOBAIS BLINDADOS (TOPO DO CÓDIGO) -->
     <script>
-        // === 1. DECLARAÇÕES GLOBAIS ===
+        // 1. CONFIGURAÇÕES BASE E DEUSES
         window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
         window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
         window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.movimentosRestantes = 0; window.connectionRef = null;
@@ -629,21 +633,21 @@
         ];
 
         window.locaisMapa = {
-            "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Fonte", x:6, y:4, w:4, h:4}] },
-            "p2": { nome: "Ramen Fantasma", x: 35, y: 65, salas: [{n:"Salão", x:1, y:1, w:8, h:6}, {n:"Cozinha", x:10, y:1, w:5, h:6}], obs:["2_2","3_2"] },
-            "p3": { nome: "Viela da Fome", x: 15, y: 65, salas: [{n:"Beco", x:4, y:2, w:6, h:10}], obs:["4_4","4_5"]},
-            "p4": { nome: "Clube Neon", x: 50, y: 80, salas: [{n:"Pista", x:2, y:2, w:8, h:8}, {n:"VIP", x:11, y:2, w:4, h:4}]},
-            "p5": { nome: "Avenida Ouro", x: 35, y: 35, salas: [{n:"Rua", x:1, y:4, w:14, h:4}] },
-            "p6": { nome: "Bar Submundo", x: 15, y: 35, salas: [{n:"Balcão", x:2, y:2, w:10, h:5}], obs:["4_4","5_4","6_4"]},
-            "p7": { nome: "Beco Sombrio", x: 15, y: 50, salas: [{n:"Beco", x:6, y:1, w:4, h:10}] },
-            "p8": { nome: "Esconderijo Alfa", x: 15, y: 80, salas: [{n:"Sala", x:4, y:4, w:8, h:6}] },
-            "p9": { nome: "Alameda das Sombras", x: 65, y: 35, salas: [{n:"Rua", x:2, y:4, w:12, h:4}] },
-            "p10":{ nome: "Apartamentos Safehouse", x: 85, y: 35, salas: [{n:"Lobby", x:4, y:2, w:8, h:8}] },
-            "p11":{ nome: "Covil de Hackers", x: 85, y: 50, salas: [{n:"Servidores", x:2, y:2, w:12, h:8}] },
-            "p12":{ nome: "Mercado Negro", x: 85, y: 65, salas: [{n:"Tendas", x:1, y:1, w:14, h:10}] },
-            "p13":{ nome: "QG da Yakuza", x: 65, y: 80, salas: [{n:"Dojo", x:2, y:2, w:8, h:8}] },
-            "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: [{n:"Bosque", x:1, y:1, w:14, h:10}] },
-            "p15":{ nome: "Cemitério", x: 35, y: 80, salas: [{n:"Túmulos", x:2, y:2, w:12, h:8}]}
+            "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Fonte", x:6, y:4, w:4, h:4}, {n:"Jardim", x:2, y:2, w:12, h:8}], obs:["7_5","8_6","4_3","11_9"] },
+            "p2": { nome: "Ramen Fantasma", x: 35, y: 65, salas: [{n:"Salão (L)", x:2, y:2, w:4, h:8}, {n:"Salão 2", x:6, y:6, w:6, h:4}], obs:["3_3","4_3","7_7","10_8"] },
+            "p3": { nome: "Viela da Fome", x: 15, y: 65, salas: [{n:"Rua Alta", x:2, y:2, w:12, h:3}, {n:"Beco Sul", x:6, y:5, w:4, h:6}], obs:["3_3","11_3","7_6","8_9"]},
+            "p4": { nome: "Clube Neon", x: 50, y: 80, salas: [{n:"Pista Esq", x:2, y:2, w:3, h:8}, {n:"Bar", x:5, y:5, w:6, h:3}, {n:"Pista Dir", x:11, y:2, w:3, h:8}], obs:["2_3","13_3","5_6","6_6","10_6","2_8","13_8"]},
+            "p5": { nome: "Avenida Ouro", x: 35, y: 35, salas: [{n:"Cruzamento", x:2, y:4, w:12, h:4}], obs:["4_4","4_7","11_4","11_7"] },
+            "p6": { nome: "Bar Submundo", x: 15, y: 35, salas: [{n:"Mesas", x:2, y:2, w:5, h:8}, {n:"Balcão", x:7, y:2, w:7, h:4}], obs:["3_4","4_4","5_4","8_3","9_3","12_3","3_8"] },
+            "p7": { nome: "Beco Sombrio", x: 15, y: 50, salas: [{n:"Beco", x:6, y:1, w:4, h:10}], obs:["6_2","9_4","6_7","9_8"] },
+            "p8": { nome: "Esconderijo Alfa", x: 15, y: 80, salas: [{n:"Entrada", x:4, y:8, w:8, h:3}, {n:"Sala", x:6, y:2, w:4, h:6}], obs:["5_9","10_9","7_4","8_4"] },
+            "p9": { nome: "Alameda das Sombras", x: 65, y: 35, salas: [{n:"Rua", x:2, y:4, w:12, h:4}], obs:["3_5","7_5","12_6"] },
+            "p10":{ nome: "Apts Safehouse", x: 85, y: 35, salas: [{n:"Quarto 1", x:2, y:2, w:4, h:4}, {n:"Corredor", x:6, y:2, w:4, h:8}, {n:"Quarto 2", x:10, y:6, w:4, h:4}], obs:["3_3","12_7","7_4","8_7"] },
+            "p11":{ nome: "Covil de Hackers", x: 85, y: 50, salas: [{n:"Servidores", x:2, y:2, w:12, h:8}], obs:["3_3","4_3","3_4","4_4","11_8","12_8","11_7","12_7","7_5","8_6"] },
+            "p12":{ nome: "Mercado Negro", x: 85, y: 65, salas: [{n:"Cruz", x:6, y:1, w:4, h:10}, {n:"Centro", x:2, y:4, w:12, h:4}], obs:["7_2","8_2","3_6","12_6","7_10","8_10"] },
+            "p13":{ nome: "QG da Yakuza", x: 65, y: 80, salas: [{n:"Dojo", x:2, y:2, w:12, h:8}], obs:["4_4","11_4","4_9","11_9","7_6","8_6"] },
+            "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: [{n:"Hexágono (Simulado)", x:4, y:2, w:8, h:8}, {n:"Borda", x:2, y:4, w:2, h:4}, {n:"Borda", x:12, y:4, w:2, h:4}], obs:["5_3","10_3","5_8","10_8","3_5","13_5","7_5","8_5"] },
+            "p15":{ nome: "Cemitério", x: 35, y: 80, salas: [{n:"Túmulos", x:2, y:2, w:12, h:8}], obs:["4_3","4_4","7_5","7_6","10_8","10_9","12_3","12_4","3_8"]}
         };
         window.conexoesMapa = [ {de:"p1", para:"p2"}, {de:"p2", para:"p3"}, {de:"p1", para:"p4"}, {de:"p1", para:"p5"}, {de:"p5", para:"p6"}, {de:"p1", para:"p9"}, {de:"p9", para:"p10"}, {de:"p10", para:"p11"}, {de:"p11", para:"p12"}, {de:"p2", para:"p13"}, {de:"p13", para:"p14"}, {de:"p3", para:"p8"}, {de:"p7", para:"p6"}, {de:"p3", para:"p7"}, {de:"p2", para:"p15"}, {de:"p4", para:"p13"} ];
         window.rotasSecretasGaia = [ {de:"p1", para:"p6"}, {de:"p15", para:"p10"}, {de:"p8", para:"p14"}, {de:"p11", para:"p4"} ];
@@ -661,15 +665,24 @@
         window.currentSpinInterval = null;
         window.currentSpinTimeout = null;
 
-        // === 2. INICIALIZAÇÃO FIREBASE ===
+        // INICIALIZAÇÃO FIREBASE (Evita erro de load)
         try { firebase.initializeApp(window.firebaseConfig); window.db = firebase.database(); } catch (e) { console.error("Firebase falhou:", e); }
 
-        // === 3. FUNÇÕES GERAIS UTILS ===
         window.setElText = function(id, t) { let e = document.getElementById(id); if(e) e.innerText = t; };
         window.setElHTML = function(id, h) { let e = document.getElementById(id); if(e) e.innerHTML = h; };
         window.setElDisplay = function(id, d) { let e = document.getElementById(id); if(e) e.style.display = d; };
         window.setElVal = function(id, v) { let e = document.getElementById(id); if(e) e.value = v; };
         
+        // TOAST NEON AVISO
+        window.showNeonToast = function(msg) {
+            let t = document.getElementById("neonToast");
+            if(t) {
+                t.innerText = msg;
+                t.classList.add("show");
+                setTimeout(() => t.classList.remove("show"), 3000);
+            }
+        };
+
         window.fecharDadoOverlay = function() { 
             if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
             if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
@@ -690,16 +703,37 @@
         window.calcularDefesa = function(u) { let def = 0; if(u && u.mochila) { Object.values(u.mochila).forEach(i => { if(i.eq && i.tipo === 'Roupa') def += (parseInt(i.poder) || 0); }); } return def; };
         window.getPesoStatus = function(u) { let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let max = 10 + ((r.for+buffs.for)*5); let peso = 0; if(u?.mochila) Object.values(u.mochila).forEach(i => peso += (parseInt(i.peso)||1)); return {atual:peso, max:max, sobrepeso: peso > max}; };
 
-        // === 4. INTERFACE GLOBAL E ABAS ===
-        window.mudarAba = function(id, btn) {
+        // === 4. INTERFACE GLOBAL E SISTEMA OS ===
+        window.abrirCelularMain = function() {
+            window.setElDisplay("phoneOverlay", "flex");
+        };
+        
+        window.fecharCelular = function() {
+            window.setElDisplay("phoneOverlay", "none");
+        };
+
+        window.abrirApp = function(appId, isLocked, lockMsg) {
+            if(isLocked) { window.showNeonToast(lockMsg); return; }
+            
+            window.fecharCelular(); 
+            window.setElDisplay("gameContainer", "block");
+            window.setElDisplay("btnHomeApp", "flex");
+            
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            let a = document.getElementById(id); if(a) a.classList.add('active');
-            document.querySelectorAll('.nav-btn, .b-nav-btn').forEach(b => b.classList.remove('active'));
-            if(btn) btn.classList.add('active');
-            if(id === 'tab-mapa') window.drawMapVisuals();
-            if(id === 'tab-personagem') window.renderizarMochila();
-            if(id === 'tab-casa') window.drawCasaBoard();
-            if(id === 'tab-panteao') window.renderizarPanteao();
+            let a = document.getElementById(appId); if(a) a.classList.add('active');
+            
+            let titles = {"tab-loja": "Gamblezon", "tab-mapa": "Gamble Maps", "tab-igamble": "iGAMBLE", "tab-personagem": "My Gamble", "tab-panteao": "Patronos", "tab-casa": "Gamble House", "tab-celular": "Gamblenger", "tab-principal": "Notícias"};
+            if(document.getElementById("appTitleHeader")) document.getElementById("appTitleHeader").innerText = titles[appId] || "Aplicativo";
+
+            if(appId === 'tab-mapa') window.drawMapVisuals();
+            if(appId === 'tab-personagem') window.renderizarMochila();
+            if(appId === 'tab-casa') window.drawCasaBoard();
+            if(appId === 'tab-panteao') window.renderizarPanteao();
+        };
+
+        window.fecharApp = function() {
+            window.setElDisplay("gameContainer", "none");
+            window.setElDisplay("btnHomeApp", "none");
         };
 
         window.abrirModal = function() {
@@ -708,27 +742,49 @@
             else { window.setElDisplay("loginScreen", "block"); window.setElDisplay("profileScreen", "none"); }
         };
         window.fecharModal = function() { window.setElDisplay("loginModal", "none"); };
-        window.toggleDesktopSidebar = function() { document.getElementById("sidebarAgents").classList.toggle("minimized"); };
-        window.toggleSidebarAgents = function() { document.getElementById("sidebarAgents").classList.toggle("show-sidebar"); };
+        
+        window.toggleDesktopSidebar = function() { let s = document.getElementById("sidebarAgents"); if(s) s.classList.toggle("minimized"); };
+
+        window.salvarPerfil = function(campo, valor) {
+            if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/perfil/${campo}`).set(valor);
+        };
 
         window.renderizarFicha = function() {
             if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
             let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let mInteg = window.calcularMaxInteg(u); let buffs = window.calcularBuffsMoveis(u); let def = window.calcularDefesa(u);
             
-            window.setElText("lblDef", def); window.setElText("lblPts", r.pontosLivres);
+            if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual);
+            if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
+            let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/avataaars/svg?seed=${window.jogadorAtual}`;
+            if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
+            if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || "");
+            if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
+            if(document.getElementById("perfilTelefone")) window.setElText("perfilTelefone", u.numero || "Sem Aparelho");
+
+            window.setElText("lblDef", def); 
+            if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres;
+            window.setElText("lblPts", r.pontosLivres);
             window.setElText("valFor", r.for + buffs.for); window.setElText("valAgi", r.agi + buffs.agi); window.setElText("valMan", r.man + buffs.man); window.setElText("valVig", r.vig + buffs.vig); window.setElText("valInt", r.int + buffs.int);
             window.setElText("lblIntegMax", mInteg); window.setElText("lblIntegVal", r.integridade + "%");
             
             let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
             let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
             
-            // Abas dinamicas
-            let temCel = u.numero ? true : false;
-            window.setElDisplay("btnAbaCelular", temCel ? "inline-block" : "none");
-            window.setElDisplay("btnAbaCelularMob", temCel ? "flex" : "none");
-            let temCasa = u.casa && Object.keys(u.casa).length > 0;
-            window.setElDisplay("btnAbaCasa", temCasa ? "inline-block" : "none");
-            window.setElDisplay("btnAbaCasaMob", temCasa ? "flex" : "none");
+            // Bloqueio dinamico dos apps do celular
+            let temCel = u.numero || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Tecnologia'));
+            let temCasa = (u.casa && Object.keys(u.casa).length > 0) || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Móvel'));
+            
+            let iCel = document.getElementById('icon-celular'); 
+            if(iCel) { 
+                if(temCel || window.isMaster) { iCel.classList.remove('locked'); iCel.onclick = () => window.abrirApp('tab-celular', false); } 
+                else { iCel.classList.add('locked'); iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre um Celular."); } 
+            }
+            
+            let iCasa = document.getElementById('icon-casa'); 
+            if(iCasa) { 
+                if(temCasa || window.isMaster) { iCasa.classList.remove('locked'); iCasa.onclick = () => window.abrirApp('tab-casa', false); } 
+                else { iCasa.classList.add('locked'); iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); } 
+            }
         };
 
         window.desenharListaUsuarios = function() {
@@ -779,8 +835,8 @@
             if((u.carteira || 0) < 500) { alert("Você precisa de 500 ¥ para girar a Roleta Divina."); return; }
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(u.carteira - 500);
             
-            let btn = document.getElementById("btnRoletaDeus"); btn.disabled = true;
-            let display = document.getElementById("gachaDisplay"); display.innerHTML = "";
+            let btn = document.getElementById("btnRoletaDeus"); if(btn) btn.disabled = true;
+            let display = document.getElementById("gachaDisplay"); if(!display) return; display.innerHTML = "";
             
             if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
             if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
@@ -796,13 +852,13 @@
                     let shuffled = [...window.deusesPanteao].sort(() => 0.5 - Math.random());
                     let op1 = shuffled[0]; let op2 = shuffled[1];
                     display.innerHTML = `
-                        <div class="card" style="width:180px; height:auto; padding:15px; cursor:default;">
+                        <div class="card" style="width:180px; height:auto; padding:15px; cursor:pointer;" onclick="window.escolherDeusFinal('${op1.nome}')">
                             <h3 style="font-size:14px;">${op1.nome}</h3><p style="font-size:11px;color:#aaa;">${op1.desc}</p>
-                            <button class="action-btn" style="margin-top:10px;" onclick="window.escolherDeusFinal('${op1.nome}')">Escolher</button>
+                            <button class="action-btn" style="margin-top:10px;">Escolher</button>
                         </div>
-                        <div class="card" style="width:180px; height:auto; padding:15px; cursor:default;">
+                        <div class="card" style="width:180px; height:auto; padding:15px; cursor:pointer;" onclick="window.escolherDeusFinal('${op2.nome}')">
                             <h3 style="font-size:14px;">${op2.nome}</h3><p style="font-size:11px;color:#aaa;">${op2.desc}</p>
-                            <button class="action-btn" style="margin-top:10px;" onclick="window.escolherDeusFinal('${op2.nome}')">Escolher</button>
+                            <button class="action-btn" style="margin-top:10px;">Escolher</button>
                         </div>
                     `;
                 }
@@ -810,31 +866,33 @@
         };
         window.escolherDeusFinal = function(n) { 
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/deus`).set(n); 
-            alert(`Patrono ${n} Escolhido!`); 
-            document.getElementById("btnRoletaDeus").disabled=false; 
-            document.getElementById("gachaDisplay").innerHTML = `<h2 style="color:#555; margin:0;">[ ROLETA DIVINA ]</h2>`;
+            window.showNeonToast(`Patrono ${n} Escolhido!`); 
+            let b = document.getElementById("btnRoletaDeus"); if(b) b.disabled=false; 
+            let g = document.getElementById("gachaDisplay"); if(g) g.innerHTML = `<h2 style="color:#555; margin:0;">[ ROLETA DIVINA ]</h2>`;
             window.renderizarPanteao(); window.drawMapVisuals(); 
         };
 
         window.mostrarDadoOverlay = function(n, f, res, maxFaces = 20) {
             let ov = document.getElementById("globalDiceOverlay");
-            window.setElText("diceRollerName", "Agente: " + n); window.setElText("diceFormulaLabel", "Ação: " + f);
+            if(document.getElementById("diceRollerName")) document.getElementById("diceRollerName").innerText = "Agente: " + n; 
+            if(document.getElementById("diceFormulaLabel")) document.getElementById("diceFormulaLabel").innerText = "Ação: " + f;
             
             let sp = document.getElementById("diceSpinners"); let dRes = document.getElementById("diceFinalResult");
-            sp.style.display = "flex"; dRes.style.display = "none"; sp.innerHTML = "";
-            for(let i=0; i<res.length; i++) sp.innerHTML += `<div class="dice-number">?</div>`;
-            ov.style.display = "flex";
+            if(sp) { sp.style.display = "flex"; sp.innerHTML = ""; for(let i=0; i<res.length; i++) sp.innerHTML += `<div class="dice-number">?</div>`; }
+            if(dRes) dRes.style.display = "none";
+            if(ov) ov.style.display = "flex";
             
             if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
             if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
 
             let sc = 0; window.currentSpinInterval = setInterval(() => {
                 let temp = ""; for(let i=0; i<res.length; i++) temp += `<div class="dice-number">${Math.floor(Math.random()*maxFaces)+1}</div>`;
-                sp.innerHTML = temp; sc++;
+                if(sp) sp.innerHTML = temp; sc++;
                 if(sc > 15) {
-                    clearInterval(window.currentSpinInterval); sp.style.display = "none"; dRes.style.display = "flex"; dRes.innerHTML = "";
-                    res.forEach(v => { dRes.innerHTML += `<div class="dice-result-box" style="font-size:24px; padding:15px 25px;">${v}</div>`; });
-                    window.currentSpinTimeout = setTimeout(() => { ov.style.display = "none"; }, 2000);
+                    clearInterval(window.currentSpinInterval); 
+                    if(sp) sp.style.display = "none"; 
+                    if(dRes) { dRes.style.display = "flex"; dRes.innerHTML = ""; res.forEach(v => { dRes.innerHTML += `<div class="dice-result-box">${v}</div>`; }); }
+                    window.currentSpinTimeout = setTimeout(() => { if(ov) ov.style.display = "none"; }, 3000);
                 }
             }, 80);
         };
@@ -857,7 +915,7 @@
             window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: formStr, results: results, ts: Date.now() });
         };
 
-        window.rolarPericiaSelect = function() { let s = document.getElementById("comboPericias").value.split('|'); window.rolarAtributo(s[0], s[1]); };
+        window.rolarPericiaSelect = function() { let s = document.getElementById("comboPericias"); if(s) { let v=s.value.split('|'); window.rolarAtributo(v[0], v[1]); } };
         window.atualizarHP = function() { let hp = parseInt(document.getElementById("hpInput").value); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`).set(hp); };
         window.distribuirPonto = function(key) { let r = window.getSafeRpg(window.usersGlobais[window.jogadorAtual]); if(r.pontosLivres > 0) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/${key}`).set(r[key]+1); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres-1); } };
 
@@ -875,7 +933,7 @@
             
             Object.keys(window.usersGlobais).forEach(n => {
                 if(n === "MESTRE") return; let u = window.usersGlobais[n]; let loc = window.locaisMapa[u.local||"p1"]; let isO = window.presenceGlobal[n];
-                if(loc) htmlMap += `<img src="${u.avatarUrl||'https://api.dicebear.com/9.x/avataaars/svg?seed='+n}" class="avatar-on-map ${isO?'':'avatar-offline'}" style="left:calc(${loc.x}% - 16px); top:calc(${loc.y}% - 16px);">`;
+                if(loc) htmlMap += `<img src="${u.avatarUrl||'https://api.dicebear.com/9.x/avataaars/svg?seed='+n}" class="avatar-on-map ${isO?'':'avatar-offline'}" style="left:calc(${loc.x}% - 18px); top:calc(${loc.y}% - 18px);">`;
             });
             
             canvas.innerHTML = htmlMap;
@@ -888,37 +946,36 @@
             let user = window.usersGlobais[window.jogadorAtual] || {}; let currentLoc = user.local || "p1"; 
             if(currentLoc === k) { window.abrirSubMapa(k); return; } // Se já ta la e clicou de novo, ENTRA.
 
-            if(window.embatesGlobais && Object.values(window.embatesGlobais).some(e => e.p1 === window.jogadorAtual || e.p2 === window.jogadorAtual)) { alert("Você está TRANCADO num EMBATE!"); return; }
+            if(window.embatesGlobais && Object.values(window.embatesGlobais).some(e => e.p1 === window.jogadorAtual || e.p2 === window.jogadorAtual)) { window.showNeonToast("Você está TRANCADO num EMBATE!"); return; }
             let isGaia = (user.deus && user.deus.includes("Gaia"));
             
             let isConn = window.conexoesMapa.some(c => (c.de === currentLoc && c.para === k) || (c.para === currentLoc && c.de === k));
             if(!isConn && isGaia) { isConn = window.rotasSecretasGaia.some(c => (c.de === currentLoc && c.para === k) || (c.para === currentLoc && c.de === k)); }
-            if(!isConn) { alert("Use as rotas ortogonais (Azul). Apenas agentes com a passiva de Gaia podem usar rotas tracejadas (Verde)."); return; }
+            if(!isConn) { window.showNeonToast("Caminho bloqueado. (Gaia = Vias Verdes)"); return; }
             
             let r = window.getSafeRpg(user); let pesoStats = window.getPesoStatus(user);
             let custoInt = 5 + Math.floor(pesoStats.atual / 5);
             if(pesoStats.sobrepeso) custoInt *= 2; 
-            if (r.integridade < custoInt) { alert(`Falta Saturação! Custo da Viagem: ${custoInt}%. Coma algo.`); return; }
+            if (r.integridade < custoInt) { window.showNeonToast(`Falta Saturação! Custo: ${custoInt}%`); return; }
             
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(r.integridade - custoInt);
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/local`).set(k);
             window.selectedNodeGlobal = k; window.drawMapVisuals();
         };
 
-        window.entrarSubMapa = function() { if(window.selectedNodeGlobal) window.abrirSubMapa(window.selectedNodeGlobal); };
         window.abrirSubMapa = function(k) { 
             window.currentSubMapKey = k; window.setElDisplay("mapCanvas", "none"); window.setElDisplay("subMapCanvas", "flex"); window.initTacticalBoard(); window.updateTacticalBoard(); 
             let c = document.getElementById("subMapCanvas");
-            if(window.submapasBGs[k]) { c.style.backgroundImage = `url("${window.submapasBGs[k]}")`; } else { c.style.backgroundImage = "none"; }
+            if(c && window.submapasBGs[k]) { c.style.backgroundImage = `url("${window.submapasBGs[k]}")`; } else if(c) { c.style.backgroundImage = "none"; }
             if(window.isMaster) { window.setElDisplay("mestreVTT", "flex"); }
             window.renderVttFoodActions();
         };
         window.fecharSubMapa = function() { window.setElDisplay("subMapCanvas", "none"); window.setElDisplay("mapCanvas", "block"); window.currentSubMapKey = ""; window.drawMapVisuals(); };
-        window.mudarBgSubMapa = function() { let url = document.getElementById("vttBgInp").value; window.db.ref(`tokyoRpg/submapsBGs/${window.currentSubMapKey}`).set(url); alert("Fundo Salvo!"); };
+        window.mudarBgSubMapa = function() { let url = document.getElementById("vttBgInp").value; window.db.ref(`tokyoRpg/submapsBGs/${window.currentSubMapKey}`).set(url); window.showNeonToast("Fundo Salvo!"); };
 
         window.rolarDadoMovimento = function() {
             if(!window.jogadorAtual) return;
-            if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { alert("Não é seu turno!"); return; }
+            if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Não é seu turno!"); return; }
             let roll = Math.floor(Math.random()*4)+1; let p = window.getPesoStatus(window.usersGlobais[window.jogadorAtual]);
             window.movimentosRestantes = p.sobrepeso ? Math.max(1, Math.floor(roll/2)) : roll;
             window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
@@ -933,7 +990,7 @@
             if(onGrid.length===0) { alert("Ninguém no grid!"); return; }
             let ini = []; onGrid.forEach(n => { let r=Math.floor(Math.random()*20)+1; let agi = (window.usersGlobais[n]?.rpg?.agi || 1); let sum = r+agi; ini.push({n:n, v:sum}); window.db.ref('tokyoRpg/mapDados').push({nome:n, texto:`Iniciativa: ${r} (+${agi}) = <strong class="neon-green">${sum}</strong>`}); });
             ini.sort((a,b)=>b.v-a.v); window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}`).set({ordem: ini.map(x=>x.n), atual:0});
-            alert("Turnos Definidos!");
+            window.showNeonToast("Turnos Definidos!");
         };
         window.passarTurnoVTT = function() {
             if(!window.turnosVTTGlobal) return;
@@ -944,8 +1001,7 @@
         window.clicarGrid = function(x,y, isObs) {
             if(!window.jogadorAtual) return;
             let u = window.usersGlobais[window.jogadorAtual]; let isGaia = (u.deus && u.deus.includes("Gaia"));
-            if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { alert("Espere seu turno."); return; }
-            if(isObs && !isGaia && !window.isMaster) { alert("Obstáculo! Apenas passiva de Gaia atravessa paredes e móveis."); return; }
+            if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
             
             let grid = window.submapasGlobais[window.currentSubMapKey] || {};
             if(grid[`${x}_${y}`]) return; // Ocupado
@@ -954,10 +1010,15 @@
             Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = cid.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
 
             if(!window.isMaster && isAlreadyOnBoard) {
+                // Checa distância Chebyshev
                 let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-                if(dist > window.movimentosRestantes) { alert("Passos insuficientes! Alcance: " + window.movimentosRestantes); return; }
+                if(dist > window.movimentosRestantes) { return; } // Ignora cliques muito longe silenciosamente
+                if(isObs && !isGaia) { window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return; }
                 window.movimentosRestantes -= dist; window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
+            } else if (isObs && !isGaia && !window.isMaster) {
+                window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return;
             }
+
             let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[`${x}_${y}`] = window.jogadorAtual;
             window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up);
         };
@@ -974,25 +1035,34 @@
                 cell.onclick = () => window.clicarGrid(x, y, isObs); b.appendChild(cell);
             }
             
-            let ro = document.getElementById("roomOverlays"); ro.innerHTML = "";
-            if(loc.salas) loc.salas.forEach(s => { ro.innerHTML += `<div class="room-overlay" style="left:${(s.x/16)*100}%; top:${(s.y/12)*100}%; width:${(s.w/16)*100}%; height:${(s.h/12)*100}%;">${s.n}</div>`; });
+            let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = "";
+            if(loc.salas && ro) loc.salas.forEach(s => { ro.innerHTML += `<div class="room-overlay" style="left:${(s.x/16)*100}%; top:${(s.y/12)*100}%; width:${(s.w/16)*100}%; height:${(s.h/12)*100}%;">${s.n}</div>`; });
         };
 
         window.updateTacticalBoard = function() {
             if(!window.currentSubMapKey) return;
             let grid = window.submapasGlobais[window.currentSubMapKey] || {};
             let layer = document.getElementById("tokensLayer"); if(!layer) return;
+            let loc = window.locaisMapa[window.currentSubMapKey] || {}; let obsList = loc.obs || [];
+            let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
             let px = -1, py = -1;
             Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
 
+            // Highlight in-range cells
             for(let i=0; i<192; i++) {
-                let x = i % 16; let y = Math.floor(i / 16); let cell = document.getElementById(`cell_${x}_${y}`);
+                let x = i % 16; let y = Math.floor(i / 16); let cid = `${x}_${y}`;
+                let cell = document.getElementById(`cell_${x}_${y}`);
                 if(cell) {
-                    cell.classList.remove("in-range");
+                    cell.classList.remove("in-range", "in-range-blocked");
+                    let isObs = obsList.includes(cid);
+                    let canWalk = !isObs || isGaia || window.isMaster;
                     if(px !== -1 && py !== -1 && window.movimentosRestantes > 0) {
                         let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-                        if(dist > 0 && dist <= window.movimentosRestantes && !grid[`${x}_${y}`]) cell.classList.add("in-range");
+                        if(dist > 0 && dist <= window.movimentosRestantes && !grid[cid]) {
+                            if(canWalk) cell.classList.add("in-range");
+                            else cell.classList.add("in-range-blocked");
+                        }
                     }
                 }
             }
@@ -1009,7 +1079,7 @@
 
                 if(tokenEl) {
                     tokenEl.style.left = `${(x / 16) * 100}%`; tokenEl.style.top = `${(y / 12) * 100}%`;
-                    tokenEl.querySelector('.token-hp').innerText = hp;
+                    if (tokenEl.querySelector('.token-hp')) tokenEl.querySelector('.token-hp').innerText = hp;
                 } else {
                     let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token";
                     if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; }
@@ -1022,9 +1092,13 @@
             
             let tBar = document.getElementById("turnOrderUI"); let btnP = document.getElementById("btnPassTurno");
             if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0) {
-                tBar.style.display="flex"; btnP.style.display="inline-block"; tBar.innerHTML="";
-                window.turnosVTTGlobal.ordem.forEach((n,i) => { tBar.innerHTML+=`<img src="${window.usersGlobais[n]?.avatarUrl||'https://api.dicebear.com/9.x/avataaars/svg?seed='+n}" class="turn-avatar ${i===window.turnosVTTGlobal.atual?'active':''}" title="${n}">`; });
-            } else { tBar.style.display="none"; btnP.style.display="none"; }
+                if(tBar) { tBar.style.display="flex"; tBar.innerHTML=""; }
+                if(btnP) btnP.style.display="inline-block";
+                window.turnosVTTGlobal.ordem.forEach((n,i) => { if(tBar) tBar.innerHTML+=`<img src="${window.usersGlobais[n]?.avatarUrl||'https://api.dicebear.com/9.x/avataaars/svg?seed='+n}" class="turn-avatar ${i===window.turnosVTTGlobal.atual?'active':''}" title="${n}">`; });
+            } else { 
+                if(tBar) tBar.style.display="none"; 
+                if(btnP) btnP.style.display="none"; 
+            }
         };
 
         window.renderVttFoodActions = function() {
@@ -1037,13 +1111,14 @@
             let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill");
             if(!ov || !fill) return;
             ov.style.display="flex"; fill.style.width="0%";
-            void fill.offsetWidth; // Reflow force
+            void fill.offsetWidth; // Reflow force para a animação do CSS pegar!
+            
             setTimeout(()=>{ fill.style.transition=`width ${cd}s linear`; fill.style.width="100%"; }, 50);
             setTimeout(()=>{
                 ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]);
                 window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+p));
                 window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove();
-                window.renderVttFoodActions(); alert(`Nutrição +${p}% restaurada.`);
+                window.renderVttFoodActions(); window.showNeonToast(`Nutrição +${p}% restaurada.`);
             }, cd*1000);
         };
 
@@ -1146,13 +1221,13 @@
             if(ev) ev.stopPropagation(); 
             let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill");
             if(!ov || !fill) return;
-            ov.style.display="flex"; fill.style.width="0%"; void fill.offsetWidth; // Reflow
+            ov.style.display="flex"; fill.style.width="0%"; void fill.offsetWidth; // Reflow force
             setTimeout(()=>{ fill.style.transition=`width ${cd}s linear`; fill.style.width="100%"; }, 50);
             setTimeout(()=>{
                 ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]);
                 window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+parseInt(poder)));
                 window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove();
-                alert(`Nutrição +${poder}% restaurada.`);
+                window.showNeonToast(`Nutrição +${poder}% restaurada.`);
             }, cd*1000); 
         };
         window.removerItemMochila = function(k, ev) { 
@@ -1189,7 +1264,7 @@
         window.selecionarMovel = function(nome, w, h, el) { window.selectedFurniture = nome; window.selectedSizeW = w; window.selectedSizeH = h; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); };
         window.clicarGridCasa = function(x,y) { if(!window.selectedFurniture) return; let cellId = `${x}_${y}`; window.db.ref(`tokyoRpg/casasGrid/${window.jogadorAtual}/${cellId}`).set({n: window.selectedFurniture, w: window.selectedSizeW, h: window.selectedSizeH}); window.selectedFurniture = null; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); window.drawCasaBoard(); };
         window.removerMoveCasa = function(cellId, ev) { ev.stopPropagation(); window.db.ref(`tokyoRpg/casasGrid/${window.jogadorAtual}/${cellId}`).remove().then(()=>window.drawCasaBoard()); };
-        window.salvarConfigCasa = function() { if(!window.jogadorAtual) return; let nome = document.getElementById("casaNomeInp").value; let bg = document.getElementById("casaBgInp").value; window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/casaConfig`).update({ nome: nome, bg: bg }); alert("Casa Salva."); };
+        window.salvarConfigCasa = function() { if(!window.jogadorAtual) return; let nome = document.getElementById("casaNomeInp").value; let bg = document.getElementById("casaBgInp").value; window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/casaConfig`).update({ nome: nome, bg: bg }); window.showNeonToast("Casa Salva!"); };
 
         // --- 8. LOJA E MASTER ---
         window.filtrarLoja = function(t, btn) { window.filtroLojaAtual = t; document.querySelectorAll(".shop-tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); window.renderizarLojaUI(); };
@@ -1206,9 +1281,15 @@
         window.prepararEdicaoLoja = function(id) {
             if(!window.isMaster) return; let i = window.lojaGlobal[id]; if(!i) return; window.editandoItemId = id;
             window.setElVal("niType", i.tipo); window.setElVal("niName", i.nome); window.setElVal("niDesc", i.desc); window.setElVal("niBuffType", i.buffType || ""); window.setElVal("niPoder", i.poder || ""); window.setElVal("niW", i.w || 1); window.setElVal("niH", i.h || 1); window.setElVal("niPrice", i.preco); window.setElVal("niExW", i.extraW || 0); window.setElVal("niExH", i.extraH || 0); window.setElVal("niPeso", i.peso || 1); window.setElVal("niCD", i.cd || 2);
-            window.setElText("btnSalvarLoja", "Salvar Alterações"); window.setElDisplay("btnCancelarEdicao", "inline-block"); document.getElementById("masterShopPanel").scrollIntoView({behavior: "smooth"});
+            if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Salvar Alterações";
+            window.setElDisplay("btnCancelarEdicao", "inline-block"); 
+            let p = document.getElementById("masterShopPanel"); if(p) p.scrollIntoView({behavior: "smooth"});
         };
-        window.cancelarEdicaoLoja = function() { window.editandoItemId = null; window.setElVal("niName", ""); window.setElVal("niDesc", ""); window.setElVal("niPrice", ""); window.setElVal("niPoder", ""); window.setElVal("niExW", "0"); window.setElVal("niExH", "0"); window.setElVal("niPeso", "1"); window.setElVal("niCD", "2"); window.setElText("btnSalvarLoja", "Publicar no Mercado"); window.setElDisplay("btnCancelarEdicao", "none"); };
+        window.cancelarEdicaoLoja = function() { 
+            window.editandoItemId = null; window.setElVal("niName", ""); window.setElVal("niDesc", ""); window.setElVal("niPrice", ""); window.setElVal("niPoder", ""); window.setElVal("niExW", "0"); window.setElVal("niExH", "0"); window.setElVal("niPeso", "1"); window.setElVal("niCD", "2"); 
+            if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Publicar no Mercado"; 
+            window.setElDisplay("btnCancelarEdicao", "none"); 
+        };
 
         window.criarItemLoja = function() {
             if(!window.isMaster) return;
@@ -1222,18 +1303,16 @@
                             if(Object.keys(updates).length > 0) { window.db.ref().update(updates); }
                         });
                     });
-                    alert("Alterado e Sincronizado nas Mochilas!"); window.cancelarEdicaoLoja();
-                } else { window.db.ref('tokyoRpg/loja').push(payload); alert("Publicado!"); window.setElVal("niName", ""); window.setElVal("niDesc", ""); }
+                    window.showNeonToast("Item Atualizado!"); window.cancelarEdicaoLoja();
+                } else { window.db.ref('tokyoRpg/loja').push(payload); window.showNeonToast("Publicado!"); window.setElVal("niName", ""); window.setElVal("niDesc", ""); }
             }
         };
 
         window.comprarItem = function(id, n, p, t, d, poder, buff, w, h, exW, exH, peso, cd, ev) {
-            if(ev) ev.stopPropagation(); if(!window.jogadorAtual || window.isMaster) return; let c = window.usersGlobais[window.jogadorAtual].carteira||0; if(c<p) {alert("Sem Yenes.");return;}
+            if(ev) ev.stopPropagation(); if(!window.jogadorAtual || window.isMaster) return; let c = window.usersGlobais[window.jogadorAtual].carteira||0; if(c<p) {window.showNeonToast("Sem Yenes.");return;}
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(c-p);
             let itemPayload = { id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff, w:w, h:h, extraW:exW, extraH:exH, peso:peso, cd:cd, eq:false };
-            if(t === "Tecnologia") { let num = Math.floor(100000 + Math.random() * 900000).toString(); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/numero`).set(num); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push(itemPayload); window.setElDisplay("btnAbaCelular", "inline-block"); window.setElText("myPhoneHeader", num); }
-            else if(t === "Móvel") { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/casa`).push(itemPayload); window.setElDisplay("btnAbaCasa", "inline-block"); }
-            else window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push(itemPayload); alert("Comprado!");
+            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push(itemPayload); window.showNeonToast("Comprado!");
         };
 
         // --- 9. CHAT, AVATARES E LOGIN ---
@@ -1249,16 +1328,16 @@
         window.selecionarAvatarLoja = function(el, url) { window.urlSelecionadaStudio = url; document.querySelectorAll('.av-thumb').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); };
         window.salvarAvatarCustom = function() {
             if(!window.jogadorAtual || !window.urlSelecionadaStudio) return;
-            if(!window.isMaster && window.usersGlobais[window.jogadorAtual].carteira < 500) { alert("Precisa de 500 ¥."); return; }
+            if(!window.isMaster && window.usersGlobais[window.jogadorAtual].carteira < 500) { window.showNeonToast("Precisa de 500 ¥."); return; }
             if(!window.isMaster) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(window.usersGlobais[window.jogadorAtual].carteira - 500);
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/avatarUrl`).set(window.urlSelecionadaStudio); alert("Avatar Equipado!");
+            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/avatarUrl`).set(window.urlSelecionadaStudio); window.showNeonToast("Avatar Equipado!");
         };
         window.carregarTitulos = function() { let sel = document.getElementById("lojaTitulos"); if(!sel) return; sel.innerHTML = ""; window.titulosExtensos.forEach(t => { let arr = t.split("|"); sel.innerHTML += `<option value="${arr[0]}|${arr[1]}|${arr[2]}">${arr[0]} [${arr[1]}] - ${arr[2]}¥</option>`; }); };
         window.comprarTituloChat = function() {
             if(!window.jogadorAtual) return; let sel = document.getElementById("lojaTitulos").value; let arr = sel.split("|"); let txt = arr[0]; let rar = arr[1]; let preco = parseInt(arr[2]);
             let u = window.usersGlobais[window.jogadorAtual]; let unl = u.titulosUnl || {};
-            if(!unl[txt] && preco > 0) { if((u.carteira||0) < preco) { alert("Sem fundos."); return; } window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set((u.carteira||0) - preco); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/titulosUnl/${txt}`).set(true); }
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/tituloChat`).set({txt:txt, raridade:rar}); alert("Título Equipado!");
+            if(!unl[txt] && preco > 0) { if((u.carteira||0) < preco) { window.showNeonToast("Sem fundos."); return; } window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set((u.carteira||0) - preco); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/titulosUnl/${txt}`).set(true); }
+            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/tituloChat`).set({txt:txt, raridade:rar}); window.showNeonToast("Título Equipado!");
         };
         window.msgAtualParaReagir = "";
         window.abrirEmojiReacao = function(msgKey, event) { window.msgAtualParaReagir = msgKey; let p = document.getElementById("emojiPopupDynamic"); p.style.display="flex"; p.style.left = event.clientX + "px"; p.style.top = (event.clientY - 10) + "px"; };
@@ -1269,10 +1348,10 @@
             else { let iLink = null; if((t.startsWith("http://") || t.startsWith("https://")) && t.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i)) { iLink = t; t = ""; } window.db.ref('tokyoRpg/chat').push({ nome: window.jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); window.setElVal("chatInp", ""); } 
         };
 
-        window.enviarSMS = function() { if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual].numero) return; let dest = document.getElementById("smsDestino").value.trim(); let msg = document.getElementById("smsTexto").value.trim(); let meuNum = window.usersGlobais[window.jogadorAtual].numero; if(!dest || !msg) return; let achou = false; Object.keys(window.usersGlobais).forEach(userKey => { if(window.usersGlobais[userKey].numero === dest) achou = true; }); if(!achou) { alert("O número não existe."); return; } let timestamp = Date.now(); let pacote = { de: meuNum, para: dest, msg: msg, data: new Date().toLocaleTimeString() }; window.db.ref('tokyoRpg/sms/' + dest + '/' + timestamp).set(pacote); window.db.ref('tokyoRpg/sms/' + meuNum + '/' + timestamp).set(pacote); document.getElementById("smsTexto").value = ""; };
+        window.enviarSMS = function() { if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual].numero) return; let dest = document.getElementById("smsDestino").value.trim(); let msg = document.getElementById("smsTexto").value.trim(); let meuNum = window.usersGlobais[window.jogadorAtual].numero; if(!dest || !msg) return; let achou = false; Object.keys(window.usersGlobais).forEach(userKey => { if(window.usersGlobais[userKey].numero === dest) achou = true; }); if(!achou) { window.showNeonToast("O número não existe."); return; } let timestamp = Date.now(); let pacote = { de: meuNum, para: dest, msg: msg, data: new Date().toLocaleTimeString() }; window.db.ref('tokyoRpg/sms/' + dest + '/' + timestamp).set(pacote); window.db.ref('tokyoRpg/sms/' + meuNum + '/' + timestamp).set(pacote); document.getElementById("smsTexto").value = ""; };
 
-        window.iniciarEmbateMap = function() { if(!window.isMaster) return; let locStr = document.getElementById("embLocal").value; let p1 = document.getElementById("embP1").value.trim().toUpperCase(); let p2 = document.getElementById("embP2").value.trim().toUpperCase(); let ap = parseInt(document.getElementById("embAposta").value||0); if(!locStr || !p1 || !p2) return; window.db.ref('tokyoRpg/mapEmbates').push({ localKey: locStr, p1: p1, p2: p2, aposta: ap }); alert("Embate Trancado."); window.setElVal("embP1",""); window.setElVal("embP2",""); window.setElVal("embAposta",""); };
-        window.processarEmbate = function() { if(!window.isMaster) return; let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase(); let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value; if(!v || !p) return; let ap = 0; let embKey = null; Object.keys(window.embatesGlobais).forEach(k => { let e = window.embatesGlobais[k]; if((e.p1===v||e.p2===v)&&(e.p1===p||e.p2===p)) { ap = e.aposta||0; embKey = k; } }); let cVenc = window.usersGlobais[v]?.carteira || 0; let cPerd = window.usersGlobais[p]?.carteira || 0; cVenc += ap; cPerd -= ap; let isMorte = (cPerd <= 0); if(window.usersGlobais[v]) window.db.ref(`tokyoRpg/users/${v}`).update({ carteira: cVenc, "rpg/nivel": (window.usersGlobais[v].rpg?.nivel||1)+1, "rpg/pontosLivres": (window.usersGlobais[v].rpg?.pontosLivres||0)+1 }); if(window.usersGlobais[p]) { if(isMorte) window.db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" }); else window.db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd }); } if(embKey) window.db.ref(`tokyoRpg/mapEmbates/${embKey}`).remove(); window.db.ref('tokyoRpg/news').push({ tipo: isMorte?"MORTE":"EMBATE", vencedor: v, perdedor: p, aposta: ap, saldoVencedor: cVenc, saldoPerdedor: cPerd, data: new Date().toLocaleTimeString(), descMorte: mDesc, imgMorte: mImg }); alert("Resolvido!"); window.setElVal("embVencedor",""); window.setElVal("embPerdedor",""); window.setElVal("embMorteDesc",""); window.setElVal("embMorteImg",""); };
+        window.iniciarEmbateMap = function() { if(!window.isMaster) return; let locStr = document.getElementById("embLocal").value; let p1 = document.getElementById("embP1").value.trim().toUpperCase(); let p2 = document.getElementById("embP2").value.trim().toUpperCase(); let ap = parseInt(document.getElementById("embAposta").value||0); if(!locStr || !p1 || !p2) return; window.db.ref('tokyoRpg/mapEmbates').push({ localKey: locStr, p1: p1, p2: p2, aposta: ap }); window.showNeonToast("Embate Trancado."); window.setElVal("embP1",""); window.setElVal("embP2",""); window.setElVal("embAposta",""); };
+        window.processarEmbate = function() { if(!window.isMaster) return; let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase(); let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value; if(!v || !p) return; let ap = 0; let embKey = null; Object.keys(window.embatesGlobais).forEach(k => { let e = window.embatesGlobais[k]; if((e.p1===v||e.p2===v)&&(e.p1===p||e.p2===p)) { ap = e.aposta||0; embKey = k; } }); let cVenc = window.usersGlobais[v]?.carteira || 0; let cPerd = window.usersGlobais[p]?.carteira || 0; cVenc += ap; cPerd -= ap; let isMorte = (cPerd <= 0); if(window.usersGlobais[v]) window.db.ref(`tokyoRpg/users/${v}`).update({ carteira: cVenc, "rpg/nivel": (window.usersGlobais[v].rpg?.nivel||1)+1, "rpg/pontosLivres": (window.usersGlobais[v].rpg?.pontosLivres||0)+1 }); if(window.usersGlobais[p]) { if(isMorte) window.db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" }); else window.db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd }); } if(embKey) window.db.ref(`tokyoRpg/mapEmbates/${embKey}`).remove(); window.db.ref('tokyoRpg/news').push({ tipo: isMorte?"MORTE":"EMBATE", vencedor: v, perdedor: p, aposta: ap, saldoVencedor: cVenc, saldoPerdedor: cPerd, data: new Date().toLocaleTimeString(), descMorte: mDesc, imgMorte: mImg }); window.showNeonToast("Resolvido!"); window.setElVal("embVencedor",""); window.setElVal("embPerdedor",""); window.setElVal("embMorteDesc",""); window.setElVal("embMorteImg",""); };
 
         window.dispararLoadingLogin = async function(isS) {
             let n = document.getElementById("loginName").value.trim().toUpperCase(); let p = document.getElementById("loginPass").value; let s = document.getElementById("loginSerial").value.trim().toUpperCase();
@@ -1288,15 +1367,18 @@
         
         window.logarSucesso = function(n, s) {
             window.jogadorAtual = n; window.serialAtual = s; window.isMaster = (s === window.MASTER_SERIAL); 
-            document.getElementById("userBtn").style.borderColor = "#0f0"; document.getElementById("userBtn").style.color = "#0f0"; 
-            window.setElText("profileName", n); window.setElText("profileSerial", s);
-            window.setElDisplay('masterHomePanel', window.isMaster ? 'block' : 'none'); window.setElDisplay('masterShopPanel', window.isMaster ? 'block' : 'none');
-            if(window.isMaster) { let sel = document.getElementById("embLocal"); sel.innerHTML = "<option value=''>Selecione...</option>"; Object.keys(window.locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${window.locaisMapa[k].nome}</option>`; }); }
-            window.renderizarFicha(); window.renderizarMochila(); window.renderizarLojaUI(); window.drawMapVisuals(); window.fecharModal(); window.renderizarPanteao();
+            
+            if(window.isMaster) { let sel = document.getElementById("embLocal"); if(sel) {sel.innerHTML = "<option value=''>Selecione...</option>"; Object.keys(window.locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${window.locaisMapa[k].nome}</option>`; });} }
+            
+            window.setElDisplay("loginModal", "none");
+            window.setElDisplay("base-desktop", "flex"); 
+            window.setElDisplay("gameContainer", "none");
+
+            window.renderizarFicha(); window.renderizarMochila(); window.renderizarLojaUI(); window.drawMapVisuals(); window.renderizarPanteao();
             if(window.db && window.jogadorAtual) { window.db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { window.connectionRef = window.db.ref('tokyoRpg/presence/' + window.jogadorAtual); window.connectionRef.onDisconnect().set(false).then(() => { window.connectionRef.set(true); }); }}); }
         };
         
-        window.deslogar = function() { if(window.connectionRef) window.connectionRef.set(false); window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; document.getElementById("userBtn").style.borderColor = "var(--accent-red)"; document.getElementById("userBtn").style.color = "var(--accent-red)"; window.setElVal("loginName", ""); window.setElVal("loginPass", ""); window.setElVal("loginSerial", ""); window.setElDisplay('masterHomePanel', 'none'); window.setElDisplay('masterShopPanel', 'none'); window.setElDisplay("btnAbaCasa", "none"); window.setElDisplay("btnAbaCelular", "none"); window.fecharSubMapa(); window.fecharModal(); window.drawMapVisuals(); };
+        window.deslogar = function() { if(window.connectionRef) window.connectionRef.set(false); window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.setElVal("loginName", ""); window.setElVal("loginPass", ""); window.setElVal("loginSerial", ""); window.fecharCelular(); window.setElDisplay('gameContainer', 'none'); window.setElDisplay('base-desktop', 'none'); window.abrirModal(); window.drawMapVisuals(); };
 
         // === 10. INICIALIZAÇÃO ONLOAD ===
         window.onload = function() {
@@ -1304,21 +1386,15 @@
                 window.carregarTitulos(); window.carregarAvatares(); 
                 window.db.ref('tokyoRpg/users').on('value', s => { 
                     window.usersGlobais = s.val()||{}; 
-                    window.renderizarFicha(); window.renderizarMochila(); window.drawMapVisuals(); window.drawCasaBoard(); window.desenharListaUsuarios(); window.renderizarPanteao(); 
+                    window.renderizarFicha(); window.renderizarMochila(); window.drawMapVisuals(); window.drawCasaBoard(); window.desenharListaUsuarios(); window.renderizarPanteao(); window.updateTacticalBoard();
                     if(window.jogadorAtual && window.usersGlobais[window.jogadorAtual]) { 
                         let u = window.usersGlobais[window.jogadorAtual];
-                        window.setElText("profileWallet", (u.carteira||0)); 
-                        let temCel = u.numero ? true : false;
-                        window.setElDisplay("btnAbaCelular", temCel ? "inline-block" : "none");
-                        window.setElDisplay("btnAbaCelularMob", temCel ? "flex" : "none");
-                        let temCasa = u.casa && Object.keys(u.casa).length > 0;
-                        window.setElDisplay("btnAbaCasa", temCasa ? "inline-block" : "none");
-                        window.setElDisplay("btnAbaCasaMob", temCasa ? "flex" : "none");
+                        if(document.getElementById("walletDesktop")) document.getElementById("walletDesktop").innerText = (u.carteira||0) + " ¥";
                     }
                 });
                 window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; window.drawMapVisuals(); window.desenharListaUsuarios(); });
                 window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; window.drawMapVisuals(); });
-                window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; window.renderizarLojaUI(); });
+                window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; window.renderizarLojaUI(); window.renderizarFicha(); window.renderizarMochila(); window.drawCasaBoard(); }); 
                 window.db.ref('tokyoRpg/casasGrid').on('value', s => { window.casaGlobais = s.val() || {}; window.drawCasaBoard(); });
                 window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; window.updateTacticalBoard(); });
                 
@@ -1326,8 +1402,8 @@
                     window.submapasBGs = s.val() || {}; 
                     if(window.currentSubMapKey) { 
                         let subCanvas = document.getElementById("subMapCanvas"); 
-                        if(window.submapasBGs[window.currentSubMapKey]) { subCanvas.style.backgroundImage = `url("${window.submapasBGs[window.currentSubMapKey]}")`; subCanvas.style.backgroundColor = "transparent"; } 
-                        else { subCanvas.style.backgroundImage = "none"; subCanvas.style.backgroundColor = "#050505"; }
+                        if(subCanvas && window.submapasBGs[window.currentSubMapKey]) { subCanvas.style.backgroundImage = `url("${window.submapasBGs[window.currentSubMapKey]}")`; subCanvas.style.backgroundColor = "transparent"; } 
+                        else if (subCanvas) { subCanvas.style.backgroundImage = "none"; subCanvas.style.backgroundColor = "#050505"; }
                     }
                 });
 
@@ -1350,6 +1426,17 @@
                     } catch (err) { console.error("Erro ao renderizar chat:", err); }
                 });
             }
+            
+            // Relógio Local
+            setInterval(() => {
+                let d = new Date();
+                let timeStr = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0');
+                if (document.getElementById('clockTime')) document.getElementById('clockTime').innerText = timeStr;
+                if(document.getElementById('clockTimeDesktop')) document.getElementById('clockTimeDesktop').innerText = timeStr;
+            }, 1000);
+            
+            // Auto abre o login ao iniciar
+            window.abrirModal();
         };
     </script>
 </body>
