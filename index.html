@@ -5,266 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sistema do Distrito - OS V6.0 Master</title>
     
+    <!-- FIREBASE IMPORT -->
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
-    <style>
-        /* === VARIÁVEIS CYBERPUNK E RESET === */
-        :root {
-            --bg-dark: #030305; --panel-bg: #0a0a0f; --accent-red: #ff1a55; --accent-blue: #00e5ff; 
-            --accent-purple: #b000ff; --text-main: #e0e0e0; 
-            --rarity-com: #aaaaaa; --rarity-inc: #00ff66; --rarity-rar: #0077ff; --rarity-epi: #aa00ff; --rarity-leg: #ffaa00;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Courier New', Courier, monospace; background-color: var(--bg-dark); color: var(--text-main); margin: 0; height: 100vh; overflow: hidden; user-select: none; -webkit-user-select: none; }
-
-        /* SCROLLBARS */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #000; border-left: 1px solid #111; }
-        ::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 10px; box-shadow: inset 0 0 10px rgba(0,229,255,0.8); }
-
-        /* INPUTS */
-        input, select { appearance: none; -webkit-appearance: none; background: #000 !important; color: #fff !important; border: 1px solid var(--accent-blue) !important; padding: 10px; border-radius: 4px; font-family: inherit; outline: none; width: 100%; box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.1); }
-        select { background: url('data:image/svg+xml;utf8,<svg fill="%2300e5ff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 10px center; }
-        input:focus, select:focus { border-color: var(--accent-red) !important; box-shadow: inset 0 0 10px rgba(255, 26, 85, 0.3), 0 0 10px var(--accent-red); }
-        button { font-family: inherit; cursor: pointer; transition: 0.3s; outline: none; }
-
-        /* TEXTOS NEON */
-        h1, h2, h3, h4 { color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue); text-transform: uppercase; margin-top: 0;}
-        .neon-red { color: var(--accent-red) !important; text-shadow: 0 0 10px var(--accent-red) !important; }
-        .neon-green { color: #00ff00 !important; text-shadow: 0 0 10px #00ff00 !important; }
-        .neon-gold { color: #ffaa00 !important; text-shadow: 0 0 10px #ffaa00 !important; }
-        .neon-purple { color: var(--accent-purple) !important; text-shadow: 0 0 15px var(--accent-purple) !important; }
-
-        button.action-btn { padding: 10px 15px; font-size: 12px; font-weight: bold; text-transform: uppercase; background: transparent; color: var(--accent-red); border: 1px solid var(--accent-red); border-radius: 4px; text-shadow: 0 0 5px var(--accent-red); box-shadow: inset 0 0 10px rgba(255,26,85,0.1);}
-        button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow: 0 0 20px var(--accent-red); text-shadow: none; }
-
-        /* === MODAIS DE SISTEMA E TOAST NEON === */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 5000; }
-        .modal-content { background: #050505; border: 2px solid var(--accent-blue); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: 0 0 40px rgba(0, 229, 255, 0.2), inset 0 0 20px rgba(0, 229, 255, 0.1); text-align: center; position: relative; overflow: hidden; }
-        .modal-content::before { content: ''; position:absolute; top:0; left:0; width:100%; height:4px; background:var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
-        
-        #loadingTerminal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9000; flex-direction:column; justify-content:center; align-items:center; color:#0f0; font-family:'Courier New', Courier, monospace; text-align:left; font-size:14px; text-shadow: 0 0 5px #0f0; }
-
-        /* AVISOS NEON NA TELA */
-        #neonToast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #000; border: 2px solid var(--accent-red); color: var(--accent-red); padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 0 30px var(--accent-red), inset 0 0 15px rgba(255,26,85,0.4); z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s, top 0.3s; text-align: center; text-transform: uppercase; }
-        #neonToast.show { opacity: 1; top: 50px; }
-
-        /* === DESKTOP BASE === */
-        #base-desktop { width: 100%; height: 100vh; background: #000; position: absolute; top:0; left:0; z-index: 1;}
-
-        /* GAVETA DE AGENTES (DIREITA) */
-        .sidebar { width: 260px; background-color: rgba(5,5,8,0.95); border-left: 1px solid var(--accent-blue); padding: 15px; display: flex; flex-direction: column; transition: transform 0.3s ease; position: fixed; right: 0; top: 0; height: 100vh; z-index: 4500; backdrop-filter: blur(5px);}
-        .sidebar.minimized { transform: translateX(100%); }
-        .btn-toggle-sidebar { position: absolute; left: -40px; top: 20px; background: rgba(5,5,8,0.95); border: 1px solid var(--accent-blue); border-right: none; color: var(--accent-blue); width: 40px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px 0 0 8px; }
-        .user-list { flex: 1; overflow-y: auto; margin-bottom: 20px; margin-top: 10px;}
-        .user-item { background-color: rgba(0,0,0,0.5); padding: 10px; margin-bottom: 8px; border-left: 3px solid #555; font-size: 13px; border-radius: 4px;}
-        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
-        .status-dot.online { background-color: #00ff00; box-shadow: 0 0 8px #00ff00; }
-        .hp-display { font-weight: bold; color: var(--accent-red); font-size: 12px; margin-top: 5px; text-shadow: 0 0 5px var(--accent-red);}
-
-        /* BOTÕES FLUTUANTES GLOBAIS (ESQUERDA INFERIOR) */
-        .floating-controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 15px; z-index: 4500; }
-        .btn-floating { width: 55px; height: 55px; background: rgba(0,0,0,0.85); border: 2px solid var(--accent-blue); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 26px; cursor: pointer; box-shadow: 0 0 20px rgba(0,229,255,0.5); transition: transform 0.2s;}
-        .btn-floating:hover { transform: scale(1.1); background: var(--accent-blue); color:#000; text-shadow: none; }
-        #btnHomeApp { border-color: var(--accent-red); color: var(--accent-red); box-shadow: 0 0 15px rgba(255,26,85,0.5); display: none; font-weight: bold;}
-        #btnHomeApp:hover { background: var(--accent-red); color: #000; }
-
-        /* === SISTEMA OPERACIONAL (SMARTPHONE UI) === */
-        #phoneOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.8); z-index: 4000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);}
-        
-        .phone-frame { 
-            position: relative;
-            width: 100%; 
-            max-width: 400px; 
-            aspect-ratio: 9 / 18.5; /* Mantém a proporção real de um celular */
-            max-height: 90vh; /* Não deixa vazar no PC */
-            background-image: url('bg.png'); 
-            background-size: 100% 100%; 
-            border-radius: 35px; 
-            box-shadow: 0 0 60px rgba(0,229,255,0.2), inset 0 0 20px rgba(0,0,0,0.8); 
-        }
-
-        @media(max-width: 500px) { 
-            .phone-frame { border-radius: 0; max-width: none; max-height: none; height: 100vh; aspect-ratio: auto; background-size: cover; background-position: center;} 
-        }
-        
-        /* THE HITBOX GRID FOR BG.PNG APPS - Totalmente Invisíveis */
-        .phone-apps-grid { 
-            position: absolute; 
-            top: 10%; bottom: 20%; left: 8%; right: 8%; 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            grid-template-rows: repeat(4, 1fr); 
-            gap: 15px; 
-        }
-        
-        .app-hitbox { background: transparent; border: none; cursor: pointer; border-radius: 20px; transition: 0.1s; }
-        .app-hitbox:active { background: rgba(255,255,255,0.2); transform: scale(0.95); }
-
-        .close-phone-btn { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); color: #fff; background: rgba(0,0,0,0.8); border: 1px solid var(--accent-red); width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px var(--accent-red);}
-
-        /* === ESTRUTURA DOS APPLICATIVOS (FULLSCREEN) === */
-        #gameContainer { display: none; width: 100%; height: 100vh; position: absolute; top:0; left:0; background: #07070a; overflow-y: auto; z-index: 1000; padding: 20px; padding-bottom: 90px;}
-        
-        .tab-content { display: none; width: 100%; max-width: 1200px; margin: 0 auto; flex-direction: column; animation: fadeIn 0.3s; }
-        .tab-content.active { display: flex; }
-        @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
-
-        /* HUD DO TOPO (MY GAMBLE / GERAL) */
-        .profile-header-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: #0a0a0f; padding: 15px; border: 1px dashed var(--accent-blue); border-radius: 8px; margin-bottom: 15px;}
-        .profile-stat-box { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; border: 1px solid #333; padding: 10px; border-radius: 4px; text-align: center;}
-        
-        .attr-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #ccc; border-bottom: 1px dashed #222; padding: 10px 0;}
-        .val-display { color: var(--accent-blue); font-weight: bold; width: 25px; text-align: center; font-size: 16px;}
-        .btn-attr { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); width: 28px; height: 28px; display: flex; justify-content: center; align-items: center; border-radius: 4px; font-weight: bold; font-size: 14px;}
-        .btn-attr:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); }
-
-        .dice-quick-btn { background: #000; border: 1px dashed var(--accent-blue); color: var(--accent-blue); padding: 8px; font-size: 12px; cursor: pointer; border-radius: 4px; flex: 1; text-align: center; font-weight: bold;}
-        .dice-quick-btn:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); }
-
-        .integrity-bar-bg { width: 100%; background: #222; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; border: 1px solid #0f0;}
-        .integrity-bar-fill { height: 100%; background: #00ff00; width: 0%; transition: width 0.5s linear; box-shadow: 0 0 10px #00ff00;}
-
-        /* --- MAPA E VTT ORTOGONAL --- */
-        .map-container-main { display: flex; flex-direction: column; gap: 15px; width: 100%; min-height: 80vh;}
-        @media(min-width: 900px) { .map-container-main { flex-direction: row; align-items: stretch;} }
-
-        .rpg-hud-map { width: 100%; background: rgba(5, 5, 10, 0.95); border: 1px solid var(--accent-blue); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 20px rgba(0,229,255,0.1); flex-shrink: 0;}
-        @media(min-width: 900px) { .rpg-hud-map { width: 300px; max-height: 80vh; overflow-y: auto;} }
-
-        .map-visual-area { flex: 1; position: relative; overflow: hidden; border: 2px solid var(--accent-blue); border-radius: 8px; box-shadow: inset 0 0 50px rgba(0,229,255,0.2); min-height: 60vh;}
-        
-        .map-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; background-image: url('mapa1.png'); background-size: cover; background-position: center; transition: 0.5s; cursor: pointer;}
-        .map-overlay-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background: rgba(0, 0, 10, 0.7); background-image: linear-gradient(rgba(0, 229, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 229, 255, 0.15) 1px, transparent 1px); background-size: 40px 40px; z-index: 1; }
-
-        .svg-lines-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; display: block; }
-        .map-node { position: absolute; width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--accent-blue); background: #000; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 10px var(--accent-blue), inset 0 0 10px var(--accent-blue); z-index: 10; display: flex; justify-content: center; align-items: center; transition: 0.2s;}
-        .map-node::after { content: ''; width: 10px; height: 10px; background: var(--accent-blue); border-radius: 50%; }
-        .map-node.danger { border-color: var(--accent-red); box-shadow: 0 0 20px var(--accent-red), inset 0 0 10px var(--accent-red); animation: pulseDanger 1s infinite;}
-        
-        .node-label { position: absolute; top: 35px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 3px 8px; border-radius: 4px; white-space: nowrap; border: 1px solid #333; pointer-events: none;}
-        
-        .avatar-on-map { position: absolute; width: 36px; height: 36px; border-radius: 50%; border: 2px solid #00ff00; object-fit: cover; z-index: 20; box-shadow: 0 0 15px #00ff00; transition: top 0.4s ease-out, left 0.4s ease-out; background:#111; pointer-events: none; }
-        .avatar-offline { filter: grayscale(100%); border-color: #555; opacity: 0.6; box-shadow: none;}
-        .token-hp { position: absolute; top: -16px; left: 50%; transform: translateX(-50%); background: #000; color: var(--accent-red); border: 1px solid var(--accent-red); font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; z-index: 25; text-shadow: 0 0 5px var(--accent-red); pointer-events: none; }
-
-        @keyframes pulseDanger { 0% { box-shadow: 0 0 5px #f00; } 50% { box-shadow: 0 0 20px #f00; } 100% { box-shadow: 0 0 5px #f00; } }
-
-        /* VTT INTERIOR E TÁTICAS (ALCANCE / SLIDE) */
-        .submap-canvas { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505; z-index: 100; flex-direction: column; padding: 15px; background-size: cover; background-position: center;}
-        
-        .tactical-board { flex: 1; position: relative; background: rgba(0,0,0,0.7); border-top: 2px solid var(--accent-blue); overflow: hidden;}
-        .grid-cells-container { display: grid; grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(12, 1fr); width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2; }
-        .tokens-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-
-        .tactical-cell { border: 1px solid rgba(0, 229, 255, 0.15); transition: background-color 0.2s; position: relative;}
-        .tactical-cell:hover { background: rgba(0,229,255,0.3); }
-        
-        .tactical-cell.in-range { background: rgba(0, 255, 100, 0.25); box-shadow: inset 0 0 15px rgba(0, 255, 100, 0.6); cursor: pointer; border: 1px dashed #0f0; z-index: 3;}
-        .tactical-cell.in-range-blocked { background: rgba(255, 26, 85, 0.25); box-shadow: inset 0 0 15px rgba(255, 26, 85, 0.6); cursor: not-allowed; border: 1px dashed #f00; z-index: 3;}
-        
-        .cell-obstacle { background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255, 26, 85, 0.3) 5px, rgba(255, 26, 85, 0.3) 10px); border: 1px solid rgba(255, 26, 85, 0.5); cursor: not-allowed;}
-        .cell-obstacle-gaia { border-color: #00ff00 !important; cursor: crosshair !important; box-shadow: inset 0 0 10px rgba(0,255,0,0.2);}
-
-        .tactical-token { position: absolute; width: 6.25%; height: 8.33%; background-size: cover; border-radius: 50%; border: 2px solid #00ff00; box-shadow: 0 0 15px #00ff00; transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), top 0.4s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: none;}
-        
-        .room-overlay { position: absolute; border: 2px solid var(--accent-blue); background: rgba(0,229,255,0.05); display: flex; align-items: flex-start; justify-content: center; padding-top: 5px; color: #fff; font-size: 14px; font-weight: bold; text-shadow: 0 0 8px var(--accent-blue); pointer-events: none; z-index: 1;}
-
-        .turn-order-bar { display:flex; gap:10px; overflow-x:auto; background:rgba(0,0,0,0.8); padding:5px; border:1px solid var(--accent-red); align-items:center; border-radius: 4px; max-width: 100%;}
-        .turn-avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #555; opacity: 0.5; transition: 0.3s; flex-shrink: 0;}
-        .turn-avatar.active { border-color: #00ff00; opacity: 1; box-shadow: 0 0 15px #00ff00; transform: scale(1.1); }
-
-        .food-action-bar { display: flex; gap: 10px; z-index: 200; flex-wrap:wrap; padding: 10px; background: rgba(0,0,0,0.8); border-bottom: 1px solid var(--accent-blue);}
-        .btn-eat { background: rgba(0,255,100,0.2); border: 1px solid #00ff00; color: #00ff00; padding: 10px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; text-shadow: 0 0 5px #00ff00; backdrop-filter: blur(5px);}
-        
-        .eating-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9000; display:none; flex-direction:column; justify-content:center; align-items:center; pointer-events: all; }
-        .eating-text { color: #00ff00; font-size: 28px; font-weight: bold; text-shadow: 0 0 20px #00ff00; margin-bottom: 20px; animation: pulseDanger 1s infinite; }
-        .eating-bar-bg { width: 300px; height: 25px; border: 2px solid #00ff00; border-radius: 12px; padding: 3px; background: #111; }
-        .eating-bar-fill { height: 100%; background: #00ff00; width: 0%; box-shadow: 0 0 20px #00ff00; border-radius: 8px; }
-
-        /* DADOS OVERLAY (SKIP CLICÁVEL) */
-        .dice-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 8000; display: none; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
-        .dice-box-panel { background: rgba(5,5,10,0.95); border: 2px solid var(--accent-blue); border-radius: 15px; padding: 40px; box-shadow: 0 0 60px rgba(0,229,255,0.5); text-align: center; width: 90%; max-width: 400px; pointer-events: none;}
-        .dice-spinners { display: flex; gap: 15px; margin: 25px 0; font-size: 36px; font-weight: bold; color: var(--accent-red); text-shadow: 0 0 20px var(--accent-red); font-family: monospace; flex-wrap: wrap; justify-content: center;}
-        .dice-number { background: #111; border: 2px solid var(--accent-red); border-radius: 10px; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 20px rgba(255,26,85,0.4);}
-        .dice-result-box { display: inline-block; background: #000; border: 2px solid #00ff00; color: #00ff00; padding: 15px 25px; border-radius: 10px; margin: 5px; font-weight: bold; font-size: 28px; box-shadow: 0 0 15px rgba(0,255,0,0.5), inset 0 0 10px rgba(0,255,0,0.3);}
-
-        /* === TETRIS (PERSONAGEM / INVENTÁRIO) === */
-        .tetris-wrapper { display: flex; justify-content: center; margin-top: 15px; overflow-x: auto; padding: 10px; }
-        .tetris-grid { position: relative; display: grid; gap: 1px; background: #111; border: 2px solid var(--accent-blue); box-shadow: 0 0 20px rgba(0,229,255,0.2); touch-action: none; box-sizing: content-box; min-width: max-content; margin: 0 auto; }
-        .grid-cell { background: #050505; width: 45px; height: 45px; border: 1px dashed #333; }
-        
-        .item-tetris { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #fff; text-align: center; border-radius: 4px; cursor: grab; touch-action: none; z-index: 100; transition: transform 0.1s, box-shadow 0.1s; box-shadow: inset 0 0 10px rgba(255,255,255,0.2), 0 0 5px rgba(0,0,0,0.8); flex-direction: column; overflow: visible; margin: 0; box-sizing: border-box;}
-        .item-tetris span { pointer-events: none; } 
-        .item-tetris.dragging { z-index: 999; opacity: 0.9; cursor: grabbing; box-shadow: 0 15px 30px rgba(0,0,0,0.9); transform: scale(1.05); }
-        
-        .btn-excluir-item { position:absolute; top:-8px; right:-8px; font-size:12px; width:22px; height:22px; background:#000; color:var(--accent-gold); border:1px solid var(--accent-gold); border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:10; box-shadow:0 0 8px var(--accent-gold); text-shadow:0 0 5px var(--accent-gold); padding:0; }
-        .btn-excluir-item.discard { color:var(--accent-red); border-color:var(--accent-red); box-shadow:0 0 8px var(--accent-red); text-shadow:0 0 5px var(--accent-red); }
-
-        .item-tetris.Arma { background: rgba(255, 26, 85, 0.8); border: 1px solid var(--accent-red); }
-        .item-tetris.Roupa { background: rgba(0, 119, 255, 0.8); border: 1px solid var(--rarity-rar); }
-        .item-tetris.Comida { background: rgba(0, 255, 102, 0.8); border: 1px solid var(--rarity-inc); color: #000;}
-        .item-tetris.Tecnologia { background: rgba(176, 0, 255, 0.8); border: 1px solid var(--accent-purple); }
-        .item-tetris.Móvel { background: rgba(255, 170, 0, 0.8); border: 1px solid var(--rarity-leg); color: #000;}
-        .item-tetris.Acessório { background: rgba(200, 200, 200, 0.8); border: 1px solid #fff; color: #000;}
-        .item-tetris.Mochila { background: rgba(100, 100, 100, 0.8); border: 1px solid #fff; color: #000;}
-
-        .inv-itens-soltos { display: flex; flex-wrap: wrap; gap: 10px; min-height: 80px; padding: 15px; background: #0a0a0f; border: 1px dashed var(--accent-blue); border-radius: 8px; margin-top: 15px;}
-        .inv-itens-soltos .item-tetris { position: relative !important; left: auto !important; top: auto !important;}
-
-        /* PANTEÃO ROLETA GACHA E LISTA */
-        .gacha-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px; margin-bottom: 20px; }
-        .gacha-display { width: 100%; max-width:600px; min-height: 220px; display: flex; gap:20px; align-items: center; justify-content: center; background:#050505; border: 2px dashed var(--accent-purple); padding:20px; border-radius:12px; box-shadow: inset 0 0 30px rgba(176,0,255,0.1); flex-wrap: wrap;}
-        
-        .god-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; width: 100%; max-width: 900px; margin: 0 auto; }
-        .card { background: #1a0033; border: 2px solid var(--accent-purple); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(176,0,255,0.4); text-align: center; padding: 15px; transition: 0.2s;}
-        .card.spinning { animation: slotMachine 0.1s infinite; border-color: #fff; box-shadow: 0 0 30px #fff;}
-        .card.selected { border-color: #0f0; box-shadow: 0 0 30px #0f0;}
-        @keyframes slotMachine { 0% { transform: translateY(-2px); } 50% { transform: translateY(2px); } 100% { transform: translateY(-2px); } }
-
-        /* IGAMBLE CHAT PREMIUM */
-        .igamble-wrapper { display: flex; flex-direction: column; gap: 20px; width: 100%; height: 100%;}
-        @media(min-width: 768px) { .igamble-wrapper { flex-direction: row; } }
-        .igamble-side { flex: 1; min-width: 250px; max-width: 350px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto;}
-        .igamble-chat { flex: 2; display: flex; flex-direction: column; background: #050508; border: 1px solid var(--accent-blue); border-radius: 8px; box-shadow: 0 0 20px rgba(0,229,255,0.1); height: 100%; overflow: hidden; min-height: 500px;}
-
-        .avatar-maker-panel { background: #0a0a0f; border: 1px dashed var(--accent-blue); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px;}
-        .avatar-grid-select { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #333; border-radius: 4px;}
-        .av-thumb { width: 45px; height: 45px; cursor: pointer; border-radius: 50%; border: 2px solid transparent; transition: 0.2s; background: #111; object-fit: cover;} 
-        .av-thumb:hover { transform: scale(1.1); }
-        .av-thumb.selected { border-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
-
-        .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
-        .chat-input-area { display: flex; padding: 10px; background: #000; border-top: 1px solid var(--accent-blue); align-items: center; gap: 10px;}
-        .chat-input-area input { flex: 1; border: none !important; box-shadow: none !important; padding: 12px; font-size: 14px; background: #111 !important;}
-        .neon-icon-btn { background: transparent !important; color: var(--accent-blue) !important; border: none !important; font-size: 24px; text-shadow: 0 0 10px var(--accent-blue); padding: 0 5px; width: auto;}
-        .neon-icon-btn:hover { color: #fff !important; text-shadow: 0 0 15px #fff;}
-
-        .msg-box { display: flex; gap: 15px; align-items: flex-start; }
-        .msg-avatar-container { display: flex; flex-direction: column; align-items: center; min-width: 50px; gap: 5px;}
-        .msg-avatar { width: 45px; height: 45px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-blue); box-shadow: 0 0 10px rgba(0,229,255,0.5); background:#111; object-fit:cover;}
-        .msg-content { background: #111; padding: 12px; border-radius: 8px; max-width: 80%; border: 1px solid #333; position: relative;}
-        .msg-image { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 8px; object-fit: contain; border: 1px solid var(--accent-blue); background: #000; display: block;}
-
-        .title-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-weight: bold; text-transform: uppercase; border: 1px solid currentColor;}
-        .title-tag.com { color: var(--rarity-com); } .title-tag.inc { color: var(--rarity-inc); text-shadow: 0 0 5px var(--rarity-inc);} .title-tag.rar { color: var(--rarity-rar); text-shadow: 0 0 5px var(--rarity-rar);} .title-tag.epi { color: var(--rarity-epi); text-shadow: 0 0 8px var(--rarity-epi); } .title-tag.leg { color: var(--rarity-leg); text-shadow: 0 0 10px var(--rarity-leg); }
-
-        .react-btn { background: #000; border: 1px solid #555; color: #aaa; border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer; margin-right: 5px;}
-        .react-btn:hover { background: #333; color: #fff; border-color: var(--accent-blue);}
-        .react-add { background: transparent; border: 1px dashed var(--accent-blue); color: var(--accent-blue); font-weight: bold; font-size: 14px; padding: 2px 8px; cursor: pointer;}
-        .emoji-popup { display: none; position: absolute; background: #000; border: 1px solid var(--accent-blue); border-radius: 8px; padding: 5px; z-index: 100; gap: 5px; box-shadow: 0 0 15px var(--accent-blue); flex-wrap: wrap; width: 160px;}
-        .emoji-btn { background: none; border: none; font-size: 18px; cursor: pointer; transition: 0.2s;} .emoji-btn:hover { transform: scale(1.3); }
-
-        /* LOJA E USUÁRIOS */
-        .shop-tabs { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;}
-        .shop-tab-btn { background: #111; border: 1px solid #555; color: #aaa; padding: 8px 16px; border-radius: 4px;}
-        .shop-tab-btn.active { background: var(--accent-blue); color: #000; border-color: var(--accent-blue);}
-        .shop-item { background: #111; border: 1px solid #333; padding: 15px; border-radius: 5px; text-align: center; display: flex; flex-direction: column; justify-content: space-between; position:relative;}
-        .shop-item.master-edit:hover { border-color: var(--accent-red); cursor:pointer; box-shadow: 0 0 15px rgba(255,26,85,0.3);}
-
-        .master-panel { background: #0a0000; border: 1px solid var(--accent-red); padding: 20px; width: 100%; max-width: 900px; margin-bottom: 20px; border-radius: 8px; box-shadow: inset 0 0 30px rgba(255,26,85,0.1); margin-left: auto; margin-right: auto;}
-    </style>
+    <!-- ESTILOS CSS IMPORTADOS -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -281,6 +27,23 @@
     </div>
 
     <div id="neonToast">---</div>
+	
+	
+	
+	    <!-- POPUP DE REAÇÕES (EMOJIS) -->
+    <div id="emojiPopupDynamic" class="emoji-popup">
+        <button class="emoji-btn" onclick="window.executarReacao('🔥')">🔥</button>
+        <button class="emoji-btn" onclick="window.executarReacao('💀')">💀</button>
+        <button class="emoji-btn" onclick="window.executarReacao('😂')">😂</button>
+        <button class="emoji-btn" onclick="window.executarReacao('👀')">👀</button>
+        <button class="emoji-btn" onclick="window.executarReacao('💯')">💯</button>
+        <button class="emoji-btn" onclick="window.executarReacao('🤡')">🤡</button>
+        <button class="emoji-btn" onclick="window.executarReacao('💔')">💔</button>
+        <button class="emoji-btn" onclick="window.executarReacao('💰')">💰</button>
+        
+        <!-- Botão para fechar sem reagir -->
+        <button onclick="document.getElementById('emojiPopupDynamic').style.display='none'" style="background:transparent; color:var(--accent-red); border:none; cursor:pointer; font-weight:bold; width: 100%; font-size: 12px; margin-top: 5px; border-top: 1px dashed #333; padding-top: 5px;">Fechar</button>
+    </div>
 
     <!-- PAINEL DE DADOS (ROLETA) -->
     <div id="globalDiceOverlay" class="dice-overlay" onclick="window.fecharDadoOverlay()">
@@ -493,11 +256,19 @@
                     <h1 style="text-align:center;">Mercado Negro</h1>
                     
                     <div id="masterShopPanel" class="master-panel" style="display:none; margin: 0 auto 20px auto;">
-                        <h4 style="color:#f00;">MASTER: CRIAR ITEM</h4>
+                        <h4 style="color:#f00;">MASTER: CRIAR / EDITAR ITEM</h4>
                         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap:10px; margin-top:10px;">
                             <select id="niType"><option>Arma</option><option>Roupa</option><option>Comida</option><option>Móvel</option><option>Tecnologia</option><option>Acessório</option><option>Mochila</option></select>
                             <input type="text" id="niName" placeholder="Nome">
                             <input type="number" id="niPrice" placeholder="Preço ¥">
+                            <input type="text" id="niDesc" placeholder="Descrição rápida">
+                            
+                            <!-- CAIXINHA DE PROMOÇÃO NOVA -->
+                            <label style="color:#ffaa00; font-size:12px; display:flex; align-items:center; justify-content:center; gap:5px; background:#111; border:1px solid #ffaa00; border-radius:4px; cursor:pointer; padding: 5px;">
+                                <input type="checkbox" id="niPromo"> É Promoção?
+                            </label>
+
+                            <input type="text" id="niBuffType" placeholder="Tipo Buff (Opcional)">
                             <input type="number" id="niW" placeholder="Largura (1-5)" value="1">
                             <input type="number" id="niH" placeholder="Altura (1-3)" value="1">
                             <input type="number" id="niPeso" placeholder="Peso (Kg)" value="1">
@@ -506,10 +277,14 @@
                             <input type="number" id="niExW" placeholder="+Cols Bolsa" value="0">
                             <input type="number" id="niExH" placeholder="+Lins Bolsa" value="0">
                         </div>
-                        <button class="action-btn" style="width:100%; margin-top:10px;" onclick="window.criarItemLoja()">Publicar</button>
+                        <div style="display:flex; gap:10px; margin-top:10px;">
+                            <button id="btnSalvarLoja" class="action-btn" style="flex:1;" onclick="window.criarItemLoja()">Publicar no Mercado</button>
+                            <button id="btnCancelarEdicao" class="action-btn" style="display:none; border-color:#555; color:#aaa;" onclick="window.cancelarEdicaoLoja()">Cancelar</button>
+                        </div>
                     </div>
+                    
                     <div class="shop-tabs">
-                        <button class="shop-tab-btn active" onclick="window.filtrarLoja('Tudo', this)">Tudo</button>
+                        <button class="shop-tab-btn active" onclick="window.filtrarLoja('Promoções', this)">Promoções</button>
                         <button class="shop-tab-btn" onclick="window.filtrarLoja('Arma', this)">Armas</button>
                         <button class="shop-tab-btn" onclick="window.filtrarLoja('Roupa', this)">Roupas</button>
                         <button class="shop-tab-btn" onclick="window.filtrarLoja('Comida', this)">Comida</button>
@@ -520,35 +295,127 @@
                     <div id="shopGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:15px; margin-top:15px;"></div>
                 </div>
 
-                <!-- IGAMBLE CHAT -->
-                <div id="tab-igamble" class="tab-content">
-                    <h1 style="color: #00d2ff; margin-bottom: 10px;">I-Gamble Hub</h1>
-                    <div class="igamble-wrapper">
-                        <div class="igamble-side">
-                            <div class="avatar-maker-panel">
-                                <h4 style="width:100%; text-align:center; color:var(--accent-blue);">Galeria de Avatares</h4>
-                                <p style="font-size:10px; color:#aaa; margin:0 0 5px 0;">Selecione para alterar em todo o site.</p>
-                                <div class="avatar-grid-select" id="avatarGridDisplay"></div>
-                                <button class="action-btn" onclick="window.salvarAvatarCustom()" style="width:100%; font-size:12px; margin-top:10px;">Equipar Avatar (500 ¥)</button>
-                            </div>
-                            <div class="avatar-maker-panel" style="flex-direction:column;">
-                                <h4 style="color:#ffaa00; margin:0;">Títulos de Respeito</h4>
-                                <select id="lojaTitulos" style="width:100%; font-size:11px;"></select>
-                                <button class="action-btn" onclick="window.comprarTituloChat()" style="width:100%; border-color:#ffaa00; color:#ffaa00; font-size:12px;">Comprar / Equipar</button>
-                            </div>
-                        </div>
+                            <!-- === APLICATIVO: IGAMBLE (Mini-Hub Social) === -->
+<div id="tab-igamble" class="tab-content">
 
-                        <div class="igamble-chat">
-                            <div id="chatMessages" class="chat-messages"></div>
-                            <div class="chat-input-area">
-                                <input type="file" id="chatImageFile" accept="image/*" style="display: none;">
-                                <button class="neon-icon-btn" onclick="document.getElementById('chatImageFile').click()" title="Anexar Imagem">📎</button>
-                                <input type="text" id="chatInp" placeholder="Sua mensagem..." onkeypress="if(event.key==='Enter') window.prepararEnvioMensagem()">
-                                <button class="neon-icon-btn" onclick="window.prepararEnvioMensagem()">➤</button>
-                            </div>
-                        </div>
+  <div class="igamble-nav">
+    <button class="igamble-tab-btn active" onclick="window.switchIGambleTab('chat', this)">💬 Chat</button>
+    <button class="igamble-tab-btn" onclick="window.switchIGambleTab('posts', this)">📸 Posts</button>
+    <button class="igamble-tab-btn" onclick="window.switchIGambleTab('embates', this)">⚔️ Embates</button>
+  </div>
+
+  <!-- 1) VIEW: CHAT -->
+  <div id="igamble-view-chat" class="igamble-view active">
+    <div class="igamble-wrapper">
+      <div class="igamble-side">
+        <div class="avatar-maker-panel">
+          <h4 class="neon-blue" style="text-align:center;">GALERIA DE AVATARES</h4>
+          <p style="font-size:10px;text-align:center;color:#aaa;">Selecione para alterar em todo o site.</p>
+          <div class="avatar-grid-select" id="avatarGridDisplay"></div>
+          <button class="action-btn" id="btnEquiparAvatar" style="border-color:var(--accent-red); color:var(--accent-red);" onclick="window.comprarAvatar()">EQUIPAR AVATAR (500 ¥)</button>
+        </div>
+
+        <div class="avatar-maker-panel">
+          <h4 class="neon-gold" style="text-align:center;">TÍTULOS DE RESPEITO</h4>
+          <select id="tituloSelect" style="background:#000; color:#fff; border:1px solid var(--accent-blue); padding:5px; border-radius:4px; font-family:'Courier New', Courier, monospace;">
+            <option value="Novato|com|0">Novato [com] - 0¥</option>
+          </select>
+          <button class="action-btn" style="border-color:var(--accent-gold); color:var(--accent-gold);" onclick="window.comprarTitulo()">COMPRAR / EQUIPAR</button>
+        </div>
+
+        <!-- (Opcional) Você pode manter um bloco aqui se quiser: status, regras, etc. -->
+      </div>
+
+      <div class="igamble-chat">
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-area">
+          <button class="neon-icon-btn" onclick="window.enviarAnexo()">📎</button>
+          <input type="text" id="chatInputMsg" placeholder="Sua mensagem..." onkeydown="if(event.key==='Enter') window.enviarMsgGamble()">
+          <button class="neon-icon-btn" onclick="window.enviarMsgGamble()">➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2) VIEW: POSTS -->
+  <div id="igamble-view-posts" class="igamble-view" style="padding: 10px; overflow:hidden; background:#000;">
+    <!-- barra superior -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <button class="action-btn" id="btnToggleMute" style="border-color:#aaa; color:#aaa;" onclick="window.toggleGambleMute()">🔇 Áudio Bloqueado</button>
+      <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue);" onclick="window.togglePostCreator()">➕ Criar Post</button>
+    </div>
+
+    <!-- criador de post -->
+    <div id="postCreatorBox" class="post-creator-box" style="display:none; margin-bottom:10px;">
+      <div style="display:flex; gap:10px;">
+        <img id="postPreviewAvatar" src="https://api.dicebear.com/9.x/adventurer/svg?seed=Anonimo" class="post-avatar">
+        <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
+          <textarea id="postText" placeholder="O que está acontecendo no Distrito?" rows="3"
+            style="width:100%; background:#111; color:#fff; border:1px solid #333; border-radius:4px; padding:8px; font-family:monospace; resize:none;"></textarea>
+
+          <div id="postExtras" style="display:flex; flex-direction:column; gap:5px; margin-top:5px;">
+            <div style="background:#111; padding:10px; border-radius:4px; border:1px dashed #333;">
+              <label style="font-size:10px; color:#aaa; display:block; margin-bottom:5px;">Foto do PC (Max 2MB):</label>
+              <input type="file" id="postImgFile" accept="image/*" class="gamble-input" style="padding:5px;">
+              <div style="text-align:center; font-size:10px; color:#555; margin:5px 0;">-- OU --</div>
+              <input type="text" id="postImgUrl" placeholder="URL da Imagem da Web..." class="gamble-input">
+            </div>
+
+            <input type="text" id="postAudioUrl" placeholder="URL do Áudio MP3 (Toca sozinho)" class="gamble-input">
+
+            <!-- Mestre -->
+            <input type="text" id="postCustomName" placeholder="[MESTRE] Postar como nome falso" class="gamble-input" style="display:none; border-color:#f00; color:#f00;">
+            <input type="text" id="postCustomAvatar" placeholder="[MESTRE] URL Foto Falsa" class="gamble-input" style="display:none; border-color:#f00; color:#f00;"
+              oninput="document.getElementById('postPreviewAvatar').src=this.value||'https://api.dicebear.com/9.x/bottts/svg?seed=Master'">
+            <label id="lblAd" style="display:none; color:var(--accent-gold); font-size:12px; cursor:pointer;">
+              <input type="checkbox" id="postIsAd"> Promover como Anúncio Oficial?
+            </label>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:5px;">
+            <button class="action-btn" onclick="window.enviarPost()">Publicar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- feed -->
+    <div id="igamblePostsFeed" class="feed-container"></div>
+  </div>
+
+  <!-- 3) VIEW: EMBATES -->
+  <div id="igamble-view-embates" class="igamble-view" style="padding: 15px; overflow-y:auto; background:#050508;">
+    <h2 class="neon-red" style="text-align:center; margin-bottom:15px;">ARENA DO DISTRITO</h2>
+
+    <div id="masterEmbatePanel" class="master-panel" style="display:none; border-color:#f00; margin-bottom:20px;">
+      <h4 class="neon-red">MASTER: ANUNCIAR EMBATE</h4>
+      <datalist id="listaJogadoresDatalist"></datalist>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+        <input type="text" id="emF1" list="listaJogadoresDatalist" placeholder="Nome Lutador 1" class="gamble-input" oninput="window.updateEmbateAvatar(1)">
+        <input type="text" id="emF2" list="listaJogadoresDatalist" placeholder="Nome Lutador 2" class="gamble-input" oninput="window.updateEmbateAvatar(2)">
+        <input type="text" id="emImg1" placeholder="URL Foto L1 (Auto)" class="gamble-input">
+        <input type="text" id="emImg2" placeholder="URL Foto L2 (Auto)" class="gamble-input">
+        <select id="emLocal" class="gamble-input" style="grid-column: span 2;">
+          <option value="Cassino Central">Cassino Central</option>
+          <option value="Distrito das Cartas">Distrito das Cartas</option>
+          <option value="Arena Subterrânea">Arena Subterrânea</option>
+          <option value="Rua de Neon">Rua de Neon</option>
+          <option value="Galpão Abandonado">Galpão Abandonado</option>
+        </select>
+        <input type="text" id="emDesc" placeholder="Descrição / Regras da Luta" class="gamble-input" style="grid-column: span 2;">
+        <input type="number" id="emPremio" placeholder="Prêmio Base ¥" class="gamble-input" style="grid-column: span 2;">
+      </div>
+      <button class="action-btn" style="width:100%; margin-top:10px; border-color:#f00; color:#f00;" onclick="window.criarEmbate()">Criar Embate</button>
+    </div>
+
+    <div id="listaEmbates" style="display:flex; flex-direction:column; gap:20px;"></div>
+  </div>
+
+</div>
+                        
+                        <!-- LISTA DE LUTAS -->
+                        <div id="listaEmbates" style="display:flex; flex-direction:column; gap:20px;"></div>
                     </div>
-                </div>
 
                 <!-- CASA E CELULAR APPS -->
                 <div id="tab-casa" class="tab-content">
@@ -606,838 +473,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT GLOBAIS BLINDADOS (TOPO DO CÓDIGO) -->
-    <script>
-        // 1. CONFIGURAÇÕES BASE E DEUSES
-        window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
-        window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
-        window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.movimentosRestantes = 0; window.connectionRef = null;
-        window.MASTER_SERIAL = "4053-DC1";
-        
-        window.codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
-        window.iconesMercado = { "Arma": "🔫", "Roupa": "🦺", "Comida": "🍫", "Móvel": "🪑", "Tecnologia": "📱", "Acessório": "📿", "Mochila": "🎒" };
-
-        window.deusesPanteao = [
-            { nome: "Oizus (Miséria)", desc: "Dobra risco do adversário e reduz o seu." },
-            { nome: "Afrodite (Desejo)", desc: "Força acordo não-letal irresistível." },
-            { nome: "Athena (Estratégia)", desc: "Recebe pista dedutiva do mestre." },
-            { nome: "Hades (Submundo)", desc: "Herda automaticamente Yenes de mortos." },
-            { nome: "Hermes (Tráfico)", desc: "Garante fuga perfeita de embates." },
-            { nome: "Gaia (Território)", desc: "Destaca as melhores rotas de fuga no mapa e usa Vias Verdes." },
-            { nome: "Zeus (Autoridade)", desc: "Força aposta pública ou multa de 10%." },
-            { nome: "Diogenes (Cinismo)", desc: "Imune a manipulações de apostas." },
-            { nome: "Ares (Violência)", desc: "Ignora dor leve e descobre armas." },
-            { nome: "Poseidon (Maré)", desc: "Pode anular completamente a última transação." },
-            { nome: "Apolo (Verdade)", desc: "Força o alvo a responder Sim/Não com verdade." },
-            { nome: "Ártemis (Caçada)", desc: "Rastreio infalível e bônus de furtividade." }
-        ];
-
-        window.locaisMapa = {
-            "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Fonte", x:6, y:4, w:4, h:4}, {n:"Jardim", x:2, y:2, w:12, h:8}], obs:["7_5","8_6","4_3","11_9"] },
-            "p2": { nome: "Ramen Fantasma", x: 35, y: 65, salas: [{n:"Salão (L)", x:2, y:2, w:4, h:8}, {n:"Salão 2", x:6, y:6, w:6, h:4}], obs:["3_3","4_3","7_7","10_8"] },
-            "p3": { nome: "Viela da Fome", x: 15, y: 65, salas: [{n:"Rua Alta", x:2, y:2, w:12, h:3}, {n:"Beco Sul", x:6, y:5, w:4, h:6}], obs:["3_3","11_3","7_6","8_9"]},
-            "p4": { nome: "Clube Neon", x: 50, y: 80, salas: [{n:"Pista Esq", x:2, y:2, w:3, h:8}, {n:"Bar", x:5, y:5, w:6, h:3}, {n:"Pista Dir", x:11, y:2, w:3, h:8}], obs:["2_3","13_3","5_6","6_6","10_6","2_8","13_8"]},
-            "p5": { nome: "Avenida Ouro", x: 35, y: 35, salas: [{n:"Cruzamento", x:2, y:4, w:12, h:4}], obs:["4_4","4_7","11_4","11_7"] },
-            "p6": { nome: "Bar Submundo", x: 15, y: 35, salas: [{n:"Mesas", x:2, y:2, w:5, h:8}, {n:"Balcão", x:7, y:2, w:7, h:4}], obs:["3_4","4_4","5_4","8_3","9_3","12_3","3_8"] },
-            "p7": { nome: "Beco Sombrio", x: 15, y: 50, salas: [{n:"Beco", x:6, y:1, w:4, h:10}], obs:["6_2","9_4","6_7","9_8"] },
-            "p8": { nome: "Esconderijo Alfa", x: 15, y: 80, salas: [{n:"Entrada", x:4, y:8, w:8, h:3}, {n:"Sala", x:6, y:2, w:4, h:6}], obs:["5_9","10_9","7_4","8_4"] },
-            "p9": { nome: "Alameda das Sombras", x: 65, y: 35, salas: [{n:"Rua", x:2, y:4, w:12, h:4}], obs:["3_5","7_5","12_6"] },
-            "p10":{ nome: "Apts Safehouse", x: 85, y: 35, salas: [{n:"Quarto 1", x:2, y:2, w:4, h:4}, {n:"Corredor", x:6, y:2, w:4, h:8}, {n:"Quarto 2", x:10, y:6, w:4, h:4}], obs:["3_3","12_7","7_4","8_7"] },
-            "p11":{ nome: "Covil de Hackers", x: 85, y: 50, salas: [{n:"Servidores", x:2, y:2, w:12, h:8}], obs:["3_3","4_3","3_4","4_4","11_8","12_8","11_7","12_7","7_5","8_6"] },
-            "p12":{ nome: "Mercado Negro", x: 85, y: 65, salas: [{n:"Cruz", x:6, y:1, w:4, h:10}, {n:"Centro", x:2, y:4, w:12, h:4}], obs:["7_2","8_2","3_6","12_6","7_10","8_10"] },
-            "p13":{ nome: "QG da Yakuza", x: 65, y: 80, salas: [{n:"Dojo", x:2, y:2, w:12, h:8}], obs:["4_4","11_4","4_9","11_9","7_6","8_6"] },
-            "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: [{n:"Hexágono (Simulado)", x:4, y:2, w:8, h:8}, {n:"Borda", x:2, y:4, w:2, h:4}, {n:"Borda", x:12, y:4, w:2, h:4}], obs:["5_3","10_3","5_8","10_8","3_5","13_5","7_5","8_5"] },
-            "p15":{ nome: "Cemitério", x: 35, y: 80, salas: [{n:"Túmulos", x:2, y:2, w:12, h:8}], obs:["4_3","4_4","7_5","7_6","10_8","10_9","12_3","12_4","3_8"]}
-        };
-        window.conexoesMapa = [ {de:"p1", para:"p2"}, {de:"p2", para:"p3"}, {de:"p1", para:"p4"}, {de:"p1", para:"p5"}, {de:"p5", para:"p6"}, {de:"p1", para:"p9"}, {de:"p9", para:"p10"}, {de:"p10", para:"p11"}, {de:"p11", para:"p12"}, {de:"p2", para:"p13"}, {de:"p13", para:"p14"}, {de:"p3", para:"p8"}, {de:"p7", para:"p6"}, {de:"p3", para:"p7"}, {de:"p2", para:"p15"}, {de:"p4", para:"p13"} ];
-        window.rotasSecretasGaia = [ {de:"p1", para:"p6"}, {de:"p15", para:"p10"}, {de:"p8", para:"p14"}, {de:"p11", para:"p4"} ];
-
-        window.filtroLojaAtual = "Tudo"; window.editandoItemId = null;
-        window.GRID_COLS = 5; window.GRID_ROWS = 3; window.CELL_SIZE = 45; window.GRID_GAP = 1; window.REAL_CELL_SIZE = window.CELL_SIZE + window.GRID_GAP;
-        window.tetrisMatrix = []; window.arrastandoKey = null; window.itemArrastado = null; window.offsetX = 0; window.offsetY = 0; window.origin = null; window.initPos = {c:-1, r:-1};
-
-        window.titulosExtensos = [
-            "Novato|com|0", "Alvo Fácil|com|500", "Rato de Beco|com|800", "Corredor|com|1000", "Sobrevivente|com|1200", "Apostador|com|1500",
-            "Lutador|inc|2000", "Atirador|inc|2500", "Sombra|inc|3000", "Estrategista|rar|6000", "Investigador|rar|7000",
-            "O Hacker|epi|12000", "Ceifador|epi|30000", "Demônio de Neon|leg|40000", "Deus das Apostas|leg|45000", "A Lenda Viva|leg|60000", "Líder Supremo|leg|100000"
-        ];
-        
-        window.currentSpinInterval = null;
-        window.currentSpinTimeout = null;
-
-        // INICIALIZAÇÃO FIREBASE (Evita erro de load)
-        try { firebase.initializeApp(window.firebaseConfig); window.db = firebase.database(); } catch (e) { console.error("Firebase falhou:", e); }
-
-        window.setElText = function(id, t) { let e = document.getElementById(id); if(e) e.innerText = t; };
-        window.setElHTML = function(id, h) { let e = document.getElementById(id); if(e) e.innerHTML = h; };
-        window.setElDisplay = function(id, d) { let e = document.getElementById(id); if(e) e.style.display = d; };
-        window.setElVal = function(id, v) { let e = document.getElementById(id); if(e) e.value = v; };
-        
-        // TOAST NEON AVISO
-        window.showNeonToast = function(msg) {
-            let t = document.getElementById("neonToast");
-            if(t) {
-                t.innerText = msg;
-                t.classList.add("show");
-                setTimeout(() => t.classList.remove("show"), 3000);
-            }
-        };
-
-        window.fecharDadoOverlay = function() { 
-            if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
-            if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
-            window.setElDisplay("globalDiceOverlay", "none"); 
-        };
-
-        window.getSafeRpg = function(u) { 
-            let d = { for: 1, agi: 1, man: 1, vig: 1, int: 1, pontosLivres: 3, nivel: 1, integridade: 100, hp: 100 }; 
-            if (!u || !u.rpg) return d;
-            let r = u.rpg;
-            let spent = Math.max(0, (r.for||1)-1) + Math.max(0, (r.agi||1)-1) + Math.max(0, (r.man||1)-1) + Math.max(0, (r.vig||1)-1) + Math.max(0, (r.int||1)-1);
-            let realPts = Math.max(0, 3 + ((r.nivel||1)-1) - spent);
-            return { for: r.for||1, agi: r.agi||1, man: r.man||1, vig: r.vig||1, int: r.int||1, pontosLivres: (r.pontosLivres!==undefined)?r.pontosLivres:realPts, nivel: r.nivel||1, integridade: (r.integridade!==undefined)?r.integridade:100, hp: (r.hp!==undefined)?r.hp:100 };
-        };
-        
-        window.calcularMaxInteg = function(u) { let m = 100; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.buffType==="integ" && i.poder) m += parseInt(i.poder); }); return m; };
-        window.calcularBuffsMoveis = function(u) { let buffs = { for:0, agi:0, int:0, vig:0, man:0 }; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.buffType && i.poder && buffs[i.buffType] !== undefined) buffs[i.buffType] += parseInt(i.poder); }); return buffs; };
-        window.calcularDefesa = function(u) { let def = 0; if(u && u.mochila) { Object.values(u.mochila).forEach(i => { if(i.eq && i.tipo === 'Roupa') def += (parseInt(i.poder) || 0); }); } return def; };
-        window.getPesoStatus = function(u) { let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let max = 10 + ((r.for+buffs.for)*5); let peso = 0; if(u?.mochila) Object.values(u.mochila).forEach(i => peso += (parseInt(i.peso)||1)); return {atual:peso, max:max, sobrepeso: peso > max}; };
-
-        // === 4. INTERFACE GLOBAL E SISTEMA OS ===
-        window.abrirCelularMain = function() {
-            window.setElDisplay("phoneOverlay", "flex");
-        };
-        
-        window.fecharCelular = function() {
-            window.setElDisplay("phoneOverlay", "none");
-        };
-
-        window.abrirApp = function(appId, isLocked, lockMsg) {
-            if(isLocked) { window.showNeonToast(lockMsg); return; }
-            
-            window.fecharCelular(); 
-            window.setElDisplay("gameContainer", "block");
-            window.setElDisplay("btnHomeApp", "flex");
-            
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            let a = document.getElementById(appId); if(a) a.classList.add('active');
-            
-            let titles = {"tab-loja": "Gamblezon", "tab-mapa": "Gamble Maps", "tab-igamble": "iGAMBLE", "tab-personagem": "My Gamble", "tab-panteao": "Patronos", "tab-casa": "Gamble House", "tab-celular": "Gamblenger", "tab-principal": "Notícias"};
-            if(document.getElementById("appTitleHeader")) document.getElementById("appTitleHeader").innerText = titles[appId] || "Aplicativo";
-
-            if(appId === 'tab-mapa') window.drawMapVisuals();
-            if(appId === 'tab-personagem') window.renderizarMochila();
-            if(appId === 'tab-casa') window.drawCasaBoard();
-            if(appId === 'tab-panteao') window.renderizarPanteao();
-        };
-
-        window.fecharApp = function() {
-            window.setElDisplay("gameContainer", "none");
-            window.setElDisplay("btnHomeApp", "none");
-        };
-
-        window.abrirModal = function() {
-            window.setElDisplay("loginModal", "flex");
-            if(window.jogadorAtual) { window.setElDisplay("loginScreen", "none"); window.setElDisplay("profileScreen", "block"); }
-            else { window.setElDisplay("loginScreen", "block"); window.setElDisplay("profileScreen", "none"); }
-        };
-        window.fecharModal = function() { window.setElDisplay("loginModal", "none"); };
-        
-        window.toggleDesktopSidebar = function() { let s = document.getElementById("sidebarAgents"); if(s) s.classList.toggle("minimized"); };
-
-        window.salvarPerfil = function(campo, valor) {
-            if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/perfil/${campo}`).set(valor);
-        };
-
-        window.renderizarFicha = function() {
-            if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
-            let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let mInteg = window.calcularMaxInteg(u); let buffs = window.calcularBuffsMoveis(u); let def = window.calcularDefesa(u);
-            
-            if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual);
-            if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
-            let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/avataaars/svg?seed=${window.jogadorAtual}`;
-            if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
-            if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || "");
-            if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
-            if(document.getElementById("perfilTelefone")) window.setElText("perfilTelefone", u.numero || "Sem Aparelho");
-
-            window.setElText("lblDef", def); 
-            if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres;
-            window.setElText("lblPts", r.pontosLivres);
-            window.setElText("valFor", r.for + buffs.for); window.setElText("valAgi", r.agi + buffs.agi); window.setElText("valMan", r.man + buffs.man); window.setElText("valVig", r.vig + buffs.vig); window.setElText("valInt", r.int + buffs.int);
-            window.setElText("lblIntegMax", mInteg); window.setElText("lblIntegVal", r.integridade + "%");
-            
-            let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
-            let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
-            
-            // Bloqueio dinamico dos apps do celular
-            let temCel = u.numero || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Tecnologia'));
-            let temCasa = (u.casa && Object.keys(u.casa).length > 0) || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Móvel'));
-            
-            let iCel = document.getElementById('icon-celular'); 
-            if(iCel) { 
-                if(temCel || window.isMaster) { iCel.classList.remove('locked'); iCel.onclick = () => window.abrirApp('tab-celular', false); } 
-                else { iCel.classList.add('locked'); iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre um Celular."); } 
-            }
-            
-            let iCasa = document.getElementById('icon-casa'); 
-            if(iCasa) { 
-                if(temCasa || window.isMaster) { iCasa.classList.remove('locked'); iCasa.onclick = () => window.abrirApp('tab-casa', false); } 
-                else { iCasa.classList.add('locked'); iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); } 
-            }
-        };
-
-        window.desenharListaUsuarios = function() {
-            let b = document.getElementById("userLog"); if(!b) return; b.innerHTML = ""; let hideOff = document.getElementById("checkOnline")?.checked;
-            let sortedUsers = Object.keys(window.usersGlobais).filter(n => n !== "MESTRE").sort((a, b) => { let aOn = window.presenceGlobal[a] === true && window.usersGlobais[a].status !== "morto"; let bOn = window.presenceGlobal[b] === true && window.usersGlobais[b].status !== "morto"; return (aOn === bOn) ? 0 : aOn ? -1 : 1; });
-            sortedUsers.forEach(n => { 
-                let u=window.usersGlobais[n]; let r = window.getSafeRpg(u); let isD=(u.status==="morto"); let isO=window.presenceGlobal[n]===true&&!isD; 
-                if(hideOff && !isO && !isD) return; 
-                b.innerHTML += `<div class="user-item" style="opacity:${isD?0.5:1};"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong style="color:${isO?'var(--accent-blue)':'#aaa'};">${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span><div class="hp-display">❤️ HP: ${r.hp}</div></div>`; 
-            });
-        };
-
-        // === 5. SISTEMA RPG (DADOS E PANTEÃO) ===
-        window.resgatarCodigo = function() {
-            let c = document.getElementById("sponsorCode").value.trim().toUpperCase(); if(!c) return;
-            if(c === "CASH4053") {
-                window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set((window.usersGlobais[window.jogadorAtual].carteira||0) + 10000);
-                alert("Injetado 10000 ¥ (Modo Teste)!"); window.setElVal("sponsorCode", ""); return;
-            }
-            if(window.codigosPromocionais[c]) {
-                let v = window.codigosPromocionais[c]; let r = window.db.ref('tokyoRpg/users/' + window.jogadorAtual);
-                r.once('value').then(s => { 
-                    let u = s.val(); if(u.codigosUsados && u.codigosUsados[c]) { alert("Já resgatado."); } 
-                    else { r.child('codigosUsados').update({ [c]: true }); r.update({ carteira: (u.carteira || 0) + v }); alert(`Sucesso! +${v}¥`); window.setElVal("sponsorCode", ""); } 
-                });
-            } else { alert("Código Inválido."); }
-        };
-
-        window.renderizarPanteao = function() {
-            let u = window.usersGlobais[window.jogadorAtual] || {}; let currentGod = u.deus || "Nenhum";
-            let gachaC = document.getElementById("gachaDisplay"); if(gachaC) gachaC.innerHTML = `<h2 style="color:#555; margin:0;">[ SEU DEUS ]</h2><h3 class="neon-purple" style="font-size:28px; margin-top:10px;">${currentGod}</h3>`;
-            
-            let list = document.getElementById("allGodsList"); if(!list) return;
-            list.innerHTML = "";
-            window.deusesPanteao.forEach(g => {
-                let gNameClean = g.nome.split(" ")[0];
-                let isMine = (currentGod === g.nome || currentGod.includes(gNameClean));
-                list.innerHTML += `<div class="card ${isMine?'selected':''}" style="height:auto; min-height:80px; cursor:default; width:200px; padding:10px;">
-                    <h3 style="margin:0 0 5px 0; font-size:14px; color:${isMine?'#0f0':'var(--accent-purple)'};">${g.nome}</h3>
-                    <p style="font-size:11px; color:#aaa; margin:0; line-height:1.2;">${g.desc}</p>
-                </div>`;
-            });
-        };
-
-        window.girarRoletaPanteao = function() {
-            if(!window.jogadorAtual) return;
-            let u = window.usersGlobais[window.jogadorAtual];
-            if((u.carteira || 0) < 500) { alert("Você precisa de 500 ¥ para girar a Roleta Divina."); return; }
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(u.carteira - 500);
-            
-            let btn = document.getElementById("btnRoletaDeus"); if(btn) btn.disabled = true;
-            let display = document.getElementById("gachaDisplay"); if(!display) return; display.innerHTML = "";
-            
-            if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
-            if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
-            
-            let counter = 0;
-            window.currentSpinInterval = setInterval(() => {
-                let g1 = window.deusesPanteao[Math.floor(Math.random() * window.deusesPanteao.length)];
-                let g2 = window.deusesPanteao[Math.floor(Math.random() * window.deusesPanteao.length)];
-                display.innerHTML = `<div class="card spinning" style="width:140px; height:160px; padding:10px;"><h3 style="font-size:14px;margin:0;">${g1.nome}</h3></div><div class="card spinning" style="width:140px; height:160px; padding:10px;"><h3 style="font-size:14px;margin:0;">${g2.nome}</h3></div>`;
-                counter++;
-                if(counter > 15) {
-                    clearInterval(window.currentSpinInterval);
-                    let shuffled = [...window.deusesPanteao].sort(() => 0.5 - Math.random());
-                    let op1 = shuffled[0]; let op2 = shuffled[1];
-                    display.innerHTML = `
-                        <div class="card" style="width:180px; height:auto; padding:15px; cursor:pointer;" onclick="window.escolherDeusFinal('${op1.nome}')">
-                            <h3 style="font-size:14px;">${op1.nome}</h3><p style="font-size:11px;color:#aaa;">${op1.desc}</p>
-                            <button class="action-btn" style="margin-top:10px;">Escolher</button>
-                        </div>
-                        <div class="card" style="width:180px; height:auto; padding:15px; cursor:pointer;" onclick="window.escolherDeusFinal('${op2.nome}')">
-                            <h3 style="font-size:14px;">${op2.nome}</h3><p style="font-size:11px;color:#aaa;">${op2.desc}</p>
-                            <button class="action-btn" style="margin-top:10px;">Escolher</button>
-                        </div>
-                    `;
-                }
-            }, 100);
-        };
-        window.escolherDeusFinal = function(n) { 
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/deus`).set(n); 
-            window.showNeonToast(`Patrono ${n} Escolhido!`); 
-            let b = document.getElementById("btnRoletaDeus"); if(b) b.disabled=false; 
-            let g = document.getElementById("gachaDisplay"); if(g) g.innerHTML = `<h2 style="color:#555; margin:0;">[ ROLETA DIVINA ]</h2>`;
-            window.renderizarPanteao(); window.drawMapVisuals(); 
-        };
-
-        window.mostrarDadoOverlay = function(n, f, res, maxFaces = 20) {
-            let ov = document.getElementById("globalDiceOverlay");
-            if(document.getElementById("diceRollerName")) document.getElementById("diceRollerName").innerText = "Agente: " + n; 
-            if(document.getElementById("diceFormulaLabel")) document.getElementById("diceFormulaLabel").innerText = "Ação: " + f;
-            
-            let sp = document.getElementById("diceSpinners"); let dRes = document.getElementById("diceFinalResult");
-            if(sp) { sp.style.display = "flex"; sp.innerHTML = ""; for(let i=0; i<res.length; i++) sp.innerHTML += `<div class="dice-number">?</div>`; }
-            if(dRes) dRes.style.display = "none";
-            if(ov) ov.style.display = "flex";
-            
-            if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
-            if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
-
-            let sc = 0; window.currentSpinInterval = setInterval(() => {
-                let temp = ""; for(let i=0; i<res.length; i++) temp += `<div class="dice-number">${Math.floor(Math.random()*maxFaces)+1}</div>`;
-                if(sp) sp.innerHTML = temp; sc++;
-                if(sc > 15) {
-                    clearInterval(window.currentSpinInterval); 
-                    if(sp) sp.style.display = "none"; 
-                    if(dRes) { dRes.style.display = "flex"; dRes.innerHTML = ""; res.forEach(v => { dRes.innerHTML += `<div class="dice-result-box">${v}</div>`; }); }
-                    window.currentSpinTimeout = setTimeout(() => { if(ov) ov.style.display = "none"; }, 3000);
-                }
-            }, 80);
-        };
-
-        window.lancarDadoCustom = function(t) {
-            if(!window.jogadorAtual) return;
-            let max = parseInt(t.replace('1d','')); let res = Math.floor(Math.random() * max) + 1;
-            window.mostrarDadoOverlay(window.jogadorAtual, t, [res], max);
-            window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Rolou ${t}: <span class="dice-result-box">${res}</span>` });
-            window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: t, results: [res], ts: Date.now() });
-        };
-
-        window.rolarAtributo = function(nome, key) {
-            if(!window.jogadorAtual) return; let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u);
-            let qtd = r[key] + buffs[key]; if(qtd < 1) qtd = 1;
-            let results = []; for(let i=0; i<qtd; i++) results.push(Math.floor(Math.random()*20)+1);
-            let formStr = `${nome} (${qtd}d20)`;
-            window.mostrarDadoOverlay(window.jogadorAtual, formStr, results, 20);
-            window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Rolou ${formStr}: <span class="dice-result-box">${results.join('</span> <span class="dice-result-box">')}</span>` });
-            window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: formStr, results: results, ts: Date.now() });
-        };
-
-        window.rolarPericiaSelect = function() { let s = document.getElementById("comboPericias"); if(s) { let v=s.value.split('|'); window.rolarAtributo(v[0], v[1]); } };
-        window.atualizarHP = function() { let hp = parseInt(document.getElementById("hpInput").value); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`).set(hp); };
-        window.distribuirPonto = function(key) { let r = window.getSafeRpg(window.usersGlobais[window.jogadorAtual]); if(r.pontosLivres > 0) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/${key}`).set(r[key]+1); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres-1); } };
-
-        // === 6. MAPA GLOBAL E VTT ===
-        window.drawMapVisuals = function() {
-            const canvas = document.getElementById("mapCanvas"); if(!canvas) return;
-            let uData = window.usersGlobais[window.jogadorAtual] || {}; let isGaia = (uData.deus && uData.deus.includes("Gaia"));
-            
-            let nodes = ""; 
-            window.conexoesMapa.forEach(c => { let p1=window.locaisMapa[c.de]; let p2=window.locaisMapa[c.para]; nodes += `<line x1="${p1.x}%" y1="${p1.y}%" x2="${p2.x}%" y2="${p2.y}%" stroke="var(--accent-blue)" stroke-width="2" opacity="0.6"/>`; });
-            if(isGaia || window.isMaster) window.rotasSecretasGaia.forEach(c => { let p1=window.locaisMapa[c.de]; let p2=window.locaisMapa[c.para]; nodes += `<line x1="${p1.x}%" y1="${p1.y}%" x2="${p2.x}%" y2="${p2.y}%" stroke="#00ff00" stroke-width="2" stroke-dasharray="5,5" opacity="0.8"/>`; });
-            
-            let htmlMap = `<svg class="svg-lines-container">${nodes}</svg><div class="map-overlay-grid"></div>`;
-            Object.keys(window.locaisMapa).forEach(k => { let l = window.locaisMapa[k]; htmlMap += `<div class="map-node" style="left:${l.x}%; top:${l.y}%;" onclick="window.viajarPara('${k}')" title="${l.nome} (Clique para Interagir)"><span class="node-label">${l.nome}</span></div>`; });
-            
-            Object.keys(window.usersGlobais).forEach(n => {
-                if(n === "MESTRE") return; let u = window.usersGlobais[n]; let loc = window.locaisMapa[u.local||"p1"]; let isO = window.presenceGlobal[n];
-                if(loc) htmlMap += `<img src="${u.avatarUrl||'https://api.dicebear.com/9.x/avataaars/svg?seed='+n}" class="avatar-on-map ${isO?'':'avatar-offline'}" style="left:calc(${loc.x}% - 18px); top:calc(${loc.y}% - 18px);">`;
-            });
-            
-            canvas.innerHTML = htmlMap;
-        };
-
-        window.viajarPara = function(k) {
-            if(!window.jogadorAtual) return;
-            if(window.isMaster) { window.abrirSubMapa(k); return; }
-
-            let user = window.usersGlobais[window.jogadorAtual] || {}; let currentLoc = user.local || "p1"; 
-            if(currentLoc === k) { window.abrirSubMapa(k); return; } // Se já ta la e clicou de novo, ENTRA.
-
-            if(window.embatesGlobais && Object.values(window.embatesGlobais).some(e => e.p1 === window.jogadorAtual || e.p2 === window.jogadorAtual)) { window.showNeonToast("Você está TRANCADO num EMBATE!"); return; }
-            let isGaia = (user.deus && user.deus.includes("Gaia"));
-            
-            let isConn = window.conexoesMapa.some(c => (c.de === currentLoc && c.para === k) || (c.para === currentLoc && c.de === k));
-            if(!isConn && isGaia) { isConn = window.rotasSecretasGaia.some(c => (c.de === currentLoc && c.para === k) || (c.para === currentLoc && c.de === k)); }
-            if(!isConn) { window.showNeonToast("Caminho bloqueado. (Gaia = Vias Verdes)"); return; }
-            
-            let r = window.getSafeRpg(user); let pesoStats = window.getPesoStatus(user);
-            let custoInt = 5 + Math.floor(pesoStats.atual / 5);
-            if(pesoStats.sobrepeso) custoInt *= 2; 
-            if (r.integridade < custoInt) { window.showNeonToast(`Falta Saturação! Custo: ${custoInt}%`); return; }
-            
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(r.integridade - custoInt);
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/local`).set(k);
-            window.selectedNodeGlobal = k; window.drawMapVisuals();
-        };
-
-        window.abrirSubMapa = function(k) { 
-            window.currentSubMapKey = k; window.setElDisplay("mapCanvas", "none"); window.setElDisplay("subMapCanvas", "flex"); window.initTacticalBoard(); window.updateTacticalBoard(); 
-            let c = document.getElementById("subMapCanvas");
-            if(c && window.submapasBGs[k]) { c.style.backgroundImage = `url("${window.submapasBGs[k]}")`; } else if(c) { c.style.backgroundImage = "none"; }
-            if(window.isMaster) { window.setElDisplay("mestreVTT", "flex"); }
-            window.renderVttFoodActions();
-        };
-        window.fecharSubMapa = function() { window.setElDisplay("subMapCanvas", "none"); window.setElDisplay("mapCanvas", "block"); window.currentSubMapKey = ""; window.drawMapVisuals(); };
-        window.mudarBgSubMapa = function() { let url = document.getElementById("vttBgInp").value; window.db.ref(`tokyoRpg/submapsBGs/${window.currentSubMapKey}`).set(url); window.showNeonToast("Fundo Salvo!"); };
-
-        window.rolarDadoMovimento = function() {
-            if(!window.jogadorAtual) return;
-            if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Não é seu turno!"); return; }
-            let roll = Math.floor(Math.random()*4)+1; let p = window.getPesoStatus(window.usersGlobais[window.jogadorAtual]);
-            window.movimentosRestantes = p.sobrepeso ? Math.max(1, Math.floor(roll/2)) : roll;
-            window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
-            window.db.ref('tokyoRpg/mapDados').push({nome:window.jogadorAtual, texto:`Movimento: <span class="dice-result-box">${roll}</span> -> ${window.movimentosRestantes} passos`});
-            window.mostrarDadoOverlay(window.jogadorAtual, "Movimento", [roll], 4);
-            window.updateTacticalBoard();
-        };
-
-        window.iniciarIniciativaVTT = function() {
-            if(!window.isMaster) return;
-            let onGrid = Object.values(window.submapasGlobais[window.currentSubMapKey]||{}).filter(x=>x!=="MESTRE");
-            if(onGrid.length===0) { alert("Ninguém no grid!"); return; }
-            let ini = []; onGrid.forEach(n => { let r=Math.floor(Math.random()*20)+1; let agi = (window.usersGlobais[n]?.rpg?.agi || 1); let sum = r+agi; ini.push({n:n, v:sum}); window.db.ref('tokyoRpg/mapDados').push({nome:n, texto:`Iniciativa: ${r} (+${agi}) = <strong class="neon-green">${sum}</strong>`}); });
-            ini.sort((a,b)=>b.v-a.v); window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}`).set({ordem: ini.map(x=>x.n), atual:0});
-            window.showNeonToast("Turnos Definidos!");
-        };
-        window.passarTurnoVTT = function() {
-            if(!window.turnosVTTGlobal) return;
-            window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}/atual`).set((window.turnosVTTGlobal.atual+1)%window.turnosVTTGlobal.ordem.length);
-            window.movimentosRestantes = 0; window.setElText("movRestantes", "Passos Livres: 0");
-        };
-
-        window.clicarGrid = function(x,y, isObs) {
-            if(!window.jogadorAtual) return;
-            let u = window.usersGlobais[window.jogadorAtual]; let isGaia = (u.deus && u.deus.includes("Gaia"));
-            if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
-            
-            let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-            if(grid[`${x}_${y}`]) return; // Ocupado
-            
-            let px = -1, py = -1; let isAlreadyOnBoard = false;
-            Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = cid.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
-
-            if(!window.isMaster && isAlreadyOnBoard) {
-                // Checa distância Chebyshev
-                let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-                if(dist > window.movimentosRestantes) { return; } // Ignora cliques muito longe silenciosamente
-                if(isObs && !isGaia) { window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return; }
-                window.movimentosRestantes -= dist; window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
-            } else if (isObs && !isGaia && !window.isMaster) {
-                window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return;
-            }
-
-            let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[`${x}_${y}`] = window.jogadorAtual;
-            window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up);
-        };
-
-        window.initTacticalBoard = function() {
-            let b = document.getElementById("gridCells"); if(!b) return; b.innerHTML = "";
-            let loc = window.locaisMapa[window.currentSubMapKey] || {}; let obsList = loc.obs || [];
-            let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
-
-            for(let i=0; i<192; i++) {
-                let x = i % 16; let y = Math.floor(i / 16); let cid = `${x}_${y}`; let isObs = obsList.includes(cid);
-                let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
-                let cell = document.createElement("div"); cell.id = `cell_${x}_${y}`; cell.className = `tactical-cell ${obsClass}`;
-                cell.onclick = () => window.clicarGrid(x, y, isObs); b.appendChild(cell);
-            }
-            
-            let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = "";
-            if(loc.salas && ro) loc.salas.forEach(s => { ro.innerHTML += `<div class="room-overlay" style="left:${(s.x/16)*100}%; top:${(s.y/12)*100}%; width:${(s.w/16)*100}%; height:${(s.h/12)*100}%;">${s.n}</div>`; });
-        };
-
-        window.updateTacticalBoard = function() {
-            if(!window.currentSubMapKey) return;
-            let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-            let layer = document.getElementById("tokensLayer"); if(!layer) return;
-            let loc = window.locaisMapa[window.currentSubMapKey] || {}; let obsList = loc.obs || [];
-            let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
-
-            let px = -1, py = -1;
-            Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
-
-            // Highlight in-range cells
-            for(let i=0; i<192; i++) {
-                let x = i % 16; let y = Math.floor(i / 16); let cid = `${x}_${y}`;
-                let cell = document.getElementById(`cell_${x}_${y}`);
-                if(cell) {
-                    cell.classList.remove("in-range", "in-range-blocked");
-                    let isObs = obsList.includes(cid);
-                    let canWalk = !isObs || isGaia || window.isMaster;
-                    if(px !== -1 && py !== -1 && window.movimentosRestantes > 0) {
-                        let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-                        if(dist > 0 && dist <= window.movimentosRestantes && !grid[cid]) {
-                            if(canWalk) cell.classList.add("in-range");
-                            else cell.classList.add("in-range-blocked");
-                        }
-                    }
-                }
-            }
-
-            let currentTokens = [];
-            Object.keys(grid).forEach(cid => {
-                let occupier = grid[cid]; if(!occupier) return;
-                let parts = cid.split("_"); let x = parseInt(parts[0]); let y = parseInt(parts[1]);
-                let tokenId = `token_${occupier}`; currentTokens.push(tokenId);
-                let tokenEl = document.getElementById(tokenId);
-                let avToken = window.usersGlobais[occupier]?.avatarUrl || `https://api.dicebear.com/9.x/avataaars/svg?seed=${occupier}`;
-                let hp = window.usersGlobais[occupier]?.rpg?.hp || 100;
-                let isMe = (occupier === window.jogadorAtual);
-
-                if(tokenEl) {
-                    tokenEl.style.left = `${(x / 16) * 100}%`; tokenEl.style.top = `${(y / 12) * 100}%`;
-                    if (tokenEl.querySelector('.token-hp')) tokenEl.querySelector('.token-hp').innerText = hp;
-                } else {
-                    let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token";
-                    if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; }
-                    tHtml.style.backgroundImage = `url('${avToken}')`; tHtml.style.left = `${(x / 16) * 100}%`; tHtml.style.top = `${(y / 12) * 100}%`;
-                    tHtml.innerHTML = `<div class="token-hp">${hp}</div>`; layer.appendChild(tHtml);
-                }
-            });
-
-            Array.from(layer.children).forEach(t => { if(!currentTokens.includes(t.id)) t.remove(); });
-            
-            let tBar = document.getElementById("turnOrderUI"); let btnP = document.getElementById("btnPassTurno");
-            if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0) {
-                if(tBar) { tBar.style.display="flex"; tBar.innerHTML=""; }
-                if(btnP) btnP.style.display="inline-block";
-                window.turnosVTTGlobal.ordem.forEach((n,i) => { if(tBar) tBar.innerHTML+=`<img src="${window.usersGlobais[n]?.avatarUrl||'https://api.dicebear.com/9.x/avataaars/svg?seed='+n}" class="turn-avatar ${i===window.turnosVTTGlobal.atual?'active':''}" title="${n}">`; });
-            } else { 
-                if(tBar) tBar.style.display="none"; 
-                if(btnP) btnP.style.display="none"; 
-            }
-        };
-
-        window.renderVttFoodActions = function() {
-            let bar = document.getElementById("vttFoodActions"); if(!bar) return; bar.innerHTML = "";
-            let inv = window.usersGlobais[window.jogadorAtual]?.mochila || {};
-            Object.keys(inv).forEach(k => { if(inv[k].tipo==='Comida' && inv[k].eq) bar.innerHTML += `<button class="btn-eat" onclick="window.consumirComidaVTT('${k}',${inv[k].poder||0},${inv[k].cd||2})">🍽️ Comer ${inv[k].nome}</button>`; });
-        };
-
-        window.consumirComidaVTT = function(k, p, cd) {
-            let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill");
-            if(!ov || !fill) return;
-            ov.style.display="flex"; fill.style.width="0%";
-            void fill.offsetWidth; // Reflow force para a animação do CSS pegar!
-            
-            setTimeout(()=>{ fill.style.transition=`width ${cd}s linear`; fill.style.width="100%"; }, 50);
-            setTimeout(()=>{
-                ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]);
-                window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+p));
-                window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove();
-                window.renderVttFoodActions(); window.showNeonToast(`Nutrição +${p}% restaurada.`);
-            }, cd*1000);
-        };
-
-        // --- 7. TETRIS MOCHILA ---
-        window.renderizarMochila = function() {
-            let g = document.getElementById("grid-personagem"); let l = document.getElementById("lista-itens-soltos"); if(!g || !l) return;
-            if(window.arrastandoKey !== null) return; 
-
-            let extraW = 0, extraH = 0; let itens = window.usersGlobais[window.jogadorAtual]?.mochila || {};
-            Object.values(itens).forEach(i => { if(i.tipo === 'Mochila' && i.eq === true) { extraW += (parseInt(i.extraW) || 0); extraH += (parseInt(i.extraH) || 0); } });
-            
-            window.GRID_COLS = 5 + extraW; window.GRID_ROWS = 3 + extraH;
-            g.style.gridTemplateColumns = `repeat(${window.GRID_COLS}, 45px)`; g.style.gridTemplateRows = `repeat(${window.GRID_ROWS}, 45px)`;
-            g.innerHTML = ""; l.innerHTML = ""; window.tetrisMatrix = Array(window.GRID_ROWS).fill(null).map(()=>Array(window.GRID_COLS).fill(0));
-            for(let i = 0; i < (window.GRID_COLS * window.GRID_ROWS); i++) g.innerHTML += `<div class="grid-cell"></div>`;
-
-            let pesoStats = window.getPesoStatus(window.usersGlobais[window.jogadorAtual]);
-            let sP = document.getElementById("statusPeso"); if(sP) { sP.innerText = `Peso Atual: ${pesoStats.atual} / ${pesoStats.max} kg`; sP.style.color = pesoStats.sobrepeso?"#f00":"var(--accent-gold)"; }
-
-            let drop = {};
-            Object.keys(itens).forEach(k => { let i = itens[k]; if(i.eq && (i.c+parseInt(i.w)>window.GRID_COLS || i.r+parseInt(i.h)>window.GRID_ROWS)) { drop[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/eq`] = false; drop[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/c`] = null; drop[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/r`] = null; } });
-            if(Object.keys(drop).length > 0) { window.db.ref().update(drop); return; } 
-
-            Object.keys(itens).forEach(k => {
-                let i = itens[k]; let w = parseInt(i.w) || 1; let h = parseInt(i.h) || 1;
-                let el = document.createElement('div'); el.className = `item-tetris ${i.tipo || 'Arma'}`; el.setAttribute('data-key', k); el.setAttribute('data-w', w); el.setAttribute('data-h', h);
-                el.style.width = `${(w * window.CELL_SIZE) + ((w-1) * window.GRID_GAP)}px`; el.style.height = `${(h * window.CELL_SIZE) + ((h-1) * window.GRID_GAP)}px`;
-                
-                let btnText = i.eq ? '⭯' : '✖'; let btnTitle = i.eq ? 'Desequipar' : 'Descartar'; let btnClass = i.eq ? 'btn-excluir-item' : 'btn-excluir-item discard';
-                
-                el.innerHTML = `<span>${window.iconesMercado[i.tipo]||''} ${i.nome}</span>${i.tipo === 'Comida' ? `<button onclick="window.consumirComida('${k}', ${i.poder||0}, ${i.cd||2}, event)" style="font-size:8px; padding:2px; margin-top:2px; background:#000; color:#0f0; border:1px solid #0f0; border-radius:2px; cursor:pointer; position:relative; z-index:5;">Comer</button>` : ''}<button class="${btnClass}" title="${btnTitle}" onpointerdown="window.removerItemMochila('${k}', event)">${btnText}</button>`;
-
-                if(i.eq === true && i.c !== undefined && i.r !== undefined && i.c < window.GRID_COLS && i.r < window.GRID_ROWS) {
-                    el.style.left = `${i.c * window.REAL_CELL_SIZE}px`; el.style.top = `${i.r * window.REAL_CELL_SIZE}px`;
-                    el.setAttribute('data-c', i.c); el.setAttribute('data-r', i.r);
-                    for(let row=i.r; row<i.r+h; row++) for(let col=i.c; col<i.c+w; col++) window.tetrisMatrix[row][col] = 1; 
-                    g.appendChild(el);
-                } else {
-                    el.style.position = 'relative'; el.style.left = 'auto'; el.style.top = 'auto';
-                    l.appendChild(el);
-                }
-                el.addEventListener('pointerdown', window.iniciarArrasteTetris);
-            });
-            window.renderVttFoodActions();
-        };
-
-        window.iniciarArrasteTetris = function(e) {
-            if(e.target.closest('.btn-excluir-item') || e.target.tagName.toLowerCase() === 'button') return;
-            e.preventDefault(); window.itemArrastado = e.currentTarget; window.arrastandoKey = window.itemArrastado.getAttribute('data-key');
-            let gridEl = document.getElementById("grid-personagem");
-            let rectOrig = window.itemArrastado.getBoundingClientRect();
-
-            if (window.itemArrastado.parentElement === gridEl) {
-                window.origin = 'grid'; window.initPos = {c: parseInt(window.itemArrastado.getAttribute('data-c')), r: parseInt(window.itemArrastado.getAttribute('data-r'))};
-                let w = parseInt(window.itemArrastado.getAttribute('data-w')); let h = parseInt(window.itemArrastado.getAttribute('data-h'));
-                for(let row=window.initPos.r; row<window.initPos.r+h; row++) for(let col=window.initPos.c; col<window.initPos.c+w; col++) window.tetrisMatrix[row][col] = 0; 
-            } else { 
-                window.origin = 'inv'; 
-                let gridRect = gridEl.getBoundingClientRect();
-                window.itemArrastado.style.margin = "0";
-                window.itemArrastado.style.left = (rectOrig.left - gridRect.left) + 'px';
-                window.itemArrastado.style.top = (rectOrig.top - gridRect.top) + 'px';
-                gridEl.appendChild(window.itemArrastado); 
-            }
-            
-            window.itemArrastado.classList.add('dragging'); window.itemArrastado.style.position = 'absolute'; 
-            let newRect = window.itemArrastado.getBoundingClientRect();
-            window.offsetX = e.clientX - newRect.left; window.offsetY = e.clientY - newRect.top;
-
-            document.addEventListener('pointermove', window.arrastarTetris); document.addEventListener('pointerup', window.soltarTetris);
-        };
-        window.arrastarTetris = function(e) { e.preventDefault(); window.moverTetris(e); };
-        window.moverTetris = function(e) {
-            if(!window.itemArrastado) return; const gridRect = document.getElementById("grid-personagem").getBoundingClientRect();
-            window.itemArrastado.style.left = `${e.clientX - gridRect.left - window.offsetX}px`; window.itemArrastado.style.top = `${e.clientY - gridRect.top - window.offsetY}px`;
-        };
-        window.soltarTetris = function(e) {
-            document.removeEventListener('pointermove', window.arrastarTetris); document.removeEventListener('pointerup', window.soltarTetris);
-            if(!window.itemArrastado) return; window.itemArrastado.classList.remove('dragging');
-            const w = parseInt(window.itemArrastado.getAttribute('data-w')), h = parseInt(window.itemArrastado.getAttribute('data-h'));
-            
-            let rawLeft = parseFloat(window.itemArrastado.style.left || 0); let rawTop = parseFloat(window.itemArrastado.style.top || 0);
-            let tC = Math.round(rawLeft / window.REAL_CELL_SIZE); let tR = Math.round(rawTop / window.REAL_CELL_SIZE);
-
-            if (tC < 0 || tC + w > window.GRID_COLS || tR < 0 || tR + h > window.GRID_ROWS) {
-                window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: false, c: null, r: null});
-            } else {
-                let livre = true;
-                for(let r=tR; r<tR+h; r++) for(let c=tC; c<tC+w; c++) if(window.tetrisMatrix[r][c] === 1) livre = false;
-                if(livre) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: true, c: tC, r: tR});
-                else {
-                    if(window.origin === 'grid') window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: true, c: window.initPos.c, r: window.initPos.r});
-                    else window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: false, c: null, r: null});
-                }
-            }
-            window.arrastandoKey = null; window.itemArrastado = null; window.renderizarMochila();
-        };
-
-        window.consumirComida = function(k, poder, cd, ev) { 
-            if(ev) ev.stopPropagation(); 
-            let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill");
-            if(!ov || !fill) return;
-            ov.style.display="flex"; fill.style.width="0%"; void fill.offsetWidth; // Reflow force
-            setTimeout(()=>{ fill.style.transition=`width ${cd}s linear`; fill.style.width="100%"; }, 50);
-            setTimeout(()=>{
-                ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]);
-                window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+parseInt(poder)));
-                window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove();
-                window.showNeonToast(`Nutrição +${poder}% restaurada.`);
-            }, cd*1000); 
-        };
-        window.removerItemMochila = function(k, ev) { 
-            if(ev) ev.stopPropagation(); let item = window.usersGlobais[window.jogadorAtual]?.mochila?.[k];
-            if(item && item.eq) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).update({eq: false, c: null, r: null}); } 
-            else { if(confirm("Descartar item permanentemente?")) window.db.ref('tokyoRpg/users/' + window.jogadorAtual + '/mochila/' + k).remove(); }
-        };
-
-        // --- CASA VTT ---
-        window.drawCasaBoard = function() {
-            let b = document.getElementById("casaBoard"); if(!b) return;
-            b.innerHTML = ""; let gridCasa = window.casaGlobais[window.jogadorAtual] || {}; 
-            for(let y=0; y<12; y++) {
-                for(let x=0; x<16; x++) {
-                    let cellId = `${x}_${y}`; let fItem = gridCasa[cellId];
-                    let cellHtml = `<div class="tactical-cell" onclick="window.clicarGridCasa(${x}, ${y})">`;
-                    if(fItem) {
-                        let fSizeW = fItem.w || 1; let fSizeH = fItem.h || 1;
-                        cellHtml += `<div class="furniture-token" style="width:calc(${fSizeW} * 100%); height:calc(${fSizeH} * 100%);"><button class="btn-remover-movel" onclick="window.removerMoveCasa('${cellId}', event)">X</button>${fItem.n}</div>`;
-                    }
-                    cellHtml += `</div>`; b.innerHTML += cellHtml;
-                }
-            }
-            let cData = window.usersGlobais[window.jogadorAtual]?.casaConfig;
-            if(cData && cData.bg) { b.style.backgroundImage = `url('${cData.bg}')`; b.style.backgroundSize = "cover"; b.style.backgroundColor = "transparent"; } else { b.style.backgroundImage = "none"; b.style.backgroundColor = "#000"; }
-            
-            let fTray = document.getElementById("furnitureTray"); let moveisNoGrid = Object.values(gridCasa).map(x=>x.n);
-            if(fTray) {
-                fTray.innerHTML = ""; let prop = window.usersGlobais[window.jogadorAtual]?.casa; 
-                if(prop) { Object.keys(prop).forEach(k => { let i = prop[k]; if(i.tipo==="Móvel" && !moveisNoGrid.includes(i.nome)) fTray.innerHTML += `<div class="furniture-item" onclick="window.selecionarMovel('${i.nome}', ${i.w||1}, ${i.h||1}, this)">${i.nome} [${i.w||1}x${i.h||1}]</div>`; }); }
-            }
-        };
-        window.selectedFurniture = null; window.selectedSizeW = 1; window.selectedSizeH = 1;
-        window.selecionarMovel = function(nome, w, h, el) { window.selectedFurniture = nome; window.selectedSizeW = w; window.selectedSizeH = h; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); };
-        window.clicarGridCasa = function(x,y) { if(!window.selectedFurniture) return; let cellId = `${x}_${y}`; window.db.ref(`tokyoRpg/casasGrid/${window.jogadorAtual}/${cellId}`).set({n: window.selectedFurniture, w: window.selectedSizeW, h: window.selectedSizeH}); window.selectedFurniture = null; document.querySelectorAll('.furniture-item').forEach(e=>e.classList.remove('selected')); window.drawCasaBoard(); };
-        window.removerMoveCasa = function(cellId, ev) { ev.stopPropagation(); window.db.ref(`tokyoRpg/casasGrid/${window.jogadorAtual}/${cellId}`).remove().then(()=>window.drawCasaBoard()); };
-        window.salvarConfigCasa = function() { if(!window.jogadorAtual) return; let nome = document.getElementById("casaNomeInp").value; let bg = document.getElementById("casaBgInp").value; window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/casaConfig`).update({ nome: nome, bg: bg }); window.showNeonToast("Casa Salva!"); };
-
-        // --- 8. LOJA E MASTER ---
-        window.filtrarLoja = function(t, btn) { window.filtroLojaAtual = t; document.querySelectorAll(".shop-tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); window.renderizarLojaUI(); };
-        window.renderizarLojaUI = function() {
-            let b = document.getElementById("shopGrid"); if(!b) return; b.innerHTML="";
-            Object.keys(window.lojaGlobal).forEach(k => {
-                let i = window.lojaGlobal[k];
-                if(window.filtroLojaAtual==="Tudo" || i.tipo===window.filtroLojaAtual) {
-                    let mC = window.isMaster ? `onclick="window.prepararEdicaoLoja('${k}')" class="shop-item master-edit" title="Clique para Editar"` : `class="shop-item"`;
-                    b.innerHTML += `<div ${mC}><div><span style="font-size:10px;color:#aaa;">${window.iconesMercado[i.tipo]||''} [${i.w}x${i.h} | ${i.peso}kg | ${i.cd||0}s]</span><h3 class="neon-blue">${i.nome}</h3><p style="font-size:12px;color:#ccc;">${i.desc}</p></div><h2 class="neon-green">${i.preco}¥</h2><button class="action-btn" onclick="window.comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}', ${i.poder||0}, '${i.buffType||''}', ${i.w||1}, ${i.h||1}, ${i.extraW||0}, ${i.extraH||0}, ${i.peso||1}, ${i.cd||2}, event)">Comprar</button></div>`;
-                }
-            });
-        };
-        window.prepararEdicaoLoja = function(id) {
-            if(!window.isMaster) return; let i = window.lojaGlobal[id]; if(!i) return; window.editandoItemId = id;
-            window.setElVal("niType", i.tipo); window.setElVal("niName", i.nome); window.setElVal("niDesc", i.desc); window.setElVal("niBuffType", i.buffType || ""); window.setElVal("niPoder", i.poder || ""); window.setElVal("niW", i.w || 1); window.setElVal("niH", i.h || 1); window.setElVal("niPrice", i.preco); window.setElVal("niExW", i.extraW || 0); window.setElVal("niExH", i.extraH || 0); window.setElVal("niPeso", i.peso || 1); window.setElVal("niCD", i.cd || 2);
-            if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Salvar Alterações";
-            window.setElDisplay("btnCancelarEdicao", "inline-block"); 
-            let p = document.getElementById("masterShopPanel"); if(p) p.scrollIntoView({behavior: "smooth"});
-        };
-        window.cancelarEdicaoLoja = function() { 
-            window.editandoItemId = null; window.setElVal("niName", ""); window.setElVal("niDesc", ""); window.setElVal("niPrice", ""); window.setElVal("niPoder", ""); window.setElVal("niExW", "0"); window.setElVal("niExH", "0"); window.setElVal("niPeso", "1"); window.setElVal("niCD", "2"); 
-            if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Publicar no Mercado"; 
-            window.setElDisplay("btnCancelarEdicao", "none"); 
-        };
-
-        window.criarItemLoja = function() {
-            if(!window.isMaster) return;
-            let payload = { tipo: document.getElementById("niType").value, nome: document.getElementById("niName").value.trim(), desc: document.getElementById("niDesc").value.trim(), buffType: document.getElementById("niBuffType").value, poder: parseInt(document.getElementById("niPoder").value||"0"), w: parseInt(document.getElementById("niW").value||"1"), h: parseInt(document.getElementById("niH").value||"1"), preco: parseInt(document.getElementById("niPrice").value), extraW: parseInt(document.getElementById("niExW").value||"0"), extraH: parseInt(document.getElementById("niExH").value||"0"), peso: parseInt(document.getElementById("niPeso").value||"1"), cd: parseInt(document.getElementById("niCD").value||"2") };
-            if(payload.nome && payload.preco) {
-                if(window.editandoItemId) {
-                    window.db.ref('tokyoRpg/loja/' + window.editandoItemId).update(payload).then(() => {
-                        window.db.ref('tokyoRpg/users').once('value').then(snap => {
-                            let usrs = snap.val(); let updates = {};
-                            if(usrs) { Object.keys(usrs).forEach(uKey => { let inv = usrs[uKey].mochila; if(inv) { Object.keys(inv).forEach(mKey => { if(inv[mKey].id === window.editandoItemId || inv[mKey].nome === payload.nome) { updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/nome`] = payload.nome; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/desc`] = payload.desc; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/poder`] = payload.poder; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/buffType`] = payload.buffType; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/w`] = payload.w; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/h`] = payload.h; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/extraW`] = payload.extraW; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/extraH`] = payload.extraH; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/peso`] = payload.peso; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/cd`] = payload.cd; } }); } }); }
-                            if(Object.keys(updates).length > 0) { window.db.ref().update(updates); }
-                        });
-                    });
-                    window.showNeonToast("Item Atualizado!"); window.cancelarEdicaoLoja();
-                } else { window.db.ref('tokyoRpg/loja').push(payload); window.showNeonToast("Publicado!"); window.setElVal("niName", ""); window.setElVal("niDesc", ""); }
-            }
-        };
-
-        window.comprarItem = function(id, n, p, t, d, poder, buff, w, h, exW, exH, peso, cd, ev) {
-            if(ev) ev.stopPropagation(); if(!window.jogadorAtual || window.isMaster) return; let c = window.usersGlobais[window.jogadorAtual].carteira||0; if(c<p) {window.showNeonToast("Sem Yenes.");return;}
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(c-p);
-            let itemPayload = { id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff, w:w, h:h, extraW:exW, extraH:exH, peso:peso, cd:cd, eq:false };
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push(itemPayload); window.showNeonToast("Comprado!");
-        };
-
-        // --- 9. CHAT, AVATARES E LOGIN ---
-        window.carregarAvatares = function() {
-            let g = document.getElementById("avatarGridDisplay"); if(!g) return; g.innerHTML = "";
-            let hs = ["Jack", "Leo", "Felix", "Sam", "Arthur", "Ryan", "Oliver", "Caleb", "Zane", "Eli", "Noah", "Luke", "Gabe", "Max", "Ivan"];
-            let ms = ["Ane", "Lucy", "Jude", "Mia", "Zoe", "Lily", "Eva", "Ruby", "Cleo", "Nora", "Iris", "Lia", "Fay", "Gia", "Ivy"];
-            let bs = ["Bot1", "Bot2", "Bot3", "Bot4", "Bot5", "Bot6", "Bot7", "Bot8", "Bot9", "Bot10"];
-            hs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/avataaars/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/avataaars/svg?seed=${s}')">`; });
-            ms.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/avataaars/svg?seed=${s}&hairColor=Blonde,Pink,Red" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/avataaars/svg?seed=${s}&hairColor=Blonde,Pink,Red')">`; });
-            bs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/bottts/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/bottts/svg?seed=${s}')">`; });
-        };
-        window.selecionarAvatarLoja = function(el, url) { window.urlSelecionadaStudio = url; document.querySelectorAll('.av-thumb').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); };
-        window.salvarAvatarCustom = function() {
-            if(!window.jogadorAtual || !window.urlSelecionadaStudio) return;
-            if(!window.isMaster && window.usersGlobais[window.jogadorAtual].carteira < 500) { window.showNeonToast("Precisa de 500 ¥."); return; }
-            if(!window.isMaster) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(window.usersGlobais[window.jogadorAtual].carteira - 500);
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/avatarUrl`).set(window.urlSelecionadaStudio); window.showNeonToast("Avatar Equipado!");
-        };
-        window.carregarTitulos = function() { let sel = document.getElementById("lojaTitulos"); if(!sel) return; sel.innerHTML = ""; window.titulosExtensos.forEach(t => { let arr = t.split("|"); sel.innerHTML += `<option value="${arr[0]}|${arr[1]}|${arr[2]}">${arr[0]} [${arr[1]}] - ${arr[2]}¥</option>`; }); };
-        window.comprarTituloChat = function() {
-            if(!window.jogadorAtual) return; let sel = document.getElementById("lojaTitulos").value; let arr = sel.split("|"); let txt = arr[0]; let rar = arr[1]; let preco = parseInt(arr[2]);
-            let u = window.usersGlobais[window.jogadorAtual]; let unl = u.titulosUnl || {};
-            if(!unl[txt] && preco > 0) { if((u.carteira||0) < preco) { window.showNeonToast("Sem fundos."); return; } window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set((u.carteira||0) - preco); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/titulosUnl/${txt}`).set(true); }
-            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/tituloChat`).set({txt:txt, raridade:rar}); window.showNeonToast("Título Equipado!");
-        };
-        window.msgAtualParaReagir = "";
-        window.abrirEmojiReacao = function(msgKey, event) { window.msgAtualParaReagir = msgKey; let p = document.getElementById("emojiPopupDynamic"); p.style.display="flex"; p.style.left = event.clientX + "px"; p.style.top = (event.clientY - 10) + "px"; };
-        window.executarReacao = function(emoji) { if(!window.msgAtualParaReagir) return; window.db.ref(`tokyoRpg/chat/${window.msgAtualParaReagir}/reacoes/${emoji}`).once('value').then(s => { window.db.ref(`tokyoRpg/chat/${window.msgAtualParaReagir}/reacoes/${emoji}`).set((s.val()||0)+1); window.setElDisplay("emojiPopupDynamic", "none"); }); };
-        window.prepararEnvioMensagem = function() { 
-            if(!window.jogadorAtual) return; let t = document.getElementById("chatInp").value.trim(); let i = document.getElementById("chatImageFile"); if(!t && (!i || i.files.length === 0)) return; 
-            if(i && i.files.length > 0) { let f = i.files[0]; if(f.size > 2000000) { alert("Máx 2MB"); return;} let r = new FileReader(); r.onload = (e) => { window.db.ref('tokyoRpg/chat').push({ nome: window.jogadorAtual, texto: t, imagemUrl: e.target.result, data: new Date().toLocaleTimeString() }); i.value = ""; window.setElVal("chatInp", ""); }; r.readAsDataURL(f); } 
-            else { let iLink = null; if((t.startsWith("http://") || t.startsWith("https://")) && t.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i)) { iLink = t; t = ""; } window.db.ref('tokyoRpg/chat').push({ nome: window.jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); window.setElVal("chatInp", ""); } 
-        };
-
-        window.enviarSMS = function() { if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual].numero) return; let dest = document.getElementById("smsDestino").value.trim(); let msg = document.getElementById("smsTexto").value.trim(); let meuNum = window.usersGlobais[window.jogadorAtual].numero; if(!dest || !msg) return; let achou = false; Object.keys(window.usersGlobais).forEach(userKey => { if(window.usersGlobais[userKey].numero === dest) achou = true; }); if(!achou) { window.showNeonToast("O número não existe."); return; } let timestamp = Date.now(); let pacote = { de: meuNum, para: dest, msg: msg, data: new Date().toLocaleTimeString() }; window.db.ref('tokyoRpg/sms/' + dest + '/' + timestamp).set(pacote); window.db.ref('tokyoRpg/sms/' + meuNum + '/' + timestamp).set(pacote); document.getElementById("smsTexto").value = ""; };
-
-        window.iniciarEmbateMap = function() { if(!window.isMaster) return; let locStr = document.getElementById("embLocal").value; let p1 = document.getElementById("embP1").value.trim().toUpperCase(); let p2 = document.getElementById("embP2").value.trim().toUpperCase(); let ap = parseInt(document.getElementById("embAposta").value||0); if(!locStr || !p1 || !p2) return; window.db.ref('tokyoRpg/mapEmbates').push({ localKey: locStr, p1: p1, p2: p2, aposta: ap }); window.showNeonToast("Embate Trancado."); window.setElVal("embP1",""); window.setElVal("embP2",""); window.setElVal("embAposta",""); };
-        window.processarEmbate = function() { if(!window.isMaster) return; let v = document.getElementById("embVencedor").value.trim().toUpperCase(); let p = document.getElementById("embPerdedor").value.trim().toUpperCase(); let mDesc = document.getElementById("embMorteDesc").value; let mImg = document.getElementById("embMorteImg").value; if(!v || !p) return; let ap = 0; let embKey = null; Object.keys(window.embatesGlobais).forEach(k => { let e = window.embatesGlobais[k]; if((e.p1===v||e.p2===v)&&(e.p1===p||e.p2===p)) { ap = e.aposta||0; embKey = k; } }); let cVenc = window.usersGlobais[v]?.carteira || 0; let cPerd = window.usersGlobais[p]?.carteira || 0; cVenc += ap; cPerd -= ap; let isMorte = (cPerd <= 0); if(window.usersGlobais[v]) window.db.ref(`tokyoRpg/users/${v}`).update({ carteira: cVenc, "rpg/nivel": (window.usersGlobais[v].rpg?.nivel||1)+1, "rpg/pontosLivres": (window.usersGlobais[v].rpg?.pontosLivres||0)+1 }); if(window.usersGlobais[p]) { if(isMorte) window.db.ref(`tokyoRpg/users/${p}`).update({ carteira: 0, status: "morto" }); else window.db.ref(`tokyoRpg/users/${p}`).update({ carteira: cPerd }); } if(embKey) window.db.ref(`tokyoRpg/mapEmbates/${embKey}`).remove(); window.db.ref('tokyoRpg/news').push({ tipo: isMorte?"MORTE":"EMBATE", vencedor: v, perdedor: p, aposta: ap, saldoVencedor: cVenc, saldoPerdedor: cPerd, data: new Date().toLocaleTimeString(), descMorte: mDesc, imgMorte: mImg }); window.showNeonToast("Resolvido!"); window.setElVal("embVencedor",""); window.setElVal("embPerdedor",""); window.setElVal("embMorteDesc",""); window.setElVal("embMorteImg",""); };
-
-        window.dispararLoadingLogin = async function(isS) {
-            let n = document.getElementById("loginName").value.trim().toUpperCase(); let p = document.getElementById("loginPass").value; let s = document.getElementById("loginSerial").value.trim().toUpperCase();
-            if(isS) { if(!s) return; s = s + "-DC1"; } if(!isS && (!n || !p)) return;
-            window.setElDisplay('loginScreen', 'none'); window.setElDisplay('loadingTerminal', 'flex');
-            let lines = [ "ESTABELECENDO CONEXÃO SEGURA...", "IMPORT_SERVER_DATA(192.168.0.45)...", "VERIFICANDO CREDENCIAIS...", "ACESSO CONCEDIDO." ]; let txt = "";
-            for(let line of lines) { txt += line + "<br><br>"; window.setElHTML('loadingText', txt); await new Promise(r => setTimeout(r, 400 + Math.random() * 600)); }
-            window.setElDisplay('loadingTerminal', 'none');
-            if(isS) window.logarComSerialFinal(s); else window.logarComSenhaFinal(n, p);
-        };
-        window.logarComSenhaFinal = function(n, s) { window.db.ref('tokyoRpg/users/' + n).once('value').then((snap) => { let ud = snap.val(); if(ud) { if (ud.senha !== s) { alert("Senha incorreta."); window.setElDisplay('loginScreen', 'block'); return; } window.logarSucesso(n, ud.serial); } else { let ns = Math.floor(1000 + Math.random()*9000)+"-DC1"; window.db.ref('tokyoRpg/users/' + n).set({ senha: s, serial: ns, carteira: 0, rpg: window.getSafeRpg(null), local: "p1" }); window.logarSucesso(n, ns); alert(`Criado.`); } }); };
-        window.logarComSerialFinal = function(s) { if(s === window.MASTER_SERIAL) { window.db.ref('tokyoRpg/users/MESTRE').update({ serial: window.MASTER_SERIAL, carteira: 9999999 }); window.logarSucesso("MESTRE", window.MASTER_SERIAL); return; } let achou = false; Object.keys(window.usersGlobais).forEach(n => { if(window.usersGlobais[n].serial === s) { achou = true; window.logarSucesso(n, s); }}); if(!achou) { alert("Serial não encontrado."); window.setElDisplay('loginScreen', 'block'); } };
-        
-        window.logarSucesso = function(n, s) {
-            window.jogadorAtual = n; window.serialAtual = s; window.isMaster = (s === window.MASTER_SERIAL); 
-            
-            if(window.isMaster) { let sel = document.getElementById("embLocal"); if(sel) {sel.innerHTML = "<option value=''>Selecione...</option>"; Object.keys(window.locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${window.locaisMapa[k].nome}</option>`; });} }
-            
-            window.setElDisplay("loginModal", "none");
-            window.setElDisplay("base-desktop", "flex"); 
-            window.setElDisplay("gameContainer", "none");
-
-            window.renderizarFicha(); window.renderizarMochila(); window.renderizarLojaUI(); window.drawMapVisuals(); window.renderizarPanteao();
-            if(window.db && window.jogadorAtual) { window.db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { window.connectionRef = window.db.ref('tokyoRpg/presence/' + window.jogadorAtual); window.connectionRef.onDisconnect().set(false).then(() => { window.connectionRef.set(true); }); }}); }
-        };
-        
-        window.deslogar = function() { if(window.connectionRef) window.connectionRef.set(false); window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.setElVal("loginName", ""); window.setElVal("loginPass", ""); window.setElVal("loginSerial", ""); window.fecharCelular(); window.setElDisplay('gameContainer', 'none'); window.setElDisplay('base-desktop', 'none'); window.abrirModal(); window.drawMapVisuals(); };
-
-        // === 10. INICIALIZAÇÃO ONLOAD ===
-        window.onload = function() {
-            if (window.db) {
-                window.carregarTitulos(); window.carregarAvatares(); 
-                window.db.ref('tokyoRpg/users').on('value', s => { 
-                    window.usersGlobais = s.val()||{}; 
-                    window.renderizarFicha(); window.renderizarMochila(); window.drawMapVisuals(); window.drawCasaBoard(); window.desenharListaUsuarios(); window.renderizarPanteao(); window.updateTacticalBoard();
-                    if(window.jogadorAtual && window.usersGlobais[window.jogadorAtual]) { 
-                        let u = window.usersGlobais[window.jogadorAtual];
-                        if(document.getElementById("walletDesktop")) document.getElementById("walletDesktop").innerText = (u.carteira||0) + " ¥";
-                    }
-                });
-                window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; window.drawMapVisuals(); window.desenharListaUsuarios(); });
-                window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; window.drawMapVisuals(); });
-                window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; window.renderizarLojaUI(); window.renderizarFicha(); window.renderizarMochila(); window.drawCasaBoard(); }); 
-                window.db.ref('tokyoRpg/casasGrid').on('value', s => { window.casaGlobais = s.val() || {}; window.drawCasaBoard(); });
-                window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; window.updateTacticalBoard(); });
-                
-                window.db.ref('tokyoRpg/submapsBGs').on('value', s => { 
-                    window.submapasBGs = s.val() || {}; 
-                    if(window.currentSubMapKey) { 
-                        let subCanvas = document.getElementById("subMapCanvas"); 
-                        if(subCanvas && window.submapasBGs[window.currentSubMapKey]) { subCanvas.style.backgroundImage = `url("${window.submapasBGs[window.currentSubMapKey]}")`; subCanvas.style.backgroundColor = "transparent"; } 
-                        else if (subCanvas) { subCanvas.style.backgroundImage = "none"; subCanvas.style.backgroundColor = "#050505"; }
-                    }
-                });
-
-                window.db.ref('tokyoRpg/turnosVTT').on('value', s => { let d = s.val()||{}; window.turnosVTTGlobal = d[window.currentSubMapKey]||null; window.updateTacticalBoard(); });
-                
-                window.db.ref('tokyoRpg/news').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("newsFeed"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).reverse().forEach(n => { b.innerHTML += `<div class="news-item ${n.tipo==='MORTE'?'news-death':''}"><p class="${n.tipo==='MORTE'?'neon-red':'neon-blue'}" style="margin:0;font-size:12px;">${n.data}</p><h3 style="color:#fff;margin:5px 0;">${n.tipo==='MORTE'?'🚨 ÓBITO NO DISTRITO 🚨':'Confronto Concluído'}</h3><p style="color:#ccc;">${n.vencedor} vs ${n.perdedor}. ${n.tipo==='MORTE'?'Perdedor Eliminado.':'Aposta: '+n.aposta+'¥'}</p>${n.descMorte?`<p style="color:#ffaa00;font-size:12px;">Causa: ${n.descMorte}</p>`:''}${n.imgMorte?`<img src="${n.imgMorte}" style="max-width:100%; border-radius:4px; margin-top:10px;">`:''}</div>`; }); }});
-                
-                window.db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { window.mostrarDadoOverlay(d.nome, d.form, d.results); } });
-                window.db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div style="margin-bottom:5px;"><strong class="neon-blue">${x.nome}:</strong> ${x.texto}</div>`); b.scrollTop = b.scrollHeight; }});
-                
-                window.db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
-                    try {
-                        let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
-                        if(d){ Object.keys(d).forEach(k => { 
-                            let m = d[k]; let rCount = m.reacoes || {}; let uData = window.usersGlobais[m.nome] || {}; 
-                            let curAv = uData.avatarUrl || `https://api.dicebear.com/9.x/avataaars/svg?seed=${m.nome}`; let curTit = uData.tituloChat || m.titulo; 
-                            let reactHtml = `<button class="react-add" onclick="window.abrirEmojiReacao('${k}', event)">+</button>${rCount['🔥']?`<button class="react-btn">🔥 ${rCount['🔥']}</button>`:''}${rCount['💀']?`<button class="react-btn">💀 ${rCount['💀']}</button>`:''}${rCount['😂']?`<button class="react-btn">😂 ${rCount['😂']}</button>`:''}${rCount['👀']?`<button class="react-btn">👀 ${rCount['👀']}</button>`:''}${rCount['💯']?`<button class="react-btn">💯 ${rCount['💯']}</button>`:''}${rCount['🤡']?`<button class="react-btn">🤡 ${rCount['🤡']}</button>`:''}${rCount['💔']?`<button class="react-btn">💔 ${rCount['💔']}</button>`:''}${rCount['💰']?`<button class="react-btn">💰 ${rCount['💰']}</button>`:''}`;
-                            b.innerHTML += `<div class="msg-box"><div class="msg-avatar-container"><span style="font-size:10px; color:#ff2a5f;">${uData.carteira||0}¥</span><img src="${curAv}" class="msg-avatar"></div><div class="msg-content"><div style="display:flex; flex-direction:column; margin-bottom:5px;">${curTit?`<div class="title-tag ${curTit.raridade}" style="display:inline-block; width:fit-content; margin-bottom:2px;">${curTit.txt||curTit}</div>`:''}<strong style="color:var(--accent-blue); font-size:14px;">${m.nome} <span style="color:#555;font-size:10px; margin-left:5px;">${m.data}</span></strong></div><p style="font-size:13px; line-height:1.4; margin-top:2px;">${m.texto||''}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}<div style="margin-top:5px; display:flex; flex-wrap:wrap; gap:5px;">${reactHtml}</div></div></div>`; 
-                        }); b.scrollTop = b.scrollHeight; }
-                    } catch (err) { console.error("Erro ao renderizar chat:", err); }
-                });
-            }
-            
-            // Relógio Local
-            setInterval(() => {
-                let d = new Date();
-                let timeStr = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0');
-                if (document.getElementById('clockTime')) document.getElementById('clockTime').innerText = timeStr;
-                if(document.getElementById('clockTimeDesktop')) document.getElementById('clockTimeDesktop').innerText = timeStr;
-            }, 1000);
-            
-            // Auto abre o login ao iniciar
-            window.abrirModal();
-        };
-    </script>
+    <!-- CARREGAR O SCRIPT SEPARADO -->
+    <script src="script.js"></script>
 </body>
 </html>
