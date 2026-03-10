@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema do Distrito - OS V6.1 Master</title>
+    <title>Sistema do Distrito - OS V6.0 Master</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
@@ -23,12 +23,13 @@
         ::-webkit-scrollbar-track { background: #000; border-left: 1px solid #111; }
         ::-webkit-scrollbar-thumb { background: var(--accent-blue); border-radius: 10px; box-shadow: inset 0 0 10px rgba(0,229,255,0.8); }
 
-        /* INPUTS E BOTÕES GERAIS */
+        /* INPUTS */
         input, select { appearance: none; -webkit-appearance: none; background: #000 !important; color: #fff !important; border: 1px solid var(--accent-blue) !important; padding: 10px; border-radius: 4px; font-family: inherit; outline: none; width: 100%; box-shadow: inset 0 0 10px rgba(0, 229, 255, 0.1); }
         select { background: url('data:image/svg+xml;utf8,<svg fill="%2300e5ff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 10px center; }
         input:focus, select:focus { border-color: var(--accent-red) !important; box-shadow: inset 0 0 10px rgba(255, 26, 85, 0.3), 0 0 10px var(--accent-red); }
         button { font-family: inherit; cursor: pointer; transition: 0.3s; outline: none; }
 
+        /* TEXTOS NEON */
         h1, h2, h3, h4 { color: var(--accent-blue); text-shadow: 0 0 10px var(--accent-blue); text-transform: uppercase; margin-top: 0;}
         .neon-red { color: var(--accent-red) !important; text-shadow: 0 0 10px var(--accent-red) !important; }
         .neon-green { color: #00ff00 !important; text-shadow: 0 0 10px #00ff00 !important; }
@@ -45,18 +46,17 @@
         
         #loadingTerminal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index:9000; flex-direction:column; justify-content:center; align-items:center; color:#0f0; font-family:'Courier New', Courier, monospace; text-align:left; font-size:14px; text-shadow: 0 0 5px #0f0; }
 
-        /* AVISOS NEON NA TELA (ESTILO TOAST CYBERPUNK) */
-        #neonToast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #0a0a0f; border: 2px solid var(--accent-red); color: var(--accent-red); padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 0 30px var(--accent-red), inset 0 0 15px rgba(255,26,85,0.4); z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s, top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-align: center; text-transform: uppercase; white-space: nowrap;}
-        #neonToast.show { opacity: 1; top: 40px; }
-        #neonToast.green { border-color: #0f0; color: #0f0; box-shadow: 0 0 30px #0f0, inset 0 0 15px rgba(0,255,0,0.4); }
+        /* AVISOS NEON NA TELA */
+        #neonToast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #000; border: 2px solid var(--accent-red); color: var(--accent-red); padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 0 30px var(--accent-red), inset 0 0 15px rgba(255,26,85,0.4); z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s, top 0.3s; text-align: center; text-transform: uppercase; }
+        #neonToast.show { opacity: 1; top: 50px; }
 
-        /* === DESKTOP BASE E GAVETA DE AGENTES === */
-        #base-desktop { width: 100%; height: 100vh; background: #000; position: absolute; top:0; left:0; z-index: 1; display: none;}
-        
+        /* === DESKTOP BASE === */
+        #base-desktop { width: 100%; height: 100vh; background: #000; position: absolute; top:0; left:0; z-index: 1;}
+
+        /* GAVETA DE AGENTES (DIREITA) */
         .sidebar { width: 260px; background-color: rgba(5,5,8,0.95); border-left: 1px solid var(--accent-blue); padding: 15px; display: flex; flex-direction: column; transition: transform 0.3s ease; position: fixed; right: 0; top: 0; height: 100vh; z-index: 4500; backdrop-filter: blur(5px);}
         .sidebar.minimized { transform: translateX(100%); }
         .btn-toggle-sidebar { position: absolute; left: -40px; top: 20px; background: rgba(5,5,8,0.95); border: 1px solid var(--accent-blue); border-right: none; color: var(--accent-blue); width: 40px; height: 50px; display: flex; justify-content: center; align-items: center; cursor: pointer; font-weight: bold; font-size: 18px; border-radius: 8px 0 0 8px; }
-        
         .user-list { flex: 1; overflow-y: auto; margin-bottom: 20px; margin-top: 10px;}
         .user-item { background-color: rgba(0,0,0,0.5); padding: 10px; margin-bottom: 8px; border-left: 3px solid #555; font-size: 13px; border-radius: 4px;}
         .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
@@ -65,96 +65,76 @@
 
         /* BOTÕES FLUTUANTES GLOBAIS (ESQUERDA INFERIOR) */
         .floating-controls { position: fixed; bottom: 20px; left: 20px; display: flex; gap: 15px; z-index: 4500; }
-        
         .btn-floating { width: 55px; height: 55px; background: rgba(0,0,0,0.85); border: 2px solid var(--accent-blue); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 26px; cursor: pointer; box-shadow: 0 0 20px rgba(0,229,255,0.5); transition: transform 0.2s;}
         .btn-floating:hover { transform: scale(1.1); background: var(--accent-blue); color:#000; text-shadow: none; }
-        
-        #btnHomeApp { border-color: var(--accent-red); color: var(--accent-red); box-shadow: 0 0 15px rgba(255,26,85,0.5); display: none; font-weight: bold; font-size: 20px;}
+        #btnHomeApp { border-color: var(--accent-red); color: var(--accent-red); box-shadow: 0 0 15px rgba(255,26,85,0.5); display: none; font-weight: bold;}
         #btnHomeApp:hover { background: var(--accent-red); color: #000; }
 
-        /* === SISTEMA OPERACIONAL (SMARTPHONE UI BG) === */
-        #phoneOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.9); z-index: 4000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);}
+        /* === SISTEMA OPERACIONAL (SMARTPHONE UI) === */
+        #phoneOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.8); z-index: 4000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);}
         
-        /* O Frame do Celular Focado */
         .phone-frame { 
             position: relative;
             width: 100%; 
             max-width: 400px; 
-            aspect-ratio: 9 / 19; /* Proporção padrão de tela mobile moderna */
-            max-height: 90vh; 
+            aspect-ratio: 9 / 18.5; /* Mantém a proporção real de um celular */
+            max-height: 90vh; /* Não deixa vazar no PC */
             background-image: url('bg.png'); 
-            background-size: cover;
-            background-position: center top; 
+            background-size: 100% 100%; 
             border-radius: 35px; 
             box-shadow: 0 0 60px rgba(0,229,255,0.2), inset 0 0 20px rgba(0,0,0,0.8); 
-            border: 4px solid #111;
         }
 
         @media(max-width: 500px) { 
-            .phone-frame { border-radius: 0; border: none; max-width: none; max-height: none; height: 100vh; aspect-ratio: auto; } 
+            .phone-frame { border-radius: 0; max-width: none; max-height: none; height: 100vh; aspect-ratio: auto; background-size: cover; background-position: center;} 
         }
         
-        /* HITBOX GRID PARA O CELULAR - Totalmente Invisíveis e Alinhados à Imagem */
+        /* THE HITBOX GRID FOR BG.PNG APPS - Totalmente Invisíveis */
         .phone-apps-grid { 
             position: absolute; 
-            top: 18%; 
-            bottom: 18%; 
-            left: 10%; 
-            right: 10%; 
+            top: 10%; bottom: 20%; left: 8%; right: 8%; 
             display: grid; 
             grid-template-columns: 1fr 1fr; 
             grid-template-rows: repeat(4, 1fr); 
             gap: 15px; 
         }
         
-        /* Hitboxes Totalmente Transparentes e sem cadeado visível */
-        .app-hitbox { background: transparent; border: none; cursor: pointer; border-radius: 20px; outline: none; transition: 0.1s; }
-        .app-hitbox:hover { box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.4); border: 2px solid rgba(0, 229, 255, 0.3); }
-        .app-hitbox:active { background: rgba(0, 229, 255, 0.2); transform: scale(0.95);}
-        .app-hitbox.locked { cursor: not-allowed; }
-        .app-hitbox.locked:hover { box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.4); border: 2px solid rgba(255, 0, 0, 0.3); }
+        .app-hitbox { background: transparent; border: none; cursor: pointer; border-radius: 20px; transition: 0.1s; }
+        .app-hitbox:active { background: rgba(255,255,255,0.2); transform: scale(0.95); }
 
-        .close-phone-btn { position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%); color: #fff; background: rgba(0,0,0,0.8); border: 1px solid var(--accent-red); width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; font-weight: bold; box-shadow: 0 0 15px var(--accent-red);}
+        .close-phone-btn { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); color: #fff; background: rgba(0,0,0,0.8); border: 1px solid var(--accent-red); width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px var(--accent-red);}
 
-        /* === ESTRUTURA DOS APPLICATIVOS ABERTOS (FULLSCREEN) === */
-        #gameContainer { display: none; width: 100%; height: 100vh; position: absolute; top:0; left:0; background: #07070a; overflow: hidden; flex-direction: column; z-index: 1000;}
+        /* === ESTRUTURA DOS APPLICATIVOS (FULLSCREEN) === */
+        #gameContainer { display: none; width: 100%; height: 100vh; position: absolute; top:0; left:0; background: #07070a; overflow-y: auto; z-index: 1000; padding: 20px; padding-bottom: 90px;}
         
-        .top-bar { width: 100%; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.9); border-bottom: 1px solid var(--accent-blue); z-index: 1000; box-shadow: 0 0 15px rgba(0,229,255,0.2);}
-        .clock-hud { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 5px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; box-shadow: 0 0 10px rgba(0,229,255,0.4); text-align: center; margin-left: auto; }
-        
-        #appContainer { width: 100%; height: calc(100vh - 50px); position: relative; overflow-y: auto; padding: 20px; padding-bottom: 90px;}
-        @media(max-width: 800px) { #appContainer { padding: 10px 5px 80px 5px; } }
-
-        .tab-content { display: none; width: 100%; height: 100%; max-width: 1200px; margin: 0 auto; flex-direction: column; animation: fadeIn 0.3s; }
+        .tab-content { display: none; width: 100%; max-width: 1200px; margin: 0 auto; flex-direction: column; animation: fadeIn 0.3s; }
         .tab-content.active { display: flex; }
         @keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
 
-        /* === HUD PERSONAGEM E DADOS NEON === */
+        /* HUD DO TOPO (MY GAMBLE / GERAL) */
         .profile-header-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; background: #0a0a0f; padding: 15px; border: 1px dashed var(--accent-blue); border-radius: 8px; margin-bottom: 15px;}
         .profile-stat-box { display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; border: 1px solid #333; padding: 10px; border-radius: 4px; text-align: center;}
         
-        .hp-input-container { display: flex; align-items: center; justify-content: space-between; background: #0a0000; border: 1px solid var(--accent-red); padding: 8px 12px; border-radius: 4px; box-shadow: inset 0 0 15px rgba(255,26,85,0.2), 0 0 10px rgba(255,26,85,0.2); color: var(--accent-red); font-weight: bold; text-shadow: 0 0 5px var(--accent-red);}
-        .hp-input-container input { width: 60px; text-align: right; font-size: 18px !important; color: var(--accent-red) !important; border: none !important; padding: 0 !important; font-weight: bold; background: transparent !important; box-shadow: none !important; text-shadow: 0 0 5px var(--accent-red);}
-
         .attr-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #ccc; border-bottom: 1px dashed #222; padding: 10px 0;}
         .val-display { color: var(--accent-blue); font-weight: bold; width: 25px; text-align: center; font-size: 16px;}
-        .btn-attr { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); display: flex; justify-content: center; align-items: center; border-radius: 4px; font-weight: bold; font-size: 11px; padding: 4px 8px; box-shadow: inset 0 0 5px rgba(0,229,255,0.3); letter-spacing: 1px;}
-        .btn-attr:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); text-shadow: none;}
+        .btn-attr { background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); width: 28px; height: 28px; display: flex; justify-content: center; align-items: center; border-radius: 4px; font-weight: bold; font-size: 14px;}
+        .btn-attr:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); }
 
-        .dice-quick-btn { background: #000; border: 1px dashed var(--accent-blue); color: var(--accent-blue); padding: 8px; font-size: 12px; cursor: pointer; border-radius: 4px; flex: 1; text-align: center; font-weight: bold; letter-spacing: 1px;}
+        .dice-quick-btn { background: #000; border: 1px dashed var(--accent-blue); color: var(--accent-blue); padding: 8px; font-size: 12px; cursor: pointer; border-radius: 4px; flex: 1; text-align: center; font-weight: bold;}
         .dice-quick-btn:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); }
 
         .integrity-bar-bg { width: 100%; background: #222; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 5px; border: 1px solid #0f0;}
         .integrity-bar-fill { height: 100%; background: #00ff00; width: 0%; transition: width 0.5s linear; box-shadow: 0 0 10px #00ff00;}
 
         /* --- MAPA E VTT ORTOGONAL --- */
-        .map-container-main { display: flex; flex-direction: column; gap: 15px; width: 100%; height: 100%;}
+        .map-container-main { display: flex; flex-direction: column; gap: 15px; width: 100%; min-height: 80vh;}
         @media(min-width: 900px) { .map-container-main { flex-direction: row; align-items: stretch;} }
 
         .rpg-hud-map { width: 100%; background: rgba(5, 5, 10, 0.95); border: 1px solid var(--accent-blue); padding: 15px; border-radius: 8px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 0 20px rgba(0,229,255,0.1); flex-shrink: 0;}
-        @media(min-width: 900px) { .rpg-hud-map { width: 320px; overflow-y: auto;} }
+        @media(min-width: 900px) { .rpg-hud-map { width: 300px; max-height: 80vh; overflow-y: auto;} }
 
-        .map-visual-area { flex: 1; position: relative; overflow: hidden; border: 2px solid var(--accent-blue); border-radius: 8px; box-shadow: inset 0 0 50px rgba(0,229,255,0.2); min-height: 500px;}
+        .map-visual-area { flex: 1; position: relative; overflow: hidden; border: 2px solid var(--accent-blue); border-radius: 8px; box-shadow: inset 0 0 50px rgba(0,229,255,0.2); min-height: 60vh;}
+        
         .map-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: #000; background-image: url('mapa1.png'); background-size: cover; background-position: center; transition: 0.5s; cursor: pointer;}
         .map-overlay-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; background: rgba(0, 0, 10, 0.7); background-image: linear-gradient(rgba(0, 229, 255, 0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 229, 255, 0.15) 1px, transparent 1px); background-size: 40px 40px; z-index: 1; }
 
@@ -162,7 +142,6 @@
         .map-node { position: absolute; width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--accent-blue); background: #000; transform: translate(-50%, -50%); cursor: pointer; box-shadow: 0 0 10px var(--accent-blue), inset 0 0 10px var(--accent-blue); z-index: 10; display: flex; justify-content: center; align-items: center; transition: 0.2s;}
         .map-node::after { content: ''; width: 10px; height: 10px; background: var(--accent-blue); border-radius: 50%; }
         .map-node.danger { border-color: var(--accent-red); box-shadow: 0 0 20px var(--accent-red), inset 0 0 10px var(--accent-red); animation: pulseDanger 1s infinite;}
-        .map-node.danger::after { background: var(--accent-red); }
         
         .node-label { position: absolute; top: 35px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.8); padding: 3px 8px; border-radius: 4px; white-space: nowrap; border: 1px solid #333; pointer-events: none;}
         
@@ -172,7 +151,7 @@
 
         @keyframes pulseDanger { 0% { box-shadow: 0 0 5px #f00; } 50% { box-shadow: 0 0 20px #f00; } 100% { box-shadow: 0 0 5px #f00; } }
 
-        /* VTT INTERIOR E TÁTICAS (GLIDE / ALCANCE) */
+        /* VTT INTERIOR E TÁTICAS (ALCANCE / SLIDE) */
         .submap-canvas { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505; z-index: 100; flex-direction: column; padding: 15px; background-size: cover; background-position: center;}
         
         .tactical-board { flex: 1; position: relative; background: rgba(0,0,0,0.7); border-top: 2px solid var(--accent-blue); overflow: hidden;}
@@ -204,7 +183,7 @@
         .eating-bar-bg { width: 300px; height: 25px; border: 2px solid #00ff00; border-radius: 12px; padding: 3px; background: #111; }
         .eating-bar-fill { height: 100%; background: #00ff00; width: 0%; box-shadow: 0 0 20px #00ff00; border-radius: 8px; }
 
-        /* DADOS OVERLAY (Pular animação) */
+        /* DADOS OVERLAY (SKIP CLICÁVEL) */
         .dice-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 8000; display: none; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
         .dice-box-panel { background: rgba(5,5,10,0.95); border: 2px solid var(--accent-blue); border-radius: 15px; padding: 40px; box-shadow: 0 0 60px rgba(0,229,255,0.5); text-align: center; width: 90%; max-width: 400px; pointer-events: none;}
         .dice-spinners { display: flex; gap: 15px; margin: 25px 0; font-size: 36px; font-weight: bold; color: var(--accent-red); text-shadow: 0 0 20px var(--accent-red); font-family: monospace; flex-wrap: wrap; justify-content: center;}
@@ -228,11 +207,13 @@
         .item-tetris.Comida { background: rgba(0, 255, 102, 0.8); border: 1px solid var(--rarity-inc); color: #000;}
         .item-tetris.Tecnologia { background: rgba(176, 0, 255, 0.8); border: 1px solid var(--accent-purple); }
         .item-tetris.Móvel { background: rgba(255, 170, 0, 0.8); border: 1px solid var(--rarity-leg); color: #000;}
+        .item-tetris.Acessório { background: rgba(200, 200, 200, 0.8); border: 1px solid #fff; color: #000;}
+        .item-tetris.Mochila { background: rgba(100, 100, 100, 0.8); border: 1px solid #fff; color: #000;}
 
         .inv-itens-soltos { display: flex; flex-wrap: wrap; gap: 10px; min-height: 80px; padding: 15px; background: #0a0a0f; border: 1px dashed var(--accent-blue); border-radius: 8px; margin-top: 15px;}
         .inv-itens-soltos .item-tetris { position: relative !important; left: auto !important; top: auto !important;}
 
-        /* PANTEÃO ROLETA */
+        /* PANTEÃO ROLETA GACHA E LISTA */
         .gacha-container { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 20px; margin-bottom: 20px; }
         .gacha-display { width: 100%; max-width:600px; min-height: 220px; display: flex; gap:20px; align-items: center; justify-content: center; background:#050505; border: 2px dashed var(--accent-purple); padding:20px; border-radius:12px; box-shadow: inset 0 0 30px rgba(176,0,255,0.1); flex-wrap: wrap;}
         
@@ -242,15 +223,12 @@
         .card.selected { border-color: #0f0; box-shadow: 0 0 30px #0f0;}
         @keyframes slotMachine { 0% { transform: translateY(-2px); } 50% { transform: translateY(2px); } 100% { transform: translateY(-2px); } }
 
-        /* === IGAMBLE CHAT PREMIUM E SCROLL CORRIGIDO === */
+        /* IGAMBLE CHAT PREMIUM */
         .igamble-wrapper { display: flex; flex-direction: column; gap: 20px; width: 100%; height: 100%;}
         @media(min-width: 768px) { .igamble-wrapper { flex-direction: row; } }
-        
-        .igamble-side { flex: none; min-width: 250px; max-width: 350px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto;}
-        
-        /* Box do Chat Flexivel para caber input embaixo e mensagens no meio rolando */
-        .igamble-chat { flex: 1; display: flex; flex-direction: column; background: #050508; border: 1px solid var(--accent-blue); border-radius: 8px; box-shadow: 0 0 20px rgba(0,229,255,0.1); overflow: hidden; min-height: 400px; }
-        
+        .igamble-side { flex: 1; min-width: 250px; max-width: 350px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto;}
+        .igamble-chat { flex: 2; display: flex; flex-direction: column; background: #050508; border: 1px solid var(--accent-blue); border-radius: 8px; box-shadow: 0 0 20px rgba(0,229,255,0.1); height: 100%; overflow: hidden; min-height: 500px;}
+
         .avatar-maker-panel { background: #0a0a0f; border: 1px dashed var(--accent-blue); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px;}
         .avatar-grid-select { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; max-height: 250px; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #333; border-radius: 4px;}
         .av-thumb { width: 45px; height: 45px; cursor: pointer; border-radius: 50%; border: 2px solid transparent; transition: 0.2s; background: #111; object-fit: cover;} 
@@ -258,7 +236,7 @@
         .av-thumb.selected { border-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
 
         .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
-        .chat-input-area { flex-shrink: 0; display: flex; padding: 10px; background: #000; border-top: 1px solid var(--accent-blue); align-items: center; gap: 10px;}
+        .chat-input-area { display: flex; padding: 10px; background: #000; border-top: 1px solid var(--accent-blue); align-items: center; gap: 10px;}
         .chat-input-area input { flex: 1; border: none !important; box-shadow: none !important; padding: 12px; font-size: 14px; background: #111 !important;}
         .neon-icon-btn { background: transparent !important; color: var(--accent-blue) !important; border: none !important; font-size: 24px; text-shadow: 0 0 10px var(--accent-blue); padding: 0 5px; width: auto;}
         .neon-icon-btn:hover { color: #fff !important; text-shadow: 0 0 15px #fff;}
@@ -270,7 +248,7 @@
         .msg-image { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 8px; object-fit: contain; border: 1px solid var(--accent-blue); background: #000; display: block;}
 
         .title-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-weight: bold; text-transform: uppercase; border: 1px solid currentColor;}
-        .title-tag.inc { color: var(--rarity-inc); text-shadow: 0 0 5px var(--rarity-inc);} .title-tag.rar { color: var(--rarity-rar); text-shadow: 0 0 5px var(--rarity-rar);} .title-tag.epi { color: var(--rarity-epi); text-shadow: 0 0 8px var(--rarity-epi); } .title-tag.leg { color: var(--rarity-leg); text-shadow: 0 0 10px var(--rarity-leg); }
+        .title-tag.com { color: var(--rarity-com); } .title-tag.inc { color: var(--rarity-inc); text-shadow: 0 0 5px var(--rarity-inc);} .title-tag.rar { color: var(--rarity-rar); text-shadow: 0 0 5px var(--rarity-rar);} .title-tag.epi { color: var(--rarity-epi); text-shadow: 0 0 8px var(--rarity-epi); } .title-tag.leg { color: var(--rarity-leg); text-shadow: 0 0 10px var(--rarity-leg); }
 
         .react-btn { background: #000; border: 1px solid #555; color: #aaa; border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer; margin-right: 5px;}
         .react-btn:hover { background: #333; color: #fff; border-color: var(--accent-blue);}
@@ -291,9 +269,9 @@
 <body>
 
     <!-- OVERLAYS E CARREGAMENTO -->
-    <div id="eatingOverlay" class="eating-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9000; display:none; flex-direction:column; justify-content:center; align-items:center;">
-        <h2 id="eatingTitle" style="color:#0f0; font-size:28px; font-weight:bold; text-shadow:0 0 20px #0f0; margin-bottom:20px;">CONSUMINDO...</h2>
-        <div style="width:300px; height:25px; border:2px solid #0f0; border-radius:12px; padding:3px; background:#111;"><div id="eatingFill" style="height:100%; background:#0f0; width:0%; box-shadow:0 0 20px #0f0; border-radius:8px;"></div></div>
+    <div id="eatingOverlay" class="eating-overlay">
+        <h2 id="eatingTitle" class="eating-text">CONSUMINDO...</h2>
+        <div class="eating-bar-bg"><div id="eatingFill" class="eating-bar-fill"></div></div>
     </div>
 
     <div id="loadingTerminal">
@@ -306,11 +284,11 @@
 
     <!-- PAINEL DE DADOS (ROLETA) -->
     <div id="globalDiceOverlay" class="dice-overlay" onclick="window.fecharDadoOverlay()">
-        <div class="dice-box-panel" style="background:rgba(5,5,10,0.95); border:2px solid var(--accent-blue); border-radius:15px; padding:40px; box-shadow:0 0 60px rgba(0,229,255,0.5); text-align:center;">
+        <div class="dice-box-panel">
             <h2 style="margin:0; color:var(--accent-blue); text-shadow:0 0 10px var(--accent-blue);">RESULTADO DOS DADOS</h2>
             <p id="diceRollerName" style="color:#fff; margin:5px 0; font-weight:bold;"></p>
             <p id="diceFormulaLabel" style="color:#aaa; font-size:12px; margin:0;"></p>
-            <div id="diceSpinners" style="display:flex; gap:15px; margin:25px 0; font-size:36px; font-weight:bold; color:var(--accent-red); text-shadow:0 0 20px var(--accent-red); justify-content:center;"></div>
+            <div class="dice-spinners" id="diceSpinners"></div>
             <div id="diceFinalResult" style="display:none; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:10px;"></div>
             <p style="color:#555; font-size:10px; margin-top:25px;">[ Clique em qualquer lugar para pular animação ]</p>
         </div>
@@ -358,14 +336,14 @@
         <div id="phoneOverlay">
             <div class="phone-frame">
                 
-                <!-- TELA INICIAL (APPS NO BG.PNG COM HITBOXES INVISIVEIS) -->
+                <!-- TELA INICIAL (APPS NO BG.PNG) -->
                 <div class="phone-apps-grid">
-                    <button class="app-hitbox" onclick="window.abrirApp('tab-loja', false)" title="Gamblezon"></button>
-                    <button class="app-hitbox" onclick="window.abrirApp('tab-mapa', false)" title="Gamble Maps"></button>
-                    <button class="app-hitbox" onclick="window.abrirApp('tab-igamble', false)" title="iGAMBLE"></button>
-                    <button class="app-hitbox" onclick="window.abrirApp('tab-personagem', false)" title="My Gamble"></button>
-                    <button class="app-hitbox" onclick="window.abrirApp('none', true, 'NuGamble está Fora do Ar!')" title="NuGamble"></button>
-                    <button class="app-hitbox" onclick="window.abrirApp('tab-panteao', false)" title="Patronos"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-loja')" title="Gamblezon"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-mapa')" title="Gamble Maps"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-igamble')" title="iGAMBLE"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-personagem')" title="My Gamble"></button>
+                    <button class="app-hitbox locked" onclick="window.abrirApp('none', true, 'NuGamble está Fora do Ar!')" title="NuGamble"></button>
+                    <button class="app-hitbox" onclick="window.abrirApp('tab-panteao')" title="Patronos"></button>
                     <button class="app-hitbox locked" id="hb-casa" title="Gamble House"></button>
                     <button class="app-hitbox locked" id="hb-celular" title="Gamblenger"></button>
                 </div>
@@ -379,9 +357,6 @@
 
             <!-- CONTAINER CENTRAL (TABS) -->
             <div id="appContainer">
-                <div class="top-bar">
-                    <div class="clock-hud"><div id="clockDate" style="font-size: 9px; color:#888;">09/03/2026</div><div id="clockTime">--:--</div></div>
-                </div>
 
                 <!-- ABA MAPA E VTT -->
                 <div id="tab-mapa" class="tab-content active">
@@ -389,26 +364,22 @@
                         
                         <!-- HUD LATERAL VTT -->
                         <div class="rpg-hud-map">
-                            <div class="hp-input-container">
-                                <span style="font-size:16px;">❤️ HP</span>
-                                <div><input type="number" id="hpInput" value="100" onchange="window.atualizarHP()"> / <span id="hpMaxLabel" style="color:#aaa; font-size:12px;">100</span></div>
-                            </div>
+                            <div class="hp-input-container"><span>❤️ HP</span><div><input type="number" id="hpInput" value="100" onchange="window.atualizarHP()"> / <span id="hpMaxLabel" style="color:#aaa; font-size:12px;">100</span></div></div>
                             
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; background: #0a0a0f; padding: 5px 10px; border: 1px solid var(--accent-blue); border-radius: 4px;">
+                            <div class="ar-container">
                                 <span style="font-size: 12px; color: var(--accent-blue); text-shadow: 0 0 5px var(--accent-blue);">🛡️ AR: <strong id="lblDef" class="neon-blue">0</strong></span>
                                 <span style="font-size: 12px;">Pts Livres: <strong id="lblPts" class="neon-gold">0</strong></span>
                             </div>
                             
-                            <!-- Dados estilo Botões Neon -->
-                            <div class="attr-row"><span>Força [F]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valFor" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Força','for')">[ D20 ]</button><button class="btn-attr" onclick="window.distribuirPonto('for')">+</button></div></div>
-                            <div class="attr-row"><span>Agilidade [A]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valAgi" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Agilidade','agi')">[ D20 ]</button><button class="btn-attr" onclick="window.distribuirPonto('agi')">+</button></div></div>
-                            <div class="attr-row"><span>Manuseio [M]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valMan" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Manuseio','man')">[ D20 ]</button><button class="btn-attr" onclick="window.distribuirPonto('man')">+</button></div></div>
-                            <div class="attr-row"><span>Vigor [V]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valVig" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Vigor','vig')">[ D20 ]</button><button class="btn-attr" onclick="window.distribuirPonto('vig')">+</button></div></div>
-                            <div class="attr-row"><span>Inteligência [I]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valInt" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Inteligência','int')">[ D20 ]</button><button class="btn-attr" onclick="window.distribuirPonto('int')">+</button></div></div>
+                            <div class="attr-row"><span>Força [F]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valFor" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Força','for')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('for')">+</button></div></div>
+                            <div class="attr-row"><span>Agilidade [A]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valAgi" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Agilidade','agi')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('agi')">+</button></div></div>
+                            <div class="attr-row"><span>Manuseio [M]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valMan" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Manuseio','man')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('man')">+</button></div></div>
+                            <div class="attr-row"><span>Vigor [V]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valVig" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Vigor','vig')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('vig')">+</button></div></div>
+                            <div class="attr-row"><span>Inteligência [I]</span><div style="display:flex;gap:5px; align-items:center;"><span id="valInt" class="val-display">1</span><button class="btn-attr" onclick="window.rolarAtributo('Inteligência','int')">🎲</button><button class="btn-attr" onclick="window.distribuirPonto('int')">+</button></div></div>
                             
                             <div style="margin-top:10px; font-size: 11px;">Saturação (<span id="lblIntegMax">100</span>%): <span id="lblIntegVal" class="neon-green">100%</span><div class="integrity-bar-bg"><div id="integrityBar" class="integrity-bar-fill"></div></div></div>
                             
-                            <div class="skills-container" style="width: 100%; background: #0a0a0f; padding: 15px; border: 1px solid var(--accent-blue); border-radius: 8px; margin-top: 15px;">
+                            <div class="skills-container">
                                 <span style="color:#fff; font-size:12px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:5px; display:block;">Perícias Oficiais</span>
                                 <div style="display:flex; gap:5px; margin-top:5px;">
                                     <select id="comboPericias">
@@ -433,7 +404,7 @@
                                 <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d100')">d100</button>
                             </div>
 
-                            <div style="margin-top: auto;">
+                            <div class="dice-panel" style="margin-top: auto;">
                                 <div style="background:#1a1a24; padding:5px; text-align:center; font-weight:bold; color:var(--accent-blue); border-bottom:1px solid #333; font-size:11px;">Mesa de Dados</div>
                                 <div id="diceLog" style="flex:1; overflow-y:auto; font-size:11px; padding:5px; background:#000; min-height: 80px; max-height: 120px;"></div>
                             </div>
@@ -464,7 +435,7 @@
                                     </div>
                                 </div>
                                 
-                                <div id="vttFoodActions" style="display:flex; gap:10px; flex-wrap:wrap; padding:10px;"></div>
+                                <div id="vttFoodActions" class="food-action-bar"></div>
                                 
                                 <div class="tactical-board" id="tacticalBoard">
                                     <div id="roomOverlays"></div>
@@ -635,25 +606,17 @@
         </div>
     </div>
 
-    <!-- POPUP REACTS FIXO -->
-    <div id="emojiPopupDynamic" class="emoji-popup">
-        <button class="emoji-btn" onclick="window.executarReacao('🔥')">🔥</button><button class="emoji-btn" onclick="window.executarReacao('💀')">💀</button>
-        <button class="emoji-btn" onclick="window.executarReacao('😂')">😂</button><button class="emoji-btn" onclick="window.executarReacao('👀')">👀</button>
-        <button class="emoji-btn" onclick="window.executarReacao('💯')">💯</button><button class="emoji-btn" onclick="window.executarReacao('🤡')">🤡</button>
-        <button class="emoji-btn" onclick="window.executarReacao('💔')">💔</button><button class="emoji-btn" onclick="window.executarReacao('💰')">💰</button>
-    </div>
-
-    <!-- ========================================================================= -->
-    <!-- === ÚNICO BLOCO DE SCRIPT (FUNÇÕES GLOBAIS E LÓGICA DO SISTEMA) ======= -->
-    <!-- ========================================================================= -->
+    <!-- SCRIPT GLOBAIS BLINDADOS (TOPO DO CÓDIGO) -->
     <script>
-        // --- 1. DEFINIÇÃO DE VARIÁVEIS GLOBAIS ESTÁTICAS E DEUSES ---
-        window.titulosExtensos = [
-            "Novato|com|0", "Alvo Fácil|com|500", "Rato de Beco|com|800", "Corredor|com|1000", "Sobrevivente|com|1200", "Apostador|com|1500",
-            "Lutador|inc|2000", "Atirador|inc|2500", "Sombra|inc|3000", "Estrategista|rar|6000", "Investigador|rar|7000",
-            "O Hacker|epi|12000", "Ceifador|epi|30000", "Demônio de Neon|leg|40000", "Deus das Apostas|leg|45000", "A Lenda Viva|leg|60000", "Líder Supremo|leg|100000"
-        ];
+        // 1. CONFIGURAÇÕES BASE E DEUSES
+        window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
+        window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
+        window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.movimentosRestantes = 0; window.connectionRef = null;
+        window.MASTER_SERIAL = "4053-DC1";
         
+        window.codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
+        window.iconesMercado = { "Arma": "🔫", "Roupa": "🦺", "Comida": "🍫", "Móvel": "🪑", "Tecnologia": "📱", "Acessório": "📿", "Mochila": "🎒" };
+
         window.deusesPanteao = [
             { nome: "Oizus (Miséria)", desc: "Dobra risco do adversário e reduz o seu." },
             { nome: "Afrodite (Desejo)", desc: "Força acordo não-letal irresistível." },
@@ -683,28 +646,34 @@
             "p11":{ nome: "Covil de Hackers", x: 85, y: 50, salas: [{n:"Servidores", x:2, y:2, w:12, h:8}], obs:["3_3","4_3","3_4","4_4","11_8","12_8","11_7","12_7","7_5","8_6"] },
             "p12":{ nome: "Mercado Negro", x: 85, y: 65, salas: [{n:"Cruz", x:6, y:1, w:4, h:10}, {n:"Centro", x:2, y:4, w:12, h:4}], obs:["7_2","8_2","3_6","12_6","7_10","8_10"] },
             "p13":{ nome: "QG da Yakuza", x: 65, y: 80, salas: [{n:"Dojo", x:2, y:2, w:12, h:8}], obs:["4_4","11_4","4_9","11_9","7_6","8_6"] },
-            "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: [{n:"Hexágono", x:4, y:2, w:8, h:8}, {n:"Borda", x:2, y:4, w:2, h:4}, {n:"Borda", x:12, y:4, w:2, h:4}], obs:["5_3","10_3","5_8","10_8","3_5","13_5","7_5","8_5"] },
+            "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: [{n:"Hexágono (Simulado)", x:4, y:2, w:8, h:8}, {n:"Borda", x:2, y:4, w:2, h:4}, {n:"Borda", x:12, y:4, w:2, h:4}], obs:["5_3","10_3","5_8","10_8","3_5","13_5","7_5","8_5"] },
             "p15":{ nome: "Cemitério", x: 35, y: 80, salas: [{n:"Túmulos", x:2, y:2, w:12, h:8}], obs:["4_3","4_4","7_5","7_6","10_8","10_9","12_3","12_4","3_8"]}
         };
-
         window.conexoesMapa = [ {de:"p1", para:"p2"}, {de:"p2", para:"p3"}, {de:"p1", para:"p4"}, {de:"p1", para:"p5"}, {de:"p5", para:"p6"}, {de:"p1", para:"p9"}, {de:"p9", para:"p10"}, {de:"p10", para:"p11"}, {de:"p11", para:"p12"}, {de:"p2", para:"p13"}, {de:"p13", para:"p14"}, {de:"p3", para:"p8"}, {de:"p7", para:"p6"}, {de:"p3", para:"p7"}, {de:"p2", para:"p15"}, {de:"p4", para:"p13"} ];
         window.rotasSecretasGaia = [ {de:"p1", para:"p6"}, {de:"p15", para:"p10"}, {de:"p8", para:"p14"}, {de:"p11", para:"p4"} ];
-        window.iconesMercado = { "Arma": "🔫", "Roupa": "🦺", "Comida": "🍫", "Móvel": "🪑", "Tecnologia": "📱", "Acessório": "📿", "Mochila": "🎒" };
 
-        window.currentSpinInterval = null; window.currentSpinTimeout = null;
         window.filtroLojaAtual = "Tudo"; window.editandoItemId = null;
         window.GRID_COLS = 5; window.GRID_ROWS = 3; window.CELL_SIZE = 45; window.GRID_GAP = 1; window.REAL_CELL_SIZE = window.CELL_SIZE + window.GRID_GAP;
         window.tetrisMatrix = []; window.arrastandoKey = null; window.itemArrastado = null; window.offsetX = 0; window.offsetY = 0; window.origin = null; window.initPos = {c:-1, r:-1};
 
-        // INICIALIZAÇÃO FIREBASE 
+        window.titulosExtensos = [
+            "Novato|com|0", "Alvo Fácil|com|500", "Rato de Beco|com|800", "Corredor|com|1000", "Sobrevivente|com|1200", "Apostador|com|1500",
+            "Lutador|inc|2000", "Atirador|inc|2500", "Sombra|inc|3000", "Estrategista|rar|6000", "Investigador|rar|7000",
+            "O Hacker|epi|12000", "Ceifador|epi|30000", "Demônio de Neon|leg|40000", "Deus das Apostas|leg|45000", "A Lenda Viva|leg|60000", "Líder Supremo|leg|100000"
+        ];
+        
+        window.currentSpinInterval = null;
+        window.currentSpinTimeout = null;
+
+        // INICIALIZAÇÃO FIREBASE (Evita erro de load)
         try { firebase.initializeApp(window.firebaseConfig); window.db = firebase.database(); } catch (e) { console.error("Firebase falhou:", e); }
 
-        // --- 2. FUNÇÕES ÚTEIS GLOBAIS E MANIPULADORES DOM ---
         window.setElText = function(id, t) { let e = document.getElementById(id); if(e) e.innerText = t; };
         window.setElHTML = function(id, h) { let e = document.getElementById(id); if(e) e.innerHTML = h; };
         window.setElDisplay = function(id, d) { let e = document.getElementById(id); if(e) e.style.display = d; };
         window.setElVal = function(id, v) { let e = document.getElementById(id); if(e) e.value = v; };
-
+        
+        // TOAST NEON AVISO
         window.showNeonToast = function(msg) {
             let t = document.getElementById("neonToast");
             if(t) {
@@ -722,18 +691,19 @@
 
         window.getSafeRpg = function(u) { 
             let d = { for: 1, agi: 1, man: 1, vig: 1, int: 1, pontosLivres: 3, nivel: 1, integridade: 100, hp: 100 }; 
-            if (!u || !u.rpg) return d; let r = u.rpg;
+            if (!u || !u.rpg) return d;
+            let r = u.rpg;
             let spent = Math.max(0, (r.for||1)-1) + Math.max(0, (r.agi||1)-1) + Math.max(0, (r.man||1)-1) + Math.max(0, (r.vig||1)-1) + Math.max(0, (r.int||1)-1);
             let realPts = Math.max(0, 3 + ((r.nivel||1)-1) - spent);
             return { for: r.for||1, agi: r.agi||1, man: r.man||1, vig: r.vig||1, int: r.int||1, pontosLivres: (r.pontosLivres!==undefined)?r.pontosLivres:realPts, nivel: r.nivel||1, integridade: (r.integridade!==undefined)?r.integridade:100, hp: (r.hp!==undefined)?r.hp:100 };
         };
-
+        
         window.calcularMaxInteg = function(u) { let m = 100; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.buffType==="integ" && i.poder) m += parseInt(i.poder); }); return m; };
         window.calcularBuffsMoveis = function(u) { let buffs = { for:0, agi:0, int:0, vig:0, man:0 }; if(u && u.casa) Object.values(u.casa).forEach(i => { if(i.tipo==="Móvel" && i.buffType && i.poder && buffs[i.buffType] !== undefined) buffs[i.buffType] += parseInt(i.poder); }); return buffs; };
         window.calcularDefesa = function(u) { let def = 0; if(u && u.mochila) { Object.values(u.mochila).forEach(i => { if(i.eq && i.tipo === 'Roupa') def += (parseInt(i.poder) || 0); }); } return def; };
         window.getPesoStatus = function(u) { let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let max = 10 + ((r.for+buffs.for)*5); let peso = 0; if(u?.mochila) Object.values(u.mochila).forEach(i => peso += (parseInt(i.peso)||1)); return {atual:peso, max:max, sobrepeso: peso > max}; };
 
-        // --- 3. LÓGICA DE INTERFACE OS E APPS ---
+        // === 4. INTERFACE GLOBAL E SISTEMA OS ===
         window.abrirCelularMain = function() {
             window.setElDisplay("phoneOverlay", "flex");
         };
@@ -745,17 +715,15 @@
         window.abrirApp = function(appId, isLocked, lockMsg) {
             if(isLocked) { window.showNeonToast(lockMsg); return; }
             
-            let u = window.usersGlobais[window.jogadorAtual] || {};
-            if(appId === 'tab-celular' && (!u.numero) && !window.isMaster) { window.showNeonToast("Compre um Celular na Loja."); return; }
-            if(appId === 'tab-casa' && (!u.casa || Object.keys(u.casa).length === 0) && !window.isMaster) { window.showNeonToast("Compre um Imóvel."); return; }
-            
             window.fecharCelular(); 
-            window.setElDisplay("gameContainer", "flex");
+            window.setElDisplay("gameContainer", "block");
             window.setElDisplay("btnHomeApp", "flex");
-            window.setElDisplay("base-desktop", "none");
             
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             let a = document.getElementById(appId); if(a) a.classList.add('active');
+            
+            let titles = {"tab-loja": "Gamblezon", "tab-mapa": "Gamble Maps", "tab-igamble": "iGAMBLE", "tab-personagem": "My Gamble", "tab-panteao": "Patronos", "tab-casa": "Gamble House", "tab-celular": "Gamblenger", "tab-principal": "Notícias"};
+            if(document.getElementById("appTitleHeader")) document.getElementById("appTitleHeader").innerText = titles[appId] || "Aplicativo";
 
             if(appId === 'tab-mapa') window.drawMapVisuals();
             if(appId === 'tab-personagem') window.renderizarMochila();
@@ -766,7 +734,6 @@
         window.fecharApp = function() {
             window.setElDisplay("gameContainer", "none");
             window.setElDisplay("btnHomeApp", "none");
-            window.setElDisplay("base-desktop", "flex");
         };
 
         window.abrirModal = function() {
@@ -778,7 +745,9 @@
         
         window.toggleDesktopSidebar = function() { let s = document.getElementById("sidebarAgents"); if(s) s.classList.toggle("minimized"); };
 
-        window.salvarPerfil = function(campo, valor) { if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/perfil/${campo}`).set(valor); };
+        window.salvarPerfil = function(campo, valor) {
+            if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/perfil/${campo}`).set(valor);
+        };
 
         window.renderizarFicha = function() {
             if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
@@ -786,9 +755,7 @@
             
             if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual);
             if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
-            
-            // Usando as fotos dos Aventureiros (Homens e Mulheres sem bot)
-            let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
+            let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/avataaars/svg?seed=${window.jogadorAtual}`;
             if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
             if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || "");
             if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
@@ -807,10 +774,17 @@
             let temCel = u.numero || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Tecnologia'));
             let temCasa = (u.casa && Object.keys(u.casa).length > 0) || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Móvel'));
             
-            let iCel = document.getElementById('hb-celular'); 
-            if(iCel) { if(temCel || window.isMaster) { iCel.classList.remove('locked'); iCel.onclick = () => window.abrirApp('tab-celular', false); } else { iCel.classList.add('locked'); iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre um Celular."); } }
-            let iCasa = document.getElementById('hb-casa'); 
-            if(iCasa) { if(temCasa || window.isMaster) { iCasa.classList.remove('locked'); iCasa.onclick = () => window.abrirApp('tab-casa', false); } else { iCasa.classList.add('locked'); iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); } }
+            let iCel = document.getElementById('icon-celular'); 
+            if(iCel) { 
+                if(temCel || window.isMaster) { iCel.classList.remove('locked'); iCel.onclick = () => window.abrirApp('tab-celular', false); } 
+                else { iCel.classList.add('locked'); iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre um Celular."); } 
+            }
+            
+            let iCasa = document.getElementById('icon-casa'); 
+            if(iCasa) { 
+                if(temCasa || window.isMaster) { iCasa.classList.remove('locked'); iCasa.onclick = () => window.abrirApp('tab-casa', false); } 
+                else { iCasa.classList.add('locked'); iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); } 
+            }
         };
 
         window.desenharListaUsuarios = function() {
@@ -823,20 +797,20 @@
             });
         };
 
-        // --- 4. FUNÇÕES DE DADOS E PANTEÃO ---
+        // === 5. SISTEMA RPG (DADOS E PANTEÃO) ===
         window.resgatarCodigo = function() {
             let c = document.getElementById("sponsorCode").value.trim().toUpperCase(); if(!c) return;
             if(c === "CASH4053") {
                 window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set((window.usersGlobais[window.jogadorAtual].carteira||0) + 10000);
-                window.showNeonToast("Injetado 10000 ¥ (Modo Teste)!"); window.setElVal("sponsorCode", ""); return;
+                alert("Injetado 10000 ¥ (Modo Teste)!"); window.setElVal("sponsorCode", ""); return;
             }
             if(window.codigosPromocionais[c]) {
                 let v = window.codigosPromocionais[c]; let r = window.db.ref('tokyoRpg/users/' + window.jogadorAtual);
                 r.once('value').then(s => { 
-                    let u = s.val(); if(u.codigosUsados && u.codigosUsados[c]) { window.showNeonToast("Já resgatado."); } 
-                    else { r.child('codigosUsados').update({ [c]: true }); r.update({ carteira: (u.carteira || 0) + v }); window.showNeonToast(`Sucesso! +${v}¥`); window.setElVal("sponsorCode", ""); } 
+                    let u = s.val(); if(u.codigosUsados && u.codigosUsados[c]) { alert("Já resgatado."); } 
+                    else { r.child('codigosUsados').update({ [c]: true }); r.update({ carteira: (u.carteira || 0) + v }); alert(`Sucesso! +${v}¥`); window.setElVal("sponsorCode", ""); } 
                 });
-            } else { window.showNeonToast("Código Inválido."); }
+            } else { alert("Código Inválido."); }
         };
 
         window.renderizarPanteao = function() {
@@ -858,7 +832,7 @@
         window.girarRoletaPanteao = function() {
             if(!window.jogadorAtual) return;
             let u = window.usersGlobais[window.jogadorAtual];
-            if((u.carteira || 0) < 500) { window.showNeonToast("Você precisa de 500 ¥ para girar a Roleta Divina."); return; }
+            if((u.carteira || 0) < 500) { alert("Você precisa de 500 ¥ para girar a Roleta Divina."); return; }
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(u.carteira - 500);
             
             let btn = document.getElementById("btnRoletaDeus"); if(btn) btn.disabled = true;
@@ -945,7 +919,7 @@
         window.atualizarHP = function() { let hp = parseInt(document.getElementById("hpInput").value); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`).set(hp); };
         window.distribuirPonto = function(key) { let r = window.getSafeRpg(window.usersGlobais[window.jogadorAtual]); if(r.pontosLivres > 0) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/${key}`).set(r[key]+1); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres-1); } };
 
-        // --- 5. MAPA GLOBAL E VTT ---
+        // === 6. MAPA GLOBAL E VTT ===
         window.drawMapVisuals = function() {
             const canvas = document.getElementById("mapCanvas"); if(!canvas) return;
             let uData = window.usersGlobais[window.jogadorAtual] || {}; let isGaia = (uData.deus && uData.deus.includes("Gaia"));
@@ -959,7 +933,7 @@
             
             Object.keys(window.usersGlobais).forEach(n => {
                 if(n === "MESTRE") return; let u = window.usersGlobais[n]; let loc = window.locaisMapa[u.local||"p1"]; let isO = window.presenceGlobal[n];
-                if(loc) htmlMap += `<img src="${u.avatarUrl||'https://api.dicebear.com/9.x/adventurer/svg?seed='+n}" class="avatar-on-map ${isO?'':'avatar-offline'}" style="left:calc(${loc.x}% - 18px); top:calc(${loc.y}% - 18px);">`;
+                if(loc) htmlMap += `<img src="${u.avatarUrl||'https://api.dicebear.com/9.x/avataaars/svg?seed='+n}" class="avatar-on-map ${isO?'':'avatar-offline'}" style="left:calc(${loc.x}% - 18px); top:calc(${loc.y}% - 18px);">`;
             });
             
             canvas.innerHTML = htmlMap;
@@ -982,7 +956,7 @@
             let r = window.getSafeRpg(user); let pesoStats = window.getPesoStatus(user);
             let custoInt = 5 + Math.floor(pesoStats.atual / 5);
             if(pesoStats.sobrepeso) custoInt *= 2; 
-            if (r.integridade < custoInt) { window.showNeonToast(`Falta Saturação! Custo da Viagem: ${custoInt}%. Coma algo.`); return; }
+            if (r.integridade < custoInt) { window.showNeonToast(`Falta Saturação! Custo: ${custoInt}%`); return; }
             
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(r.integridade - custoInt);
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/local`).set(k);
@@ -1013,7 +987,7 @@
         window.iniciarIniciativaVTT = function() {
             if(!window.isMaster) return;
             let onGrid = Object.values(window.submapasGlobais[window.currentSubMapKey]||{}).filter(x=>x!=="MESTRE");
-            if(onGrid.length===0) { window.showNeonToast("Ninguém no grid!"); return; }
+            if(onGrid.length===0) { alert("Ninguém no grid!"); return; }
             let ini = []; onGrid.forEach(n => { let r=Math.floor(Math.random()*20)+1; let agi = (window.usersGlobais[n]?.rpg?.agi || 1); let sum = r+agi; ini.push({n:n, v:sum}); window.db.ref('tokyoRpg/mapDados').push({nome:n, texto:`Iniciativa: ${r} (+${agi}) = <strong class="neon-green">${sum}</strong>`}); });
             ini.sort((a,b)=>b.v-a.v); window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}`).set({ordem: ini.map(x=>x.n), atual:0});
             window.showNeonToast("Turnos Definidos!");
@@ -1099,7 +1073,7 @@
                 let parts = cid.split("_"); let x = parseInt(parts[0]); let y = parseInt(parts[1]);
                 let tokenId = `token_${occupier}`; currentTokens.push(tokenId);
                 let tokenEl = document.getElementById(tokenId);
-                let avToken = window.usersGlobais[occupier]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${occupier}`;
+                let avToken = window.usersGlobais[occupier]?.avatarUrl || `https://api.dicebear.com/9.x/avataaars/svg?seed=${occupier}`;
                 let hp = window.usersGlobais[occupier]?.rpg?.hp || 100;
                 let isMe = (occupier === window.jogadorAtual);
 
@@ -1120,7 +1094,7 @@
             if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0) {
                 if(tBar) { tBar.style.display="flex"; tBar.innerHTML=""; }
                 if(btnP) btnP.style.display="inline-block";
-                window.turnosVTTGlobal.ordem.forEach((n,i) => { if(tBar) tBar.innerHTML+=`<img src="${window.usersGlobais[n]?.avatarUrl||'https://api.dicebear.com/9.x/adventurer/svg?seed='+n}" class="turn-avatar ${i===window.turnosVTTGlobal.atual?'active':''}" title="${n}">`; });
+                window.turnosVTTGlobal.ordem.forEach((n,i) => { if(tBar) tBar.innerHTML+=`<img src="${window.usersGlobais[n]?.avatarUrl||'https://api.dicebear.com/9.x/avataaars/svg?seed='+n}" class="turn-avatar ${i===window.turnosVTTGlobal.atual?'active':''}" title="${n}">`; });
             } else { 
                 if(tBar) tBar.style.display="none"; 
                 if(btnP) btnP.style.display="none"; 
@@ -1148,7 +1122,7 @@
             }, cd*1000);
         };
 
-        // --- 6. TETRIS MOCHILA ---
+        // --- 7. TETRIS MOCHILA ---
         window.renderizarMochila = function() {
             let g = document.getElementById("grid-personagem"); let l = document.getElementById("lista-itens-soltos"); if(!g || !l) return;
             if(window.arrastandoKey !== null) return; 
@@ -1262,7 +1236,7 @@
             else { if(confirm("Descartar item permanentemente?")) window.db.ref('tokyoRpg/users/' + window.jogadorAtual + '/mochila/' + k).remove(); }
         };
 
-        // --- 7. CASA VTT ---
+        // --- CASA VTT ---
         window.drawCasaBoard = function() {
             let b = document.getElementById("casaBoard"); if(!b) return;
             b.innerHTML = ""; let gridCasa = window.casaGlobais[window.jogadorAtual] || {}; 
@@ -1341,13 +1315,15 @@
             window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push(itemPayload); window.showNeonToast("Comprado!");
         };
 
-        // --- 9. CHAT E LOGIN ---
+        // --- 9. CHAT, AVATARES E LOGIN ---
         window.carregarAvatares = function() {
             let g = document.getElementById("avatarGridDisplay"); if(!g) return; g.innerHTML = "";
             let hs = ["Jack", "Leo", "Felix", "Sam", "Arthur", "Ryan", "Oliver", "Caleb", "Zane", "Eli", "Noah", "Luke", "Gabe", "Max", "Ivan"];
             let ms = ["Ane", "Lucy", "Jude", "Mia", "Zoe", "Lily", "Eva", "Ruby", "Cleo", "Nora", "Iris", "Lia", "Fay", "Gia", "Ivy"];
-            hs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/adventurer/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/adventurer/svg?seed=${s}')">`; });
-            ms.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/adventurer/svg?seed=${s}&hairColor=Blonde,Pink,Red" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/adventurer/svg?seed=${s}&hairColor=Blonde,Pink,Red')">`; });
+            let bs = ["Bot1", "Bot2", "Bot3", "Bot4", "Bot5", "Bot6", "Bot7", "Bot8", "Bot9", "Bot10"];
+            hs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/avataaars/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/avataaars/svg?seed=${s}')">`; });
+            ms.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/avataaars/svg?seed=${s}&hairColor=Blonde,Pink,Red" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/avataaars/svg?seed=${s}&hairColor=Blonde,Pink,Red')">`; });
+            bs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/bottts/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/bottts/svg?seed=${s}')">`; });
         };
         window.selecionarAvatarLoja = function(el, url) { window.urlSelecionadaStudio = url; document.querySelectorAll('.av-thumb').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); };
         window.salvarAvatarCustom = function() {
@@ -1386,8 +1362,8 @@
             window.setElDisplay('loadingTerminal', 'none');
             if(isS) window.logarComSerialFinal(s); else window.logarComSenhaFinal(n, p);
         };
-        window.logarComSenhaFinal = function(n, s) { window.db.ref('tokyoRpg/users/' + n).once('value').then((snap) => { let ud = snap.val(); if(ud) { if (ud.senha !== s) { window.showNeonToast("Senha incorreta."); window.setElDisplay('loginScreen', 'block'); return; } window.logarSucesso(n, ud.serial); } else { let ns = Math.floor(1000 + Math.random()*9000)+"-DC1"; window.db.ref('tokyoRpg/users/' + n).set({ senha: s, serial: ns, carteira: 0, rpg: window.getSafeRpg(null), local: "p1" }); window.logarSucesso(n, ns); window.showNeonToast(`Agente Criado.`); } }); };
-        window.logarComSerialFinal = function(s) { if(s === window.MASTER_SERIAL) { window.db.ref('tokyoRpg/users/MESTRE').update({ serial: window.MASTER_SERIAL, carteira: 9999999 }); window.logarSucesso("MESTRE", window.MASTER_SERIAL); return; } let achou = false; Object.keys(window.usersGlobais).forEach(n => { if(window.usersGlobais[n].serial === s) { achou = true; window.logarSucesso(n, s); }}); if(!achou) { window.showNeonToast("Serial não encontrado."); window.setElDisplay('loginScreen', 'block'); } };
+        window.logarComSenhaFinal = function(n, s) { window.db.ref('tokyoRpg/users/' + n).once('value').then((snap) => { let ud = snap.val(); if(ud) { if (ud.senha !== s) { alert("Senha incorreta."); window.setElDisplay('loginScreen', 'block'); return; } window.logarSucesso(n, ud.serial); } else { let ns = Math.floor(1000 + Math.random()*9000)+"-DC1"; window.db.ref('tokyoRpg/users/' + n).set({ senha: s, serial: ns, carteira: 0, rpg: window.getSafeRpg(null), local: "p1" }); window.logarSucesso(n, ns); alert(`Criado.`); } }); };
+        window.logarComSerialFinal = function(s) { if(s === window.MASTER_SERIAL) { window.db.ref('tokyoRpg/users/MESTRE').update({ serial: window.MASTER_SERIAL, carteira: 9999999 }); window.logarSucesso("MESTRE", window.MASTER_SERIAL); return; } let achou = false; Object.keys(window.usersGlobais).forEach(n => { if(window.usersGlobais[n].serial === s) { achou = true; window.logarSucesso(n, s); }}); if(!achou) { alert("Serial não encontrado."); window.setElDisplay('loginScreen', 'block'); } };
         
         window.logarSucesso = function(n, s) {
             window.jogadorAtual = n; window.serialAtual = s; window.isMaster = (s === window.MASTER_SERIAL); 
@@ -1397,9 +1373,6 @@
             window.setElDisplay("loginModal", "none");
             window.setElDisplay("base-desktop", "flex"); 
             window.setElDisplay("gameContainer", "none");
-
-            // Exibir a tela inicial do celular automaticamente ao logar
-            window.abrirCelularMain();
 
             window.renderizarFicha(); window.renderizarMochila(); window.renderizarLojaUI(); window.drawMapVisuals(); window.renderizarPanteao();
             if(window.db && window.jogadorAtual) { window.db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { window.connectionRef = window.db.ref('tokyoRpg/presence/' + window.jogadorAtual); window.connectionRef.onDisconnect().set(false).then(() => { window.connectionRef.set(true); }); }}); }
@@ -1436,7 +1409,7 @@
 
                 window.db.ref('tokyoRpg/turnosVTT').on('value', s => { let d = s.val()||{}; window.turnosVTTGlobal = d[window.currentSubMapKey]||null; window.updateTacticalBoard(); });
                 
-                window.db.ref('tokyoRpg/news').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("newsFeed"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).reverse().forEach(n => { b.innerHTML += `<div class="news-item" style="background:#111; border-left:3px solid ${n.tipo==='MORTE'?'#f00':'#0f0'}; padding:10px; margin-bottom:10px;"><p style="margin:0;font-size:12px; color:${n.tipo==='MORTE'?'#f00':'#0f0'}">${n.data}</p><h3 style="color:#fff;margin:5px 0;">${n.tipo==='MORTE'?'🚨 ÓBITO NO DISTRITO 🚨':'Confronto Concluído'}</h3><p style="color:#ccc;">${n.vencedor} vs ${n.perdedor}. ${n.tipo==='MORTE'?'Perdedor Eliminado.':'Aposta: '+n.aposta+'¥'}</p>${n.descMorte?`<p style="color:#ffaa00;font-size:12px;">Causa: ${n.descMorte}</p>`:''}${n.imgMorte?`<img src="${n.imgMorte}" style="max-width:100%; border-radius:4px; margin-top:10px;">`:''}</div>`; }); }});
+                window.db.ref('tokyoRpg/news').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("newsFeed"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).reverse().forEach(n => { b.innerHTML += `<div class="news-item ${n.tipo==='MORTE'?'news-death':''}"><p class="${n.tipo==='MORTE'?'neon-red':'neon-blue'}" style="margin:0;font-size:12px;">${n.data}</p><h3 style="color:#fff;margin:5px 0;">${n.tipo==='MORTE'?'🚨 ÓBITO NO DISTRITO 🚨':'Confronto Concluído'}</h3><p style="color:#ccc;">${n.vencedor} vs ${n.perdedor}. ${n.tipo==='MORTE'?'Perdedor Eliminado.':'Aposta: '+n.aposta+'¥'}</p>${n.descMorte?`<p style="color:#ffaa00;font-size:12px;">Causa: ${n.descMorte}</p>`:''}${n.imgMorte?`<img src="${n.imgMorte}" style="max-width:100%; border-radius:4px; margin-top:10px;">`:''}</div>`; }); }});
                 
                 window.db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { window.mostrarDadoOverlay(d.nome, d.form, d.results); } });
                 window.db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div style="margin-bottom:5px;"><strong class="neon-blue">${x.nome}:</strong> ${x.texto}</div>`); b.scrollTop = b.scrollHeight; }});
@@ -1446,13 +1419,21 @@
                         let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
                         if(d){ Object.keys(d).forEach(k => { 
                             let m = d[k]; let rCount = m.reacoes || {}; let uData = window.usersGlobais[m.nome] || {}; 
-                            let curAv = uData.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${m.nome}`; let curTit = uData.tituloChat || m.titulo; 
+                            let curAv = uData.avatarUrl || `https://api.dicebear.com/9.x/avataaars/svg?seed=${m.nome}`; let curTit = uData.tituloChat || m.titulo; 
                             let reactHtml = `<button class="react-add" onclick="window.abrirEmojiReacao('${k}', event)">+</button>${rCount['🔥']?`<button class="react-btn">🔥 ${rCount['🔥']}</button>`:''}${rCount['💀']?`<button class="react-btn">💀 ${rCount['💀']}</button>`:''}${rCount['😂']?`<button class="react-btn">😂 ${rCount['😂']}</button>`:''}${rCount['👀']?`<button class="react-btn">👀 ${rCount['👀']}</button>`:''}${rCount['💯']?`<button class="react-btn">💯 ${rCount['💯']}</button>`:''}${rCount['🤡']?`<button class="react-btn">🤡 ${rCount['🤡']}</button>`:''}${rCount['💔']?`<button class="react-btn">💔 ${rCount['💔']}</button>`:''}${rCount['💰']?`<button class="react-btn">💰 ${rCount['💰']}</button>`:''}`;
                             b.innerHTML += `<div class="msg-box"><div class="msg-avatar-container"><span style="font-size:10px; color:#ff2a5f;">${uData.carteira||0}¥</span><img src="${curAv}" class="msg-avatar"></div><div class="msg-content"><div style="display:flex; flex-direction:column; margin-bottom:5px;">${curTit?`<div class="title-tag ${curTit.raridade}" style="display:inline-block; width:fit-content; margin-bottom:2px;">${curTit.txt||curTit}</div>`:''}<strong style="color:var(--accent-blue); font-size:14px;">${m.nome} <span style="color:#555;font-size:10px; margin-left:5px;">${m.data}</span></strong></div><p style="font-size:13px; line-height:1.4; margin-top:2px;">${m.texto||''}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}<div style="margin-top:5px; display:flex; flex-wrap:wrap; gap:5px;">${reactHtml}</div></div></div>`; 
                         }); b.scrollTop = b.scrollHeight; }
                     } catch (err) { console.error("Erro ao renderizar chat:", err); }
                 });
             }
+            
+            // Relógio Local
+            setInterval(() => {
+                let d = new Date();
+                let timeStr = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0');
+                if (document.getElementById('clockTime')) document.getElementById('clockTime').innerText = timeStr;
+                if(document.getElementById('clockTimeDesktop')) document.getElementById('clockTimeDesktop').innerText = timeStr;
+            }, 1000);
             
             // Auto abre o login ao iniciar
             window.abrirModal();
