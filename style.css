@@ -841,125 +841,60 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 
 
 /* =========================================================
-   PATCH: TEXTO NO CELULAR E AJUSTE DE OVERLAY
-   ========================================================= */
-@media(max-width: 600px) {
-    #igamble-view-posts .post-caption {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        z-index: 99 !important;
-        max-width: 75% !important;
-        bottom: 25px !important;    /* Levanta o texto um pouco mais no celular */
-        left: 15px !important;
-        font-size: 13px !important;
-        color: #fff !important;
-        background: rgba(0, 0, 0, 0.6) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-    }
-}
-
-/* Deixa a área da imagem clicável para o Double Tap funcionar melhor */
-#igamble-view-posts .post-overlay {
-    pointer-events: auto !important; 
-}
-#igamble-view-posts .post-caption {
-    pointer-events: auto !important; 
-}
-
-/* =========================================================
-   PATCH ABSOLUTO: TELA CHEIA, BOTÕES NA ESQUERDA E ENQUADRAMENTO
+   IGAMBLE POSTS: LAYOUT DEFINITIVO (TIKTOK STYLE)
    ========================================================= */
 
-/* 1. Botões Flutuantes (Um em cima do outro na ESQUERDA) */
-.floating-controls {
-    bottom: 25px !important;
-    left: 15px !important;
-    display: flex !important;
-    flex-direction: column !important; /* Empilha um em cima do outro */
-    gap: 15px !important;
-    z-index: 9999 !important;
-}
-
-/* 2. Afasta o App para não ficar por baixo dos botões flutuantes */
-#gameContainer {
-    padding-left: 85px !important; /* Libera espaço na esquerda pros botões */
-    padding-bottom: 20px !important;
-    padding-top: 10px !important;
-}
-
-@media(max-width: 600px) {
-    #gameContainer { padding-left: 75px !important; }
-}
-
-/* 3. Diminui o topo (Aba Chat, Posts, Embates) para dar mais tela */
-.igamble-nav {
-    padding: 5px !important;
-    border-bottom: none !important;
-}
-.igamble-nav button {
-    padding: 5px 15px !important;
-    font-size: 12px !important;
-}
-
-/* 4. Trava a altura do App INTEIRO para caber perfeitamente na tela */
+/* 1. Trava a altura do App para o scroll magnético não quebrar */
 #tab-igamble {
-    height: calc(100vh - 40px) !important; /* Usa a tela quase toda */
+    height: calc(100vh - 50px) !important;
     display: flex !important;
     flex-direction: column !important;
 }
 
 #igamble-view-posts {
     flex: 1 !important;
-    height: 100% !important;
     min-height: 0 !important;
     padding: 0 !important;
-    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #000;
 }
 
-/* 5. Feed Magnético e Bloqueado */
+/* 2. O Feed: Rola perfeitamente 1 por 1 */
 #igamble-view-posts .feed-container {
     flex: 1 !important;
     height: 100% !important;
-    min-height: 0 !important;
-    margin: 0 !important;
-    background: #000 !important;
-    border-radius: 12px !important;
-    border: 1px solid #333 !important;
-    
     overflow-y: scroll !important;
     scroll-snap-type: y mandatory !important;
     scroll-behavior: smooth !important;
     -webkit-overflow-scrolling: touch !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 #igamble-view-posts .feed-container::-webkit-scrollbar { display: none !important; }
 
-/* 6. Post Card (Tamanho exato da tela visível, 0 vazamentos) */
+/* 3. O Post: Ocupa 100% da tela visível, sem passar 1 pixel */
 #igamble-view-posts .post-card {
-    position: relative !important;
     height: 100% !important;
     width: 100% !important;
     flex: 0 0 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    position: relative !important;
     scroll-snap-align: start !important;
     scroll-snap-stop: always !important;
-    border-bottom: 2px solid #222 !important;
-    box-sizing: border-box !important;
+    border-bottom: 2px solid #111;
+    overflow: hidden !important;
 }
 
-/* 7. ENQUADRAMENTO DA IMAGEM: 100% visível, nunca corta */
+/* 4. A Imagem: Nunca é cortada */
 #igamble-view-posts .post-media {
     position: absolute !important;
     inset: 0 !important;
     width: 100% !important;
     height: 100% !important;
-    object-fit: contain !important; /* <-- A MÁGICA TÁ AQUI */
+    object-fit: contain !important;
     z-index: 2 !important;
-    background: transparent !important;
+    pointer-events: auto !important; /* Libera para o clique duplo */
 }
-
-/* Fundo borrado para preencher as sobras */
 #igamble-view-posts .post-media-bg {
     position: absolute !important;
     inset: 0 !important;
@@ -968,108 +903,102 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     object-fit: cover !important;
     z-index: 1 !important;
     opacity: 0.3 !important;
-    filter: blur(20px) !important;
-    transform: scale(1.1) !important;
+    filter: blur(20px);
+    transform: scale(1.1);
 }
 
-/* 8. OVERLAY: Deixa os cliques passarem para o duplo-clique funcionar */
-#igamble-view-posts .post-overlay {
-    position: absolute !important;
-    inset: 0 !important;
-    z-index: 10 !important;
-    pointer-events: none !important;
-}
-
-/* 9. CABEÇALHO (Foto e Nome) */
+/* 5. Cabeçalho (Foto e Nome) */
 #igamble-view-posts .post-header {
     position: absolute !important;
     top: 15px !important;
     left: 15px !important;
     right: 15px !important;
-    pointer-events: auto !important;
+    z-index: 10 !important;
 }
 
-/* 10. LEGENDA: Chumbada no Canto Inferior Esquerdo (Fundo Transparente) */
+/* 6. Legenda (Por cima da foto, no canto inferior esquerdo) */
 #igamble-view-posts .post-caption {
     position: absolute !important;
-    bottom: 15px !important;
+    bottom: 25px !important;
     left: 15px !important;
-    width: calc(100% - 75px) !important; /* Desvia dos botões na direita */
-    max-height: 100px !important;
-    
+    width: calc(100% - 90px) !important;
+    max-height: 120px !important;
+    overflow-y: auto !important;
     background: rgba(0, 0, 0, 0.6) !important;
     backdrop-filter: blur(5px) !important;
     border: 1px solid rgba(255,255,255,0.15) !important;
     border-radius: 12px !important;
     padding: 10px !important;
-    
     color: #fff !important;
     font-size: 13px !important;
-    text-shadow: 0 1px 3px #000 !important;
-    
-    overflow-y: auto !important;
-    pointer-events: auto !important;
-    margin: 0 !important;
+    z-index: 10 !important;
 }
 
-/* 11. BOTÕES (Curtir/Comentar): Chumbados no Canto Inferior Direito */
+/* 7. Botões Laterais (Por cima da foto, canto inferior direito) */
 #igamble-view-posts .post-sidebar {
     position: absolute !important;
-    bottom: 15px !important;
-    right: 10px !important;
+    bottom: 25px !important;
+    right: 15px !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
-    pointer-events: auto !important;
+    gap: 15px !important;
+    z-index: 10 !important;
 }
-/* =========================================================
-   PATCH: BOTÕES FLUTUANTES (CURTIR/COMENTAR) NO CELULAR
-   ========================================================= */
 
+/* 8. Ajustes Exclusivos para Celular */
 @media(max-width: 600px) {
-    /* 1. Força a barra lateral a ficar na Direita, acima de tudo */
-    #igamble-view-posts .post-sidebar {
-        position: absolute !important;
-        bottom: 25px !important;
-        right: 10px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        gap: 15px !important;
-        z-index: 9999 !important; /* Garante que NADA cubra os botões */
-        pointer-events: auto !important;
+    #igamble-view-posts .post-caption {
+        bottom: 35px !important;
+        left: 10px !important;
+        width: calc(100% - 75px) !important;
+        font-size: 12px !important;
     }
-
-    /* 2. Deixa os botões com um visual de app nativo (redondos com fundo de vidro) */
+    #igamble-view-posts .post-sidebar {
+        bottom: 35px !important;
+        right: 10px !important;
+        gap: 10px !important;
+    }
     #igamble-view-posts .post-btn-vert {
-        width: 48px !important;
-        height: 48px !important;
-        border-radius: 50% !important; /* Redondinhos */
-        background: rgba(0, 0, 0, 0.65) !important;
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 50% !important;
+        background: rgba(0, 0, 0, 0.6) !important;
         backdrop-filter: blur(5px) !important;
         border: 1px solid rgba(255,255,255,0.2) !important;
-        font-size: 20px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        color: #fff !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
     }
+}
 
-    /* 3. Ajusta o numerozinho (likes/coments) pra ficar embaixo do ícone */
-    #igamble-view-posts .post-btn-vert span {
-        font-size: 11px !important;
-        font-weight: 900 !important;
-        margin-top: 2px !important;
-        text-shadow: 0 1px 3px #000 !important;
-    }
-    
-    /* 4. Garante que o botão EXCLUIR fique bem no topo direito e não atrapalhe */
-    #igamble-view-posts .post-header .post-del-btn {
-        position: absolute !important;
-        top: 10px !important;
-        right: 10px !important;
-        z-index: 9999 !important;
-    }
+/* 9. Animações de Coração */
+.floating-heart {
+    position: absolute;
+    bottom: 45%; left: 50%;
+    color: var(--accent-red);
+    font-size: 45px;
+    z-index: 100;
+    pointer-events: none;
+    animation: floatHeartAnim 2.5s forwards;
+    text-shadow: 0 0 15px var(--accent-red);
+}
+
+.floating-heart-purple {
+    position: fixed; /* Nasce onde o mouse clicou */
+    color: var(--accent-purple);
+    font-size: 60px;
+    z-index: 9999;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: purpleHeartAnim 1s ease-out forwards;
+    text-shadow: 0 0 20px var(--accent-purple), 0 0 40px var(--accent-purple);
+}
+
+@keyframes floatHeartAnim {
+    0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+    15% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); }
+    100% { transform: translate(-50%, -250px) scale(1.5); opacity: 0; }
+}
+
+@keyframes purpleHeartAnim {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    50% { transform: translate(-50%, -70px) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -100px) scale(1.5); opacity: 0; }
 }
