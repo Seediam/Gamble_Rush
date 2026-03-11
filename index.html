@@ -355,7 +355,8 @@
                         <div class="chat-messages" id="chatMessages"></div>
                         <div class="chat-input-area">
                           <button class="neon-icon-btn" onclick="window.enviarAnexo()">📎</button>
-                          <input type="text" id="chatInputMsg" placeholder="Sua mensagem..." onkeydown="if(event.key==='Enter') window.enviarMsgGamble()">
+                          <input type="text" id="chatInputMsg" placeholder="Sua mensagem..." oninput="window.handleMention(event, this)" onkeydown="if(event.key==='Enter') window.enviarMsgGamble()">
+	
                           <button class="neon-icon-btn" onclick="window.enviarMsgGamble()">➤</button>
                         </div>
                       </div>
@@ -375,8 +376,8 @@
                       <div style="display:flex; gap:10px;">
                         <img id="postPreviewAvatar" src="https://api.dicebear.com/9.x/adventurer/svg?seed=Anonimo" class="post-avatar">
                         <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
-                          <textarea id="postText" placeholder="O que está acontecendo no Distrito?" rows="3"
-                            style="width:100%; background:#111; color:#fff; border:1px solid #333; border-radius:4px; padding:8px; font-family:monospace; resize:none;"></textarea>
+                          <textarea id="postText" placeholder="O que está acontecendo no Distrito?" rows="3" oninput="window.handleMention(event, this)"
+style="width:100%; background:#111; color:#fff; border:1px solid #333; border-radius:4px; padding:8px; font-family:monospace; resize:none;"></textarea>
 
                           <div id="postExtras" style="display:flex; flex-direction:column; gap:5px; margin-top:5px;">
                             <div style="background:#111; padding:10px; border-radius:4px; border:1px dashed #333;">
@@ -407,7 +408,30 @@
                     <!-- feed -->
                     <div id="igamblePostsFeed" class="feed-container"></div>
                   </div>
+    <!-- ============================================== -->
+    <!-- DROPDOWN DE MENÇÕES (@) -->
+    <div id="mentionDropdown" class="mention-dropdown" style="display:none;"></div>
 
+    <!-- OVERLAY DE COMENTÁRIOS (INSTAGRAM STYLE) -->
+    <div id="commentsOverlay" class="comments-overlay" style="display:none;">
+        <div class="comments-panel" id="commentsPanel">
+            <div class="comments-header">
+                <div class="drag-handle" onclick="window.fecharComentarios()"></div>
+                <h3>Comentários</h3>
+                <button class="close-comments-btn" onclick="window.fecharComentarios()">✖</button>
+            </div>
+            <div class="comments-list" id="commentsList"></div>
+            <div class="comments-input-area">
+                <input type="text" id="commentInput" placeholder="Adicione um comentário..." oninput="window.handleMention(event, this)" onkeydown="if(event.key==='Enter') window.enviarComentario()">
+                <button class="neon-icon-btn" onclick="window.enviarComentario()">➤</button>
+            </div>
+        </div>
+    </div>
+    <!-- ============================================== -->
+
+    <!-- CARREGAR O SCRIPT SEPARADO -->
+    <script src="script.js"></script>
+</body>
                   <!-- 3) VIEW: EMBATES -->
                   <div id="igamble-view-embates" class="igamble-view" style="padding: 15px; overflow-y:auto; background:#050508;">
                     <h2 class="neon-red" style="text-align:center; margin-bottom:15px;">ARENA DO DISTRITO</h2>
