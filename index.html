@@ -28,9 +28,7 @@
 
     <div id="neonToast">---</div>
 	
-	
-	
-	    <!-- POPUP DE REAÇÕES (EMOJIS) -->
+    <!-- POPUP DE REAÇÕES (EMOJIS) -->
     <div id="emojiPopupDynamic" class="emoji-popup">
         <button class="emoji-btn" onclick="window.executarReacao('🔥')">🔥</button>
         <button class="emoji-btn" onclick="window.executarReacao('💀')">💀</button>
@@ -251,7 +249,7 @@
                     <div class="god-grid" id="allGodsList"></div>
                 </div>
 
-                <!-- ABA MERCADO -->
+                <!-- ABA MERCADO NEGRO (CORRIGIDO VISIBILIDADE) -->
                 <div id="tab-loja" class="tab-content">
                     <h1 style="text-align:center;">Mercado Negro</h1>
                     
@@ -263,7 +261,7 @@
                             <input type="number" id="niPrice" placeholder="Preço ¥">
                             <input type="text" id="niDesc" placeholder="Descrição rápida">
                             
-                            <!-- CAIXINHA DE PROMOÇÃO NOVA -->
+                            <!-- CAIXINHA DE PROMOÇÃO -->
                             <label style="color:#ffaa00; font-size:12px; display:flex; align-items:center; justify-content:center; gap:5px; background:#111; border:1px solid #ffaa00; border-radius:4px; cursor:pointer; padding: 5px;">
                                 <input type="checkbox" id="niPromo"> É Promoção?
                             </label>
@@ -291,131 +289,132 @@
                         <button class="shop-tab-btn" onclick="window.filtrarLoja('Móvel', this)">Móveis</button>
                         <button class="shop-tab-btn" onclick="window.filtrarLoja('Tecnologia', this)">Tech</button>
                         <button class="shop-tab-btn" onclick="window.filtrarLoja('Mochila', this)">Bolsas</button>
+                        <button class="shop-tab-btn" onclick="window.filtrarLoja('Tudo', this)">Tudo</button>
                     </div>
-                    <div id="shopGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:15px; margin-top:15px;"></div>
+
+                    <!-- Layout Carousel de Itens -->
+                    <div class="shop-carousel-wrapper">
+                        <button class="shop-nav-btn left" onclick="window.navegarLoja(-1)">&#10094;</button>
+                        <div id="shopGrid"></div>
+                        <button class="shop-nav-btn right" onclick="window.navegarLoja(1)">&#10095;</button>
+                    </div>
                 </div>
 
-                            <!-- === APLICATIVO: IGAMBLE (Mini-Hub Social) === -->
-<div id="tab-igamble" class="tab-content">
+                <!-- === APLICATIVO: IGAMBLE (Mini-Hub Social) === -->
+                <div id="tab-igamble" class="tab-content">
 
-  <div class="igamble-nav">
-    <button class="igamble-tab-btn active" onclick="window.switchIGambleTab('chat', this)">💬 Chat</button>
-    <button class="igamble-tab-btn" onclick="window.switchIGambleTab('posts', this)">📸 Posts</button>
-    <button class="igamble-tab-btn" onclick="window.switchIGambleTab('embates', this)">⚔️ Embates</button>
-  </div>
+                  <div class="igamble-nav">
+                    <button class="igamble-tab-btn active" onclick="window.switchIGambleTab('chat', this)">💬 Chat</button>
+                    <button class="igamble-tab-btn" onclick="window.switchIGambleTab('posts', this)">📸 Posts</button>
+                    <button class="igamble-tab-btn" onclick="window.switchIGambleTab('embates', this)">⚔️ Embates</button>
+                  </div>
 
-  <!-- 1) VIEW: CHAT -->
-  <div id="igamble-view-chat" class="igamble-view active">
-    <div class="igamble-wrapper">
-      <div class="igamble-side">
-        <div class="avatar-maker-panel">
-          <h4 class="neon-blue" style="text-align:center;">GALERIA DE AVATARES</h4>
-          <p style="font-size:10px;text-align:center;color:#aaa;">Selecione para alterar em todo o site.</p>
-          <div class="avatar-grid-select" id="avatarGridDisplay"></div>
-          <button class="action-btn" id="btnEquiparAvatar" style="border-color:var(--accent-red); color:var(--accent-red);" onclick="window.comprarAvatar()">EQUIPAR AVATAR (500 ¥)</button>
-        </div>
+                  <!-- 1) VIEW: CHAT -->
+                  <div id="igamble-view-chat" class="igamble-view active">
+                    <div class="igamble-wrapper">
+                      <div class="igamble-side">
+                        <div class="avatar-maker-panel">
+                          <h4 class="neon-blue" style="text-align:center;">GALERIA DE AVATARES</h4>
+                          <p style="font-size:10px;text-align:center;color:#aaa;">Selecione para alterar em todo o site.</p>
+                          <div class="avatar-grid-select" id="avatarGridDisplay"></div>
+                          <button class="action-btn" id="btnEquiparAvatar" style="border-color:var(--accent-red); color:var(--accent-red);" onclick="window.salvarAvatarCustom()">EQUIPAR AVATAR (500 ¥)</button>
+                        </div>
 
-        <div class="avatar-maker-panel">
-          <h4 class="neon-gold" style="text-align:center;">TÍTULOS DE RESPEITO</h4>
-          <select id="tituloSelect" style="background:#000; color:#fff; border:1px solid var(--accent-blue); padding:5px; border-radius:4px; font-family:'Courier New', Courier, monospace;">
-            <option value="Novato|com|0">Novato [com] - 0¥</option>
-          </select>
-          <button class="action-btn" style="border-color:var(--accent-gold); color:var(--accent-gold);" onclick="window.comprarTitulo()">COMPRAR / EQUIPAR</button>
-        </div>
+                        <div class="avatar-maker-panel">
+                          <h4 class="neon-gold" style="text-align:center;">TÍTULOS DE RESPEITO</h4>
+                          <select id="lojaTitulos" style="background:#000; color:#fff; border:1px solid var(--accent-blue); padding:5px; border-radius:4px; font-family:'Courier New', Courier, monospace;">
+                            <option value="Novato|com|0">Novato [com] - 0¥</option>
+                          </select>
+                          <button class="action-btn" style="border-color:var(--accent-gold); color:var(--accent-gold);" onclick="window.comprarTituloChat()">COMPRAR / EQUIPAR</button>
+                        </div>
+                      </div>
 
-        <!-- (Opcional) Você pode manter um bloco aqui se quiser: status, regras, etc. -->
-      </div>
-
-      <div class="igamble-chat">
-        <div class="chat-messages" id="chatMessages"></div>
-        <div class="chat-input-area">
-          <button class="neon-icon-btn" onclick="window.enviarAnexo()">📎</button>
-          <input type="text" id="chatInputMsg" placeholder="Sua mensagem..." onkeydown="if(event.key==='Enter') window.enviarMsgGamble()">
-          <button class="neon-icon-btn" onclick="window.enviarMsgGamble()">➤</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 2) VIEW: POSTS -->
-  <div id="igamble-view-posts" class="igamble-view" style="padding: 10px; overflow:hidden; background:#000;">
-    <!-- barra superior -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <button class="action-btn" id="btnToggleMute" style="border-color:#aaa; color:#aaa;" onclick="window.toggleGambleMute()">🔇 Áudio Bloqueado</button>
-      <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue);" onclick="window.togglePostCreator()">➕ Criar Post</button>
-    </div>
-
-    <!-- criador de post -->
-    <div id="postCreatorBox" class="post-creator-box" style="display:none; margin-bottom:10px;">
-      <div style="display:flex; gap:10px;">
-        <img id="postPreviewAvatar" src="https://api.dicebear.com/9.x/adventurer/svg?seed=Anonimo" class="post-avatar">
-        <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
-          <textarea id="postText" placeholder="O que está acontecendo no Distrito?" rows="3"
-            style="width:100%; background:#111; color:#fff; border:1px solid #333; border-radius:4px; padding:8px; font-family:monospace; resize:none;"></textarea>
-
-          <div id="postExtras" style="display:flex; flex-direction:column; gap:5px; margin-top:5px;">
-            <div style="background:#111; padding:10px; border-radius:4px; border:1px dashed #333;">
-              <label style="font-size:10px; color:#aaa; display:block; margin-bottom:5px;">Foto do PC (Max 2MB):</label>
-              <input type="file" id="postImgFile" accept="image/*" class="gamble-input" style="padding:5px;">
-              <div style="text-align:center; font-size:10px; color:#555; margin:5px 0;">-- OU --</div>
-              <input type="text" id="postImgUrl" placeholder="URL da Imagem da Web..." class="gamble-input">
-            </div>
-
-            <input type="text" id="postAudioUrl" placeholder="URL do Áudio MP3 (Toca sozinho)" class="gamble-input">
-
-            <!-- Mestre -->
-            <input type="text" id="postCustomName" placeholder="[MESTRE] Postar como nome falso" class="gamble-input" style="display:none; border-color:#f00; color:#f00;">
-            <input type="text" id="postCustomAvatar" placeholder="[MESTRE] URL Foto Falsa" class="gamble-input" style="display:none; border-color:#f00; color:#f00;"
-              oninput="document.getElementById('postPreviewAvatar').src=this.value||'https://api.dicebear.com/9.x/bottts/svg?seed=Master'">
-            <label id="lblAd" style="display:none; color:var(--accent-gold); font-size:12px; cursor:pointer;">
-              <input type="checkbox" id="postIsAd"> Promover como Anúncio Oficial?
-            </label>
-          </div>
-
-          <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:5px;">
-            <button class="action-btn" onclick="window.enviarPost()">Publicar</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- feed -->
-    <div id="igamblePostsFeed" class="feed-container"></div>
-  </div>
-
-  <!-- 3) VIEW: EMBATES -->
-  <div id="igamble-view-embates" class="igamble-view" style="padding: 15px; overflow-y:auto; background:#050508;">
-    <h2 class="neon-red" style="text-align:center; margin-bottom:15px;">ARENA DO DISTRITO</h2>
-
-    <div id="masterEmbatePanel" class="master-panel" style="display:none; border-color:#f00; margin-bottom:20px;">
-      <h4 class="neon-red">MASTER: ANUNCIAR EMBATE</h4>
-      <datalist id="listaJogadoresDatalist"></datalist>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
-        <input type="text" id="emF1" list="listaJogadoresDatalist" placeholder="Nome Lutador 1" class="gamble-input" oninput="window.updateEmbateAvatar(1)">
-        <input type="text" id="emF2" list="listaJogadoresDatalist" placeholder="Nome Lutador 2" class="gamble-input" oninput="window.updateEmbateAvatar(2)">
-        <input type="text" id="emImg1" placeholder="URL Foto L1 (Auto)" class="gamble-input">
-        <input type="text" id="emImg2" placeholder="URL Foto L2 (Auto)" class="gamble-input">
-        <select id="emLocal" class="gamble-input" style="grid-column: span 2;">
-          <option value="Cassino Central">Cassino Central</option>
-          <option value="Distrito das Cartas">Distrito das Cartas</option>
-          <option value="Arena Subterrânea">Arena Subterrânea</option>
-          <option value="Rua de Neon">Rua de Neon</option>
-          <option value="Galpão Abandonado">Galpão Abandonado</option>
-        </select>
-        <input type="text" id="emDesc" placeholder="Descrição / Regras da Luta" class="gamble-input" style="grid-column: span 2;">
-        <input type="number" id="emPremio" placeholder="Prêmio Base ¥" class="gamble-input" style="grid-column: span 2;">
-      </div>
-      <button class="action-btn" style="width:100%; margin-top:10px; border-color:#f00; color:#f00;" onclick="window.criarEmbate()">Criar Embate</button>
-    </div>
-
-    <div id="listaEmbates" style="display:flex; flex-direction:column; gap:20px;"></div>
-  </div>
-
-</div>
-                        
-                        <!-- LISTA DE LUTAS -->
-                        <div id="listaEmbates" style="display:flex; flex-direction:column; gap:20px;"></div>
+                      <div class="igamble-chat">
+                        <div class="chat-messages" id="chatMessages"></div>
+                        <div class="chat-input-area">
+                          <button class="neon-icon-btn" onclick="window.enviarAnexo()">📎</button>
+                          <input type="text" id="chatInputMsg" placeholder="Sua mensagem..." onkeydown="if(event.key==='Enter') window.enviarMsgGamble()">
+                          <button class="neon-icon-btn" onclick="window.enviarMsgGamble()">➤</button>
+                        </div>
+                      </div>
                     </div>
+                  </div>
+
+                  <!-- 2) VIEW: POSTS -->
+                  <div id="igamble-view-posts" class="igamble-view" style="padding: 10px; overflow:hidden; background:#000;">
+                    <!-- barra superior -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                      <button class="action-btn" id="btnToggleMute" style="border-color:#aaa; color:#aaa;" onclick="window.toggleGambleMute()">🔇 Áudio Bloqueado</button>
+                      <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue);" onclick="window.togglePostCreator()">➕ Criar Post</button>
+                    </div>
+
+                    <!-- criador de post -->
+                    <div id="postCreatorBox" class="post-creator-box" style="display:none; margin-bottom:10px;">
+                      <div style="display:flex; gap:10px;">
+                        <img id="postPreviewAvatar" src="https://api.dicebear.com/9.x/adventurer/svg?seed=Anonimo" class="post-avatar">
+                        <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
+                          <textarea id="postText" placeholder="O que está acontecendo no Distrito?" rows="3"
+                            style="width:100%; background:#111; color:#fff; border:1px solid #333; border-radius:4px; padding:8px; font-family:monospace; resize:none;"></textarea>
+
+                          <div id="postExtras" style="display:flex; flex-direction:column; gap:5px; margin-top:5px;">
+                            <div style="background:#111; padding:10px; border-radius:4px; border:1px dashed #333;">
+                              <label style="font-size:10px; color:#aaa; display:block; margin-bottom:5px;">Foto do PC (Max 2MB):</label>
+                              <input type="file" id="postImgFile" accept="image/*" class="gamble-input" style="padding:5px;">
+                              <div style="text-align:center; font-size:10px; color:#555; margin:5px 0;">-- OU --</div>
+                              <input type="text" id="postImgUrl" placeholder="URL da Imagem da Web..." class="gamble-input">
+                            </div>
+
+                            <input type="text" id="postAudioUrl" placeholder="URL do Áudio MP3 (Toca sozinho)" class="gamble-input">
+
+                            <!-- Mestre -->
+                            <input type="text" id="postCustomName" placeholder="[MESTRE] Postar como nome falso" class="gamble-input" style="display:none; border-color:#f00; color:#f00;">
+                            <input type="text" id="postCustomAvatar" placeholder="[MESTRE] URL Foto Falsa" class="gamble-input" style="display:none; border-color:#f00; color:#f00;"
+                              oninput="document.getElementById('postPreviewAvatar').src=this.value||'https://api.dicebear.com/9.x/bottts/svg?seed=Master'">
+                            <label id="lblAd" style="display:none; color:var(--accent-gold); font-size:12px; cursor:pointer;">
+                              <input type="checkbox" id="postIsAd"> Promover como Anúncio Oficial?
+                            </label>
+                          </div>
+
+                          <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:5px;">
+                            <button class="action-btn" onclick="window.enviarPost()">Publicar</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- feed -->
+                    <div id="igamblePostsFeed" class="feed-container"></div>
+                  </div>
+
+                  <!-- 3) VIEW: EMBATES -->
+                  <div id="igamble-view-embates" class="igamble-view" style="padding: 15px; overflow-y:auto; background:#050508;">
+                    <h2 class="neon-red" style="text-align:center; margin-bottom:15px;">ARENA DO DISTRITO</h2>
+
+                    <div id="masterEmbatePanel" class="master-panel" style="display:none; border-color:#f00; margin-bottom:20px;">
+                      <h4 class="neon-red">MASTER: ANUNCIAR EMBATE</h4>
+                      <datalist id="listaJogadoresDatalist"></datalist>
+                      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+                        <input type="text" id="emF1" list="listaJogadoresDatalist" placeholder="Nome Lutador 1" class="gamble-input" oninput="window.updateEmbateAvatar(1)">
+                        <input type="text" id="emF2" list="listaJogadoresDatalist" placeholder="Nome Lutador 2" class="gamble-input" oninput="window.updateEmbateAvatar(2)">
+                        <input type="text" id="emImg1" placeholder="URL Foto L1 (Auto)" class="gamble-input">
+                        <input type="text" id="emImg2" placeholder="URL Foto L2 (Auto)" class="gamble-input">
+                        <select id="emLocal" class="gamble-input" style="grid-column: span 2;">
+                          <option value="Cassino Central">Cassino Central</option>
+                          <option value="Distrito das Cartas">Distrito das Cartas</option>
+                          <option value="Arena Subterrânea">Arena Subterrânea</option>
+                          <option value="Rua de Neon">Rua de Neon</option>
+                          <option value="Galpão Abandonado">Galpão Abandonado</option>
+                        </select>
+                        <input type="text" id="emDesc" placeholder="Descrição / Regras da Luta" class="gamble-input" style="grid-column: span 2;">
+                        <input type="number" id="emPremio" placeholder="Prêmio Base ¥" class="gamble-input" style="grid-column: span 2;">
+                      </div>
+                      <button class="action-btn" style="width:100%; margin-top:10px; border-color:#f00; color:#f00;" onclick="window.criarEmbate()">Criar Embate</button>
+                    </div>
+
+                    <div id="listaEmbates" style="display:flex; flex-direction:column; gap:20px;"></div>
+                  </div>
+
+                </div>
 
                 <!-- CASA E CELULAR APPS -->
                 <div id="tab-casa" class="tab-content">
