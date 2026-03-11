@@ -103,18 +103,17 @@ window.fecharCelular = function() {
     window.setElDisplay("phoneOverlay", "none");
 };
 
-// --- NOVAS FUNÇÕES PARA A TELA bg2.png (iGAMBLE) ---
+// --- FUNÇÕES PARA A TELA bg2.png (iGAMBLE) ---
 window.abrirIgambleMenu = function() {
     let frame = document.getElementById('phoneFrameUI');
     let mainScreen = document.getElementById('phoneMainScreen');
     let igambleScreen = document.getElementById('phoneIgambleScreen');
     let closeBtn = document.getElementById('btnClosePhone');
     
-    // Troca para o bg2.png
     if (frame) frame.style.backgroundImage = "url('bg2.png')";
     if (mainScreen) mainScreen.style.display = "none";
     if (igambleScreen) igambleScreen.style.display = "block";
-    if (closeBtn) closeBtn.style.display = "none"; // Esconde botão de desligar na 2ª tela
+    if (closeBtn) closeBtn.style.display = "none"; 
 };
 
 window.voltarPhoneMain = function() {
@@ -123,7 +122,6 @@ window.voltarPhoneMain = function() {
     let igambleScreen = document.getElementById('phoneIgambleScreen');
     let closeBtn = document.getElementById('btnClosePhone');
     
-    // Volta para o bg.png normal
     if (frame) frame.style.backgroundImage = "url('bg.png')";
     if (mainScreen) mainScreen.style.display = "grid";
     if (igambleScreen) igambleScreen.style.display = "none";
@@ -131,12 +129,21 @@ window.voltarPhoneMain = function() {
 };
 
 window.abrirIgambleApp = function(tabName) {
-    // 1. Abre a interface geral do iGamble na tela principal
-    window.abrirApp('tab-igamble');
-    
-    // 2. Simula o clique na aba certa por trás dos panos
+    window.abrirApp('tab-igamble'); // Abre o fundo e tela principal
     let btn = document.querySelector(`.igamble-nav button[onclick*="${tabName}"]`);
     if(btn) window.switchIGambleTab(tabName, btn);
+};
+
+// Quando clica no botão "Voltar (roxo)" durante o iGAMBLE:
+window.voltarParaMenuIgamble = function() {
+    window.fecharApp(); // Fecha as telas de jogo
+    window.abrirCelularMain(); // Abre a tela preta com overlay
+    window.abrirIgambleMenu(); // Força a tela bg2.png aparecer
+};
+
+window.abrirCelularMain = function() {
+    window.setElDisplay("phoneOverlay", "flex");
+    window.voltarPhoneMain(); // Garante que abre sempre na tela principal do bg.png
 };
 // ---------------------------------------------------
 
@@ -146,6 +153,13 @@ window.abrirApp = function(appId, isLocked, lockMsg) {
     window.fecharCelular(); 
     window.setElDisplay("gameContainer", "block");
     window.setElDisplay("btnHomeApp", "flex");
+    
+    // Mostra o botão roxo de voltar só se for iGamble
+    if(appId === 'tab-igamble') {
+        window.setElDisplay("btnBackIgamble", "flex");
+    } else {
+        window.setElDisplay("btnBackIgamble", "none");
+    }
     
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     let a = document.getElementById(appId); if(a) a.classList.add('active');
@@ -169,6 +183,7 @@ window.abrirApp = function(appId, isLocked, lockMsg) {
 window.fecharApp = function() {
     window.setElDisplay("gameContainer", "none");
     window.setElDisplay("btnHomeApp", "none");
+    window.setElDisplay("btnBackIgamble", "none"); // Garante que o voltar suma quando fecha os apps
 };
 
 window.abrirModal = function() {
