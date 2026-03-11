@@ -398,7 +398,7 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     flex: 1 !important;
     min-height: 0 !important;
     padding: 0 !important;
-    /* Removido o display: flex !important para respeitar a classe .active */
+    display: none !important; /* Estava como flex */
     flex-direction: column !important;
     background: #000;
 }
@@ -502,7 +502,7 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     position: absolute !important;
     bottom: 25px !important;
     right: 15px !important;
-    left: auto !important; /* Anula qualquer comportamento de empurrar para o lado */
+    left: auto !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 15px !important;
