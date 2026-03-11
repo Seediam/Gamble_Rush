@@ -353,7 +353,30 @@
 
                       <div class="igamble-chat">
                         <div class="chat-messages" id="chatMessages"></div>
+						  					  <!-- Preview da Resposta -->
+    <div id="chatReplyPreview" style="display:none; background:#222; border-left:3px solid var(--accent-blue); padding:5px; margin-bottom:5px; font-size:12px;">
+        <div style="display:flex; justify-content:space-between;">
+            <b id="replyToName" style="color:var(--accent-blue);"></b>
+            <span onclick="window.cancelarResposta()" style="cursor:pointer; color:red;">✖</span>
+        </div>
+        <div id="replyToText" style="color:#aaa; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+    </div>
+    
+    <div style="display:flex; width:100%;">
+        <button class="neon-icon-btn" onclick="window.enviarAnexo()">📎</button>
+        <input type="text" id="chatInputMsg" placeholder="Sua mensagem..." oninput="window.handleMention(event, this)" onkeydown="if(event.key==='Enter') window.enviarMsgGamble()">
+        <button class="neon-icon-btn" onclick="window.enviarMsgGamble()">➤</button>
+    </div>
+</div>
                         <div class="chat-input-area" style="position: relative;">
+                          <button class="neon-icon-btn" onclick="window.enviarAnexo()">📎</button>
+                          <input type="text" id="chatInputMsg" placeholder="Sua mensagem..." oninput="window.handleMention(event, this)" onkeydown="if(event.key==='Enter') window.enviarMsgGamble()">
+	<input type="text" id="chatInputMsg" placeholder="Sua mensagem..." oninput="window.handleMention(event, this)" onkeydown="if(event.key==='Enter') window.enviarMsgGamble()">
+                          <button class="neon-icon-btn" onclick="window.enviarMsgGamble()">➤</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
   
 
                   <!-- 2) VIEW: POSTS -->
