@@ -1508,4 +1508,98 @@ window.atualizarLikesVisuais = function() {
 
 // Se não tiver essa linha no código ainda, mantenha para rodar o motor
 setInterval(window.atualizarLikesVisuais, 1000);
+
+    // =========================================================
+// PATCH: REAÇÕES, ÁUDIO DUPLICADO E DOUBLE-TAP TIKTOK
+// =========================================================
+
+// 1. TRAZENDO DE VOLTA AS REAÇÕES DO CHAT
+window.abrirEmojiReacao = function(msgKey, event) { 
+    window.msgAtualParaReagir = msgKey; 
+    let p = document.getElementById("emojiPopupDynamic"); 
+    if(!p) return;
+    
+    p.style.display="flex"; 
+    let x = event.clientX;
+    let y = event.clientY - 10;
+    
+    // Evita que a caixinha abra fora da tela
+    if (x + 180 > window.innerWidth) x = window.innerWidth - 190;
+    if (y + 120 > window.innerHeight) y = window.innerHeight - 140;
+    
+    p.style.left = x + "px"; 
+    p.style.top = y + "px"; 
+};
+
+window.executarReacao = function(emoji) { 
+    if(!window.msgAtualParaReagir) return; 
+    window.db.ref(`tokyoRpg/chat/${window.msgAtualParaReagir}/reacoes/${emoji}`).once('value').then(s => { 
+        window.db.ref(`tokyoRpg/chat/${window.msgAtualParaReagir}/reacoes/${emoji}`).set((s.val()||0)+1); 
+        let p = document.getElementById("emojiPopupDynamic");
+        if(p) p.style.display="none"; 
+    }); 
+};
+
+// 2. CONSERTANDO O ÁUDIO DUPLICADO NO PC
+if(window.postObserver) window.postObserver.disconnect();
+
+window.postObserver = new IntersectionObserver((entries) => {
+    let postsView = document.getElementById("igamble-view-posts");
+    let isActiveTab = postsView && postsView.classList.contains("active");
+
+    entries.forEach(entry => {
+        let audioEl = entry.target.querySelector('audio.post-audio');
+        if(!audioEl) return;
+
+        if(entry.isIntersecting && isActiveTab) {
+            if(!window.postAudioMuted) {
+                // O SEGREDO AQUI: Pausa TODOS os outros áudios antes de tocar esse
+                document.querySelectorAll('audio.post-audio').forEach(a => {
+                    if(a !== audioEl) { a.pause(); a.currentTime = 0; }
+                });
+                
+                audioEl.volume = 1.0;
+                audioEl.play().catch(()=>{});
+            }
+        } else {
+            audioEl.pause();
+            audioEl.currentTime = 0;
+        }
+    });
+}, { threshold: 0.5 }); // Aumentei pra 50% pra garantir que só pega o que tá no centro do PC
+
+// 3. CURTIR COM 2 TOQUES NA IMAGEM (DOUBLE TAP)
+document.addEventListener('dblclick', function(e) {
+    // Verifica se clicou duas vezes em alguma parte da imagem do post
+    let media = e.target.closest('.post-media') || e.target.closest('.post-media-bg') || e.target.closest('.post-overlay');
+    
+    if(media && window.jogadorAtual) {
+        let card = media.closest('.post-card');
+        if(card) {
+            // Pega o ID do post escondido no botão de curtir
+            let btn = card.querySelector("button[onclick^='window.curtirPost']");
+            if(btn) {
+                let match = btn.getAttribute("onclick").match(/'([^']+)'/);
+                if(match && match[1]) {
+                    let postId = match[1];
+                    let ref = window.db.ref(`tokyoRpg/posts/${postId}`);
+                    
+                    // Curte o post diretamente (Ignora o painel do Mestre no duplo clique)
+                    ref.once('value').then(snap => {
+                        let p = snap.val(); if(!p) return;
+                        let likers = p.likers || {};
+                        
+                        // Só curte se ainda não curtiu (double tap não tira o like, só dá)
+                        if(!likers[window.jogadorAtual]) { 
+                            likers[window.jogadorAtual] = true;
+                            ref.update({ likes: (p.likes||0) + 1, likers });
+                            // Solta um coração gigante na tela na hora
+                            if(window.spawnFloatingHeart) window.spawnFloatingHeart(card);
+                        }
+                    });
+                }
+            }
+        }
+    }
+});
 };
