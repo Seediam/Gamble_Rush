@@ -1414,6 +1414,9 @@ window.spawnFloatingHeart = function(card) {
 
 // DUPLO CLIQUE NA IMAGEM (DOUBLE TAP)
 document.addEventListener('dblclick', function(e) {
+    // Se o duplo clique for exatamente em um botão, ignora (evita duplo processamento)
+    if (e.target.tagName.toLowerCase() === 'button' || e.target.closest('button')) return;
+
     // Detecta se clicou no post
     let card = e.target.closest('.post-card');
     if(card && window.jogadorAtual) {
@@ -1432,9 +1435,8 @@ document.addEventListener('dblclick', function(e) {
                     if(!likers[window.jogadorAtual]) { 
                         likers[window.jogadorAtual] = true;
                         ref.update({ likes: (p.likes||0) + 1, likers });
+                        window.spawnPurpleHeart(e.clientX, e.clientY); // Coração no clique
                     }
-                    // SPAWNA O CORAÇÃO ROXO EXATAMENTE ONDE O MOUSE ESTÁ!
-                    window.spawnPurpleHeart(e.clientX, e.clientY);
                 });
             }
         }
