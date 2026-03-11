@@ -1616,23 +1616,57 @@ window.showMentionDropdown = function(inputEl, query) {
     // Posiciona em cima do input atual
     let rect = inputEl.getBoundingClientRect();
     drop.style.left = rect.left + "px";
-    drop.style.top = (rect.top - 160) + "px"; // 160px pra cima
+    drop.style.top = (rect.top - 160) + "px"; 
     drop.style.display = "block";
 
-    let users = Object.values(window.usersGlobais || {});
+    let users = [];
+
+    // LÓGICA NOVA: Se for comentário, filtra os envolvidos no post
+    if (inputEl.id === "commentInput" && window.currentPostIdComment) {
+        let post = window.globalPostsData[window.currentPostIdComment];
+        if (post) {
+            let envolvidos = new Set();
+            
+            // 1. Dono do post
+            if (post.autor) envolvidos.add(post.autor);
+            
+            // 2. Você (jogador atual)
+            if (window.jogadorAtual) envolvidos.add(window.jogadorAtual);
+            
+            // 3. Pessoas que comentaram
+            if (post.comments) {
+                Object.values(post.comments).forEach(c => {
+                    if (c.autor) envolvidos.add(c.autor);
+                });
+            }
+
+            // Pega os dados globais dessas pessoas para ter o avatar delas
+            envolvidos.forEach(nome => {
+                if (window.usersGlobais && window.usersGlobais[nome]) {
+                    users.push(window.usersGlobais[nome]);
+                } else {
+                    users.push({ nome: nome }); // Caso não ache, coloca só o nome
+                }
+            });
+        }
+    } else {
+        // Se estiver criando um post novo (fora dos comentários), carrega todo mundo
+        users = Object.values(window.usersGlobais || {});
+    }
+
     // Filtra quem bate com o que foi digitado
     let filtered = users.filter(u => u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
 
     if (filtered.length === 0) { drop.style.display = "none"; return; }
 
     drop.innerHTML = filtered.map(u => {
-        let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
+        let av = u.avatarUrl || u.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
         return `
-        <div class="mention-item" onclick="window.selectMention('${u.nome}')">
-            <img src="${av}" class="mention-avatar">
+        <div class="mention-item" style="display:flex; align-items:center; gap:10px; padding:5px; cursor:pointer;" onclick="window.selectMention('${u.nome}')">
+            <img src="${av}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;" alt="">
             <span>${u.nome}</span>
         </div>`;
-    }).join('');
+    }).join("");
 };
 
 window.selectMention = function(nome) {
