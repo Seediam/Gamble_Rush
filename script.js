@@ -1616,55 +1616,65 @@ window.showMentionDropdown = function(inputEl, query) {
     // Posiciona em cima do input atual
     let rect = inputEl.getBoundingClientRect();
     drop.style.left = rect.left + "px";
-    drop.style.top = (rect.top - 160) + "px"; 
+    drop.style.top = (rect.top - 200) + "px"; // Ajustado para não colar muito no input
     drop.style.display = "block";
+    drop.style.zIndex = "99999"; // GARANTE QUE VAI APARECER NA FRENTE DO MODAL DE COMENTÁRIOS
 
     let users = [];
 
     // LÓGICA NOVA: Se for comentário, filtra os envolvidos no post
-    if (inputEl.id === "commentInput" && window.currentPostIdComment) {
-        let post = window.globalPostsData[window.currentPostIdComment];
+    if (inputEl.id === "commentInput") {
+        let postId = window.currentPostIdComment;
+        let post = window.globalPostsData ? window.globalPostsData[postId] : null;
+        
+        let envolvidos = new Set();
+        
+        // 1. Você (sempre deve poder se mencionar)
+        if (window.jogadorAtual) envolvidos.add(window.jogadorAtual);
+        
         if (post) {
-            let envolvidos = new Set();
-            
-            // 1. Dono do post
+            // 2. Dono do post (tenta pegar por 'autor' ou 'autorId')
             if (post.autor) envolvidos.add(post.autor);
+            if (post.autorId) envolvidos.add(post.autorId);
             
-            // 2. Você (jogador atual)
-            if (window.jogadorAtual) envolvidos.add(window.jogadorAtual);
-            
-            // 3. Pessoas que comentaram
+            // 3. Pessoas que comentaram (tenta pegar por 'autor' ou 'nome')
             if (post.comments) {
                 Object.values(post.comments).forEach(c => {
                     if (c.autor) envolvidos.add(c.autor);
+                    if (c.nome) envolvidos.add(c.nome);
                 });
             }
-
-            // Pega os dados globais dessas pessoas para ter o avatar delas
-            envolvidos.forEach(nome => {
-                if (window.usersGlobais && window.usersGlobais[nome]) {
-                    users.push(window.usersGlobais[nome]);
-                } else {
-                    users.push({ nome: nome }); // Caso não ache, coloca só o nome
-                }
-            });
         }
+
+        // Converte o Set (nomes únicos) para array de objetos de usuários
+        envolvidos.forEach(nome => {
+            if (!nome) return; // Ignora se vier vazio
+            if (window.usersGlobais && window.usersGlobais[nome]) {
+                users.push(window.usersGlobais[nome]);
+            } else {
+                users.push({ nome: nome }); // Caso não ache os dados globais, coloca só o nome
+            }
+        });
     } else {
         // Se estiver criando um post novo (fora dos comentários), carrega todo mundo
         users = Object.values(window.usersGlobais || {});
     }
 
-    // Filtra quem bate com o que foi digitado
-    let filtered = users.filter(u => u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+    // Filtra quem bate com o que foi digitado (ignorando maiúsculas/minúsculas)
+    let filtered = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
 
-    if (filtered.length === 0) { drop.style.display = "none"; return; }
+    if (filtered.length === 0) { 
+        drop.style.display = "none"; 
+        return; 
+    }
 
+    // Monta a lista visualmente
     drop.innerHTML = filtered.map(u => {
         let av = u.avatarUrl || u.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
         return `
-        <div class="mention-item" style="display:flex; align-items:center; gap:10px; padding:5px; cursor:pointer;" onclick="window.selectMention('${u.nome}')">
+        <div class="mention-item" style="display:flex; align-items:center; gap:10px; padding:8px; cursor:pointer; border-bottom:1px solid #333; background:#111;" onclick="window.selectMention('${u.nome}')">
             <img src="${av}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;" alt="">
-            <span>${u.nome}</span>
+            <span style="color:#fff; font-size:14px; font-weight:bold;">${u.nome}</span>
         </div>`;
     }).join("");
 };
