@@ -1587,127 +1587,102 @@ setInterval(() => {
 // =========================================================
 window.mentionState = { active: false, inputEl: null, startPos: 0 };
 
+// =========================================================
+// NOVO SISTEMA DE MENÇÕES (TIPO INSTAGRAM)
+// =========================================================
 window.handleMention = function(e, inputEl) {
-    let val = inputEl.value;
-    let cursorPos = inputEl.selectionStart;
+    // Pega o texto do começo até onde o cursor está
+    let textBeforeCursor = inputEl.value.substring(0, inputEl.selectionStart);
+    
+    // RegEx Mágica: Verifica se a última palavra digitada começa com @ 
+    let match = textBeforeCursor.match(/(?:^|\s)@([^ \n]*)$/);
 
-    // Acha se a última palavra digitada começa com @
-    let textBeforeCursor = val.substring(0, cursorPos);
-    let atIndex = textBeforeCursor.lastIndexOf('@');
-
-    // Se achou um '@' e ele for o início da string ou tiver um espaço antes
-    if (atIndex !== -1 && (atIndex === 0 || textBeforeCursor[atIndex - 1] === ' ' || textBeforeCursor[atIndex - 1] === '\n')) {
-        let query = textBeforeCursor.substring(atIndex + 1);
-        
-        // Se ainda não deu espaço depois do @, ativa a busca
-        if (!query.includes(' ') && !query.includes('\n')) {
-            window.mentionState = { active: true, inputEl: inputEl, startPos: atIndex, query: query };
-            window.showMentionDropdown(inputEl, query);
-            return;
-        }
+    if (match) {
+        let query = match[1].toLowerCase();
+        window.renderNovaMencao(inputEl, query);
+    } else {
+        window.fecharNovaMencao();
     }
-    window.closeMentionDropdown();
 };
 
-window.showMentionDropdown = function(inputEl, query) {
-    let drop = document.getElementById("mentionDropdown");
+window.renderNovaMencao = function(inputEl, query) {
+    let containerId = inputEl.id + "_mentionWrapper";
+    let drop = document.getElementById(containerId);
     
-    // Se não existir, cria
+    // Se o menu ainda não existir perto do input, a gente cria grudado nele!
     if (!drop) {
         drop = document.createElement("div");
-        drop.id = "mentionDropdown";
-        document.body.appendChild(drop);
+        drop.id = containerId;
+        
+        // O pulo do gato: CSS Absoluto Bottom 100%. Ele nasce NA BARRA e sobe.
+        drop.style.cssText = "position:absolute; bottom:100%; left:0; width:100%; max-height:220px; background:#111; border:1px solid #00f0ff; border-radius:12px 12px 0 0; z-index:9999999; overflow-y:auto; box-shadow:0 -10px 20px rgba(0,240,255,0.2); display:none;";
+        
+        // Pega a caixa-mãe onde o input está e injeta o menu lá dentro
+        if (inputEl.parentElement) {
+            inputEl.parentElement.style.position = "relative";
+            inputEl.parentElement.appendChild(drop);
+        }
     }
     
-    // BLINDAGEM MÁXIMA CSS: Força ele a ficar fixo, no topo, ignorando o painel de fundo
-    drop.style.cssText = "position: fixed !important; z-index: 9999999 !important; background: #111 !important; border: 1px solid #00f0ff !important; border-radius: 8px !important; max-height: 200px !important; overflow-y: auto !important; width: 250px !important; box-shadow: 0 0 15px rgba(0,240,255,0.5) !important; display: block !important;";
+    // Pega TODO MUNDO do Firebase direto, sem filtro de post
+    let users = Object.values(window.usersGlobais || {});
     
-    let users = [];
-    let envolvidos = new Set();
-
-    if (inputEl.id === "commentInput") {
-        let postId = window.currentPostIdForComment;
-        let post = window.globalPostsData ? window.globalPostsData[postId] : null;
-        
-        // 1. Sempre adiciona a pessoa jogando
-        if (window.jogadorAtual) envolvidos.add(window.jogadorAtual);
-        
-        if (post) {
-            // 2. Adiciona o dono do post
-            if (post.autor) envolvidos.add(post.autor);
-            if (post.autorId) envolvidos.add(post.autorId);
-            
-            // 3. Adiciona quem comentou
-            if (post.comentarios) {
-                Object.values(post.comentarios).forEach(c => {
-                    if (c.autor) envolvidos.add(c.autor);
-                    if (c.nome) envolvidos.add(c.nome);
-                });
-            }
-        }
-    } else {
-        if (window.usersGlobais) {
-            Object.keys(window.usersGlobais).forEach(n => envolvidos.add(n));
-        }
+    // Procura por quem o usuário digitou
+    let filtered = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query)).slice(0, 15); // Mostra até 15 pessoas
+    
+    if (filtered.length === 0) {
+        drop.style.display = "none";
+        return;
     }
-
-    // Pega as imagens de perfil
-    envolvidos.forEach(nome => {
-        if (!nome) return;
-        if (window.usersGlobais && window.usersGlobais[nome]) {
-            users.push(window.usersGlobais[nome]);
-        } else {
-            users.push({ nome: nome }); 
-        }
-    });
-
-    // Se estiver vazio, adiciona pelo menos um teste para a gente ver que funcionou
-    if (users.length === 0) users.push({ nome: "Convidado" });
-
-    // Filtra pelo texto
-    let filtered = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
-
-    if (filtered.length === 0) { 
-        drop.style.cssText = "display: none !important;";
-        return; 
-    }
-
+    
+    // Renderiza a lista lindona
     drop.innerHTML = filtered.map(u => {
         let av = u.avatarUrl || u.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
         return `
-        <div style="display:flex; align-items:center; gap:10px; padding:10px; cursor:pointer; border-bottom:1px solid #333; transition:background 0.2s;" 
-             onclick="window.selectMention('${u.nome}')" 
+        <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; cursor:pointer; border-bottom:1px solid #222; color:#fff; transition:0.2s;" 
+             onclick="window.inserirNovaMencao('${inputEl.id}', '${u.nome}')"
              onmouseover="this.style.background='#222'" 
              onmouseout="this.style.background='transparent'">
-            <img src="${av}" style="width:28px; height:28px; border-radius:50%; object-fit:cover;" alt="">
-            <span style="color:#fff; font-size:14px; font-weight:bold;">${u.nome}</span>
+            <img src="${av}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #555;">
+            <span style="font-weight:bold; font-size:14px; color:var(--accent-blue, #00f0ff);">${u.nome}</span>
         </div>`;
     }).join("");
-
-    let rect = inputEl.getBoundingClientRect();
     
-    // Delay de 10ms para o HTML desenhar a caixa e a gente poder medir a altura dela pra posicionar
-    setTimeout(() => {
-        let dropHeight = drop.offsetHeight || 150;
-        drop.style.left = rect.left + "px";
-        drop.style.top = (rect.top - dropHeight - 10) + "px";
-    }, 10);
+    drop.style.display = "block";
 };
 
-window.closeMentionDropdown = function() {
-    if (window.mentionState) window.mentionState.active = false;
-    let drop = document.getElementById("mentionDropdown");
-    if(drop) {
-        drop.style.cssText = "display: none !important;";
-    }
+window.inserirNovaMencao = function(inputId, nome) {
+    let inputEl = document.getElementById(inputId);
+    if(!inputEl) return;
+    
+    let textBeforeCursor = inputEl.value.substring(0, inputEl.selectionStart);
+    let textAfterCursor = inputEl.value.substring(inputEl.selectionStart);
+    
+    // Substitui o @ e a letra que tava digitando pelo nome da pessoa com espaço no final
+    let newTextBefore = textBeforeCursor.replace(/(^|\s)@([^ \n]*)$/, `$1@${nome} `);
+    
+    inputEl.value = newTextBefore + textAfterCursor;
+    inputEl.focus(); // Devolve o foco pra você continuar digitando
+    
+    // Move o cursor para logo depois do nome inserido
+    let newPos = newTextBefore.length;
+    inputEl.setSelectionRange(newPos, newPos);
+    
+    window.fecharNovaMencao();
 };
 
-// Esconde o dropdown de menção se clicar fora
+window.fecharNovaMencao = function() {
+    // Esconde qualquer menu de menção que estiver aberto na tela
+    document.querySelectorAll("[id$='_mentionWrapper']").forEach(el => el.style.display = "none");
+};
+
+// Se clicar fora, a janelinha some automaticamente
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.mention-dropdown') && !e.target.closest('input') && !e.target.closest('textarea')) {
-        window.closeMentionDropdown();
+    if (!e.target.closest("[id$='_mentionWrapper']") && !e.target.closest('input') && !e.target.closest('textarea')) {
+        window.fecharNovaMencao();
     }
 });
+// =========================================================
 
 
 // =========================================================
