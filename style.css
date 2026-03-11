@@ -407,6 +407,17 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     display: flex !important; /* Visível APENAS quando o botão for clicado */
 }
 
+#igamble-view-posts {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    display: none; /* Muda isso de flex para none */
+    flex-direction: column;
+    background: #000;
+}
+#igamble-view-posts.active {
+    display: flex !important; /* E garante que aqui ele vai aparecer só quando for active */
+}
 #igamble-view-posts .feed-container {
     flex: 1 !important;
     height: 100% !important;
