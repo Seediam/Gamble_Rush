@@ -1081,3 +1081,28 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 /* ÁREA DE INPUT */
 .comments-input-area { padding: 15px; background: #000; border-top: 1px solid var(--accent-blue); display: flex; gap: 10px; align-items: center; border-radius: 0;}
 .comments-input-area input { flex: 1; border: none !important; background: #111 !important; color: #fff; padding: 12px 15px; border-radius: 20px; font-size: 13px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5) !important; outline: none; }
+
+/* Garante que o dropdown de menções fique por cima de QUALQUER modal */
+.mention-dropdown {
+    position: fixed !important; /* Fixed é melhor para contornar modais */
+    z-index: 999999 !important; /* Força ficar na frente */
+    background: #111;
+    border: 1px solid var(--accent-blue, #00f0ff);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    max-height: 200px;
+    overflow-y: auto;
+    width: 250px;
+}
+.mention-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #333;
+    transition: background 0.2s;
+}
+.mention-item:hover {
+    background: #222;
+}
