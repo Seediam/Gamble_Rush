@@ -102,6 +102,43 @@ window.fecharCelular = function() {
     window.setElDisplay("phoneOverlay", "none");
 };
 
+// --- NOVAS FUNÇÕES PARA A TELA bg2.png (iGAMBLE) ---
+window.abrirIgambleMenu = function() {
+    let frame = document.getElementById('phoneFrameUI');
+    let mainScreen = document.getElementById('phoneMainScreen');
+    let igambleScreen = document.getElementById('phoneIgambleScreen');
+    let closeBtn = document.getElementById('btnClosePhone');
+    
+    // Troca para o bg2.png
+    if (frame) frame.style.backgroundImage = "url('bg2.png')";
+    if (mainScreen) mainScreen.style.display = "none";
+    if (igambleScreen) igambleScreen.style.display = "block";
+    if (closeBtn) closeBtn.style.display = "none"; // Esconde botão de desligar na 2ª tela
+};
+
+window.voltarPhoneMain = function() {
+    let frame = document.getElementById('phoneFrameUI');
+    let mainScreen = document.getElementById('phoneMainScreen');
+    let igambleScreen = document.getElementById('phoneIgambleScreen');
+    let closeBtn = document.getElementById('btnClosePhone');
+    
+    // Volta para o bg.png normal
+    if (frame) frame.style.backgroundImage = "url('bg.png')";
+    if (mainScreen) mainScreen.style.display = "grid";
+    if (igambleScreen) igambleScreen.style.display = "none";
+    if (closeBtn) closeBtn.style.display = "flex";
+};
+
+window.abrirIgambleApp = function(tabName) {
+    // 1. Abre a interface geral do iGamble na tela principal
+    window.abrirApp('tab-igamble');
+    
+    // 2. Simula o clique na aba certa por trás dos panos
+    let btn = document.querySelector(`.igamble-nav button[onclick*="${tabName}"]`);
+    if(btn) window.switchIGambleTab(tabName, btn);
+};
+// ---------------------------------------------------
+
 window.abrirApp = function(appId, isLocked, lockMsg) {
     if(isLocked) { window.showNeonToast(lockMsg); return; }
     
