@@ -1022,3 +1022,54 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     gap: 12px !important;
     pointer-events: auto !important;
 }
+/* =========================================================
+   PATCH: BOTÕES FLUTUANTES (CURTIR/COMENTAR) NO CELULAR
+   ========================================================= */
+
+@media(max-width: 600px) {
+    /* 1. Força a barra lateral a ficar na Direita, acima de tudo */
+    #igamble-view-posts .post-sidebar {
+        position: absolute !important;
+        bottom: 25px !important;
+        right: 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 15px !important;
+        z-index: 9999 !important; /* Garante que NADA cubra os botões */
+        pointer-events: auto !important;
+    }
+
+    /* 2. Deixa os botões com um visual de app nativo (redondos com fundo de vidro) */
+    #igamble-view-posts .post-btn-vert {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 50% !important; /* Redondinhos */
+        background: rgba(0, 0, 0, 0.65) !important;
+        backdrop-filter: blur(5px) !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+        font-size: 20px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        color: #fff !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+    }
+
+    /* 3. Ajusta o numerozinho (likes/coments) pra ficar embaixo do ícone */
+    #igamble-view-posts .post-btn-vert span {
+        font-size: 11px !important;
+        font-weight: 900 !important;
+        margin-top: 2px !important;
+        text-shadow: 0 1px 3px #000 !important;
+    }
+    
+    /* 4. Garante que o botão EXCLUIR fique bem no topo direito e não atrapalhe */
+    #igamble-view-posts .post-header .post-del-btn {
+        position: absolute !important;
+        top: 10px !important;
+        right: 10px !important;
+        z-index: 9999 !important;
+    }
+}
