@@ -2106,4 +2106,66 @@ window.cancelReply = function(){
   const box = document.getElementById("replyPreview");
   if(box) box.style.display = "none";
 };
+    window._mentionNotifyQueue = [];
+window._mentionNotifyShowing = 0;
+
+window.renderMentionNotify = function(item){
+  const stack = document.getElementById("mentionNotifyStack");
+  if(!stack) return;
+
+  // mantém no máximo 3 na tela
+  while(stack.children.length >= 3){
+    stack.removeChild(stack.firstChild);
+  }
+
+  const from = item.from || "???";
+  const u = (window.usersGlobais && window.usersGlobais[from]) || {};
+  const av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${from}`;
+
+  const div = document.createElement("div");
+  div.className = "mention-notify";
+  div.innerHTML = `
+    <img src="${av}">
+    <div class="mn-texts">
+      <div class="mn-title">@${from} te marcou</div>
+      <div class="mn-sub">${(item.text||"").replace(/\s+/g,' ').trim()}</div>
+    </div>
+  `;
+
+  stack.appendChild(div);
+
+  // some sozinho
+  setTimeout(() => {
+    div.classList.add("out");
+    setTimeout(() => { if(div.parentElement) div.remove(); }, 380);
+  }, 3200);
+};
+
+window.startMentionInboxListener = function(){
+  if(!window.db || !window.jogadorAtual) return;
+
+  const ref = window.db.ref(`tokyoRpg/mentions/${window.jogadorAtual}/inbox`).limitToLast(20);
+
+  // 1) pega backlog uma vez
+  ref.once("value").then(snap => {
+    const data = snap.val() || {};
+    const arr = Object.keys(data).map(k => ({ key:k, ...data[k] }))
+      .sort((a,b) => (a.ts||0)-(b.ts||0));
+
+    // mostra só as 3 últimas do backlog ao entrar
+    arr.slice(-3).forEach(item => window.renderMentionNotify(item));
+  });
+
+  // 2) novos em tempo real
+  ref.on("child_added", snap => {
+    const item = snap.val();
+    if(!item) return;
+
+    // ignora itens muito antigos (pra não duplicar backlog)
+    const age = Date.now() - (item.ts||0);
+    if(age > 15000) return; // 15s pra trás -> considera backlog
+
+    window.renderMentionNotify(item);
+  });
+};
 };
