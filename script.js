@@ -96,6 +96,7 @@ window.getPesoStatus = function(u) { let r = window.getSafeRpg(u); let buffs = w
 // === 4. INTERFACE GLOBAL E SISTEMA OS ===
 window.abrirCelularMain = function() {
     window.setElDisplay("phoneOverlay", "flex");
+    window.voltarPhoneMain(); // <- Adicione esta linha para forçar o reset da tela do celular
 };
 
 window.fecharCelular = function() {
