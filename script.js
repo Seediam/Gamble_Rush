@@ -1367,6 +1367,25 @@ window.db.ref("tokyoRpg/posts").on("value", snap => {
 });
 
 // 3. O motor visual que faz os números subirem na tela
+// Função que desenha o coração na tela
+window.spawnFloatingHeart = function(card) {
+    let heart = document.createElement("div");
+    heart.className = "floating-heart";
+    heart.innerText = "❤";
+    
+    // Aleatoriza a posição Horizontal (X) para não subirem todos em linha reta exata
+    let randomX = Math.random() * 50 - 25; 
+    heart.style.marginRight = randomX + "px";
+    
+    card.appendChild(heart);
+    
+    // Deleta o coração do HTML depois que a animação acaba (2 seg) para não travar o PC
+    setTimeout(() => {
+        if(heart.parentElement) heart.remove();
+    }, 2000);
+};
+
+// O motor visual atualizado
 window.atualizarLikesVisuais = function() {
     let feed = document.getElementById("igamblePostsFeed");
     if (!feed) return;
@@ -1386,26 +1405,42 @@ window.atualizarLikesVisuais = function() {
                 if (post.boost && post.boost.target > 0) {
                     let elapsed = Date.now() - post.boost.startTs;
                     let progress = elapsed / post.boost.duration;
-                    
                     if (progress > 1) progress = 1;
                     if (progress < 0) progress = 0;
-                    
                     fakeLikes = Math.floor(progress * post.boost.target);
                 }
                 
                 let totalLikes = realLikes + fakeLikes;
                 let span = btn.querySelector("span");
                 
-                if (span && parseInt(span.innerText) !== totalLikes) {
-                    span.innerText = totalLikes;
+                if (span) {
+                    let currentVal = parseInt(span.innerText) || 0;
                     
-                    // Fica vermelho neon enquanto tiver recebendo Boost
-                    if(fakeLikes > 0) {
-                        span.style.color = "#ff1a55";
-                        span.style.textShadow = "0 0 10px #ff1a55";
-                    } else {
-                        span.style.color = "";
-                        span.style.textShadow = "";
+                    // SE O NÚMERO DE LIKES AUMENTOU!
+                    if (currentVal !== totalLikes) {
+                        
+                        if (totalLikes > currentVal) {
+                            let card = btn.closest('.post-card');
+                            if (card) {
+                                // Solta até 3 corações por vez para não travar a tela se o boost for muito rápido
+                                let diff = totalLikes - currentVal;
+                                let heartsToSpawn = Math.min(diff, 3);
+                                for(let i = 0; i < heartsToSpawn; i++) {
+                                    setTimeout(() => window.spawnFloatingHeart(card), i * 250);
+                                }
+                            }
+                        }
+                        
+                        span.innerText = totalLikes;
+                        
+                        // Efeito de texto neon
+                        if(fakeLikes > 0) {
+                            span.style.color = "#ff1a55";
+                            span.style.textShadow = "0 0 10px #ff1a55";
+                        } else {
+                            span.style.color = "";
+                            span.style.textShadow = "";
+                        }
                     }
                 }
             }
@@ -1413,6 +1448,9 @@ window.atualizarLikesVisuais = function() {
     });
 };
 
+// Rodar a checagem a cada 1.5s
+// (Se você já tiver essa linha no código antigo, não precisa duplicar)
+// setInterval(window.atualizarLikesVisuais, 1500); 
 // Rodar a checagem a cada 1.5s
 setInterval(window.atualizarLikesVisuais, 1500);
 };
