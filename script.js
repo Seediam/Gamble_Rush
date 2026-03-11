@@ -1668,112 +1668,89 @@ window.enviarComentario = function() {
         window.closeMentionDropdown();
     });
 };
-    // NOVO SISTEMA DE MENÇÕES (TIPO INSTAGRAM) - VERSÃO BLINDADA
 // =========================================================
-
+// MENU DE MENÇÃO FLUTUANTE 
+// =========================================================
 window.handleMention = function(e, inputEl) {
-    let textBeforeCursor = inputEl.value.substring(0, inputEl.selectionStart);
-    // Pega o que está sendo digitado depois do último '@'
-    let match = textBeforeCursor.match(/(?:^|\s)@([^ \n]*)$/);
+    let val = inputEl.value;
+    let pos = inputEl.selectionStart;
+    let textoAntes = val.substring(0, pos);
+    
+    // Pega a última palavra digitada
+    let match = textoAntes.match(/(?:^|\s)@([^ \n]*)$/);
 
     if (match) {
         let query = match[1].toLowerCase();
-        window.renderNovaMencao(inputEl, query);
+        window.mostrarMenuMencao(inputEl, query);
     } else {
-        window.fecharNovaMencao();
+        window.esconderMenuMencao();
     }
 };
 
-window.renderNovaMencao = function(inputEl, query) {
-    let containerId = "mentionMasterBox";
-    let drop = document.getElementById(containerId);
-    
-    // 1. Cria a caixa do zero se ela não existir
-    if (!drop) {
-        drop = document.createElement("div");
-        drop.id = containerId;
-        document.body.appendChild(drop);
+window.mostrarMenuMencao = function(inputEl, query) {
+    let box = document.getElementById("hudMencaoRapida");
+    if (!box) {
+        box = document.createElement("div");
+        box.id = "hudMencaoRapida";
+        // Estilo HUD flutuante fixa na tela
+        box.style.cssText = "position:fixed; bottom:120px; left:50%; transform:translateX(-50%); width:300px; max-height:200px; background:rgba(0,0,0,0.9); border:1px solid #00f0ff; border-radius:10px; z-index:999999; overflow-y:auto; backdrop-filter:blur(5px); display:none;";
+        document.body.appendChild(box);
     }
-    
-    // 2. Injeta o CSS mais agressivo possível pra sobrepor a tela preta
-    drop.style.cssText = `
-        position: fixed !important;
-        z-index: 2147483647 !important; /* Valor máximo possível na web */
-        background: #0a0a0f !important;
-        border: 2px solid #00e5ff !important;
-        border-radius: 12px !important;
-        max-height: 250px !important;
-        overflow-y: auto !important;
-        width: 280px !important;
-        box-shadow: 0 0 30px rgba(0, 229, 255, 0.5) !important;
-        display: none;
-    `;
-    
-    // 3. Puxa todos os jogadores que existem no seu banco
-    let users = [];
-    if (window.usersGlobais) {
-        users = Object.values(window.usersGlobais);
-    } else {
-        // Se o banco falhar, joga uns falsos pra gente saber que o menu abre
-        users = [{nome:"ErroDeConexao"}, {nome:"TesteGamble"}];
-    }
-    
-    // 4. Filtra por quem ele está digitando (ex: @miu)
-    let filtered = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query)).slice(0, 10);
-    
-    if (filtered.length === 0) {
-        drop.style.display = "none";
+
+    let users = Object.values(window.usersGlobais || {});
+    let filtrados = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query)).slice(0, 10);
+
+    if (filtrados.length === 0) {
+        box.style.display = "none";
         return;
     }
-    
-    // 5. Monta a lista visual de pessoas
-    drop.innerHTML = filtered.map(u => {
-        let av = u.avatarUrl || u.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
+
+    box.innerHTML = filtrados.map(u => {
+        let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
         return `
-        <div style="display:flex; align-items:center; gap:12px; padding:12px 15px; cursor:pointer; border-bottom:1px solid #1a1a24; color:#fff;" 
-             onclick="window.inserirNovaMencao('${inputEl.id}', '${u.nome}')"
-             onmouseover="this.style.background='#1a1a24'" 
-             onmouseout="this.style.background='transparent'">
-            <img src="${av}" style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1px solid #555;">
-            <span style="font-weight:bold; font-size:15px; text-shadow: 0 0 5px #00e5ff;">${u.nome}</span>
+        <div style="display:flex; align-items:center; padding:10px; cursor:pointer; border-bottom:1px solid #333;"
+             onclick="window.escolherMencao('${inputEl.id}', '${u.nome}')"
+             onmouseover="this.style.background='#222'" onmouseout="this.style.background='transparent'">
+            <img src="${avatar}" style="width:30px; height:30px; border-radius:50%; margin-right:10px;">
+            <span style="color:#00f0ff; font-weight:bold;">${u.nome}</span>
         </div>`;
     }).join("");
-    
-    drop.style.display = "block";
 
-    // 6. Faz o menu grudar exatamente em cima do input que você tá digitando
-    let rect = inputEl.getBoundingClientRect();
-    setTimeout(() => {
-        let dropHeight = drop.offsetHeight || 150;
-        drop.style.left = rect.left + "px";
-        drop.style.top = (rect.top - dropHeight - 10) + "px"; 
-    }, 5);
+    box.style.display = "block";
 };
 
-window.inserirNovaMencao = function(inputId, nome) {
+window.escolherMencao = function(inputId, nomeAlvo) {
     let inputEl = document.getElementById(inputId);
-    if(!inputEl) return;
-    
-    let textBeforeCursor = inputEl.value.substring(0, inputEl.selectionStart);
-    let textAfterCursor = inputEl.value.substring(inputEl.selectionStart);
-    
-    // Troca o "@texto" pelo nome escolhido + 1 espaço
-    let newTextBefore = textBeforeCursor.replace(/(^|\s)@([^ \n]*)$/, `$1@${nome} `);
-    
-    inputEl.value = newTextBefore + textAfterCursor;
-    inputEl.focus(); 
-    
-    // Coloca a barrinha piscante logo depois do nome inserido
-    let newPos = newTextBefore.length;
-    inputEl.setSelectionRange(newPos, newPos);
-    
-    window.fecharNovaMencao();
+    if (!inputEl) return;
+
+    let val = inputEl.value;
+    let pos = inputEl.selectionStart;
+    let textoAntes = val.substring(0, pos);
+    let textoDepois = val.substring(pos);
+
+    // Troca o @... pelo nome
+    let novoTexto = textoAntes.replace(/(^|\s)@([^ \n]*)$/, `$1@${nomeAlvo} `);
+    inputEl.value = novoTexto + textoDepois;
+    inputEl.focus();
+
+    window.esconderMenuMencao();
+
+    // DISPARA A NOTIFICAÇÃO PRO BANCO DE DADOS NA HORA!
+    if (window.jogadorAtual) {
+        window.enviarNotificacaoHUD(nomeAlvo, window.jogadorAtual, "Mencionou você!");
+    }
 };
 
-window.fecharNovaMencao = function() {
-    let drop = document.getElementById("mentionMasterBox");
-    if(drop) drop.style.display = "none";
+window.esconderMenuMencao = function() {
+    let box = document.getElementById("hudMencaoRapida");
+    if (box) box.style.display = "none";
 };
+
+document.addEventListener("click", function(e) {
+    if (!e.target.closest("#hudMencaoRapida") && !e.target.closest("input") && !e.target.closest("textarea")) {
+        window.esconderMenuMencao();
+    }
+});
 
 // Clicar em qualquer lugar fora, fecha o menuzinho
 document.addEventListener('click', function(e) {
@@ -1908,4 +1885,54 @@ window.enviarMsgGamble = function() {
         window.cancelarResposta(); // Limpa o estado
     } catch (e) { console.error("Erro ao enviar.", e); }
 };
+    // ==========================================
+// SISTEMA DE NOTIFICAÇÕES (ONLINE E LOGIN)
+// ==========================================
+window.escutarNotificacoes = function() {
+    if (!window.jogadorAtual || !window.db) return;
+
+    let notifRef = window.db.ref(`tokyoRpg/notificacoes/${window.jogadorAtual}`);
+    
+    // Escuta novas notificações caindo no banco de dados
+    notifRef.on("child_added", snap => {
+        let n = snap.val();
+        let key = snap.key;
+
+        // Se a notificação for nova (ainda não foi lida)
+        if (!n.lida) {
+            // Exibe o popup na tela na hora (estilo Instagram)
+            window.showNeonToast(`🔔 @${n.remetente}: ${n.mensagem}`);
+            
+            // Toca um sonzinho rápido se você quiser (opcional)
+            let audio = new Audio("https://actions.google.com/sounds/v1/ui/beep_short.ogg");
+            audio.volume = 0.5;
+            audio.play().catch(()=>{});
+
+            // Marca como lida para não aparecer de novo quando ele relogar
+            window.db.ref(`tokyoRpg/notificacoes/${window.jogadorAtual}/${key}`).update({ lida: true });
+        }
+    });
+};
+
+// Dispara uma notificação para um jogador
+window.enviarNotificacaoHUD = function(alvo, remetente, mensagem) {
+    if (!window.db || !alvo || alvo === remetente) return;
+    
+    window.db.ref(`tokyoRpg/notificacoes/${alvo}`).push({
+        remetente: remetente,
+        mensagem: mensagem,
+        lida: false,
+        timestamp: Date.now()
+    });
+};
+
+// Engatilhar o escutador de notificações assim que o cara fizer login
+// (Procure no seu código onde fica o window.fazerLogin e adicione window.escutarNotificacoes() lá dentro, ou deixe solto para testar agora)
+setInterval(() => {
+    if (window.jogadorAtual && !window.notifIniciada) {
+        window.notifIniciada = true;
+        window.escutarNotificacoes();
+    }
+}, 2000);
+    
 };
