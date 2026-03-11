@@ -816,3 +816,25 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     15% { opacity: 1; }
     100% { transform: translateY(-250px) scale(1.5) rotate(-25deg); opacity: 0; }
 }
+
+/* =========================================================
+   PATCH: ANIMAÇÃO DE CORAÇÕES NO CENTRO DA IMAGEM
+   ========================================================= */
+.floating-heart {
+    position: absolute;
+    bottom: 45%;         /* Nasce bem no meio da imagem */
+    left: 50%;           /* Centralizado horizontalmente */
+    color: var(--accent-red);
+    font-size: 45px;     /* Bem grandão para dar impacto */
+    z-index: 100;
+    pointer-events: none;
+    animation: floatHeartAnim 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    text-shadow: 0 0 15px var(--accent-red), 0 0 30px var(--accent-red);
+}
+
+/* O coração sobe pelo meio da tela girando de leve */
+@keyframes floatHeartAnim {
+    0% { transform: translate(-50%, 0) scale(0.5) rotate(0deg); opacity: 0; }
+    15% { opacity: 1; transform: translate(-50%, -20px) scale(1.2) rotate(-10deg); }
+    100% { transform: translate(-50%, -250px) scale(1.5) rotate(20deg); opacity: 0; }
+}
