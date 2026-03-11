@@ -1385,7 +1385,30 @@ window.spawnFloatingHeart = function(card) {
     }, 2000);
 };
 
-// O motor visual atualizado
+// Variaveis para segurar a matemática dos "Pulos" aleatórios
+window.localDisplayedFakeLikes = window.localDisplayedFakeLikes || {};
+window.burstThresholds = window.burstThresholds || {};
+
+// Função que desenha o coração no MEIO da tela
+window.spawnFloatingHeart = function(card) {
+    let heart = document.createElement("div");
+    heart.className = "floating-heart";
+    heart.innerText = "❤";
+    
+    // Espalha um pouquinho para os lados (-50px até +50px) para não subirem em linha reta
+    let randomX = Math.random() * 100 - 50; 
+    heart.style.marginLeft = randomX + "px";
+    
+    // Varia um pouquinho o tamanho de cada coração
+    let scale = 0.7 + Math.random() * 0.5;
+    heart.style.fontSize = (45 * scale) + "px";
+    
+    card.appendChild(heart);
+    
+    setTimeout(() => { if(heart.parentElement) heart.remove(); }, 2500);
+};
+
+// O motor visual com a IA de Pulos (Chunks)
 window.atualizarLikesVisuais = function() {
     let feed = document.getElementById("igamblePostsFeed");
     if (!feed) return;
@@ -1400,47 +1423,82 @@ window.atualizarLikesVisuais = function() {
             
             if (post) {
                 let realLikes = post.likes || 0;
-                let fakeLikes = 0;
+                let fakeMathLikes = 0; // O que a matemática diz que já deveria ter
                 
                 if (post.boost && post.boost.target > 0) {
                     let elapsed = Date.now() - post.boost.startTs;
                     let progress = elapsed / post.boost.duration;
                     if (progress > 1) progress = 1;
                     if (progress < 0) progress = 0;
-                    fakeLikes = Math.floor(progress * post.boost.target);
+                    fakeMathLikes = Math.floor(progress * post.boost.target);
+                } else {
+                    window.localDisplayedFakeLikes[postId] = 0;
                 }
                 
-                let totalLikes = realLikes + fakeLikes;
+                let currentDisplayedFake = window.localDisplayedFakeLikes[postId] || 0;
+                
+                // IA que decide o tamanho do pacote com base no total que o Mestre colocou
+                if (!window.burstThresholds[postId]) {
+                    let ratePerSec = (post.boost?.target || 0) / (10 * 60 * 60);
+                    let ops = [1, 2, 3]; // Se for pouco like, pula de pouquinho
+                    if (ratePerSec >= 1 && ratePerSec < 5) ops = [1, 3, 5, 10]; // Médio
+                    else if (ratePerSec >= 5) ops = [5, 10, 15, 25]; // Se for muito like, pula de 25 em 25
+                    
+                    window.burstThresholds[postId] = ops[Math.floor(Math.random() * ops.length)];
+                }
+                
+                // A diferença entre o que tá na tela e o que a matemática manda ter
+                let diff = fakeMathLikes - currentDisplayedFake;
+                
+                // Se a diferença atingiu o "Pulo" aleatório sorteado
+                if (diff >= window.burstThresholds[postId] || (post.boost && Date.now() - post.boost.startTs >= post.boost.duration && diff > 0)) {
+                    currentDisplayedFake += diff;
+                    window.localDisplayedFakeLikes[postId] = currentDisplayedFake;
+                    
+                    // Sorteia o tamanho do PRÓXIMO pulo
+                    let ratePerSec = (post.boost?.target || 0) / (10 * 60 * 60);
+                    let ops = [1, 2, 3];
+                    if (ratePerSec >= 1 && ratePerSec < 5) ops = [1, 3, 5, 10];
+                    else if (ratePerSec >= 5) ops = [5, 10, 15, 25, 50];
+                    
+                    window.burstThresholds[postId] = ops[Math.floor(Math.random() * ops.length)];
+                }
+                
+                let totalLikes = realLikes + currentDisplayedFake;
                 let span = btn.querySelector("span");
                 
                 if (span) {
-                    let currentVal = parseInt(span.innerText) || 0;
+                    let screenVal = parseInt(span.innerText) || 0;
                     
-                    // SE O NÚMERO DE LIKES AUMENTOU!
-                    if (currentVal !== totalLikes) {
-                        
-                        if (totalLikes > currentVal) {
+                    // SE O NÚMERO DA TELA MUDOU!
+                    if (screenVal !== totalLikes) {
+                        if (totalLikes > screenVal) {
                             let card = btn.closest('.post-card');
                             if (card) {
-                                // Solta até 3 corações por vez para não travar a tela se o boost for muito rápido
-                                let diff = totalLikes - currentVal;
-                                let heartsToSpawn = Math.min(diff, 3);
+                                // Solta no máximo 6 corações por pulo para não travar o PC
+                                let jump = totalLikes - screenVal;
+                                let heartsToSpawn = Math.min(jump, 6);
                                 for(let i = 0; i < heartsToSpawn; i++) {
-                                    setTimeout(() => window.spawnFloatingHeart(card), i * 250);
+                                    setTimeout(() => window.spawnFloatingHeart(card), i * 150);
                                 }
                             }
                         }
                         
                         span.innerText = totalLikes;
                         
-                        // Efeito de texto neon
-                        if(fakeLikes > 0) {
+                        // Pisca o número
+                        span.style.transition = "transform 0.1s";
+                        span.style.transform = "scale(1.5)";
+                        
+                        if(currentDisplayedFake > 0) {
                             span.style.color = "#ff1a55";
                             span.style.textShadow = "0 0 10px #ff1a55";
                         } else {
                             span.style.color = "";
                             span.style.textShadow = "";
                         }
+                        
+                        setTimeout(() => { span.style.transform = "scale(1)"; }, 150);
                     }
                 }
             }
@@ -1448,9 +1506,6 @@ window.atualizarLikesVisuais = function() {
     });
 };
 
-// Rodar a checagem a cada 1.5s
-// (Se você já tiver essa linha no código antigo, não precisa duplicar)
-// setInterval(window.atualizarLikesVisuais, 1500); 
-// Rodar a checagem a cada 1.5s
-setInterval(window.atualizarLikesVisuais, 1500);
+// Se não tiver essa linha no código ainda, mantenha para rodar o motor
+setInterval(window.atualizarLikesVisuais, 1000);
 };
