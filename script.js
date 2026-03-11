@@ -1312,58 +1312,70 @@ window.switchIGambleTab = function(tabId, btnEl) {
             a.currentTime = 0;
         });
     }
-    // =========================================================
-// PATCH: SISTEMA DE POPULARIDADE (LIKES FALSOS DO MESTRE)
+// =========================================================
+// PATCH V2: SISTEMA DE POPULARIDADE E LIKES DO MESTRE
 // =========================================================
 
-window.globalPostsData = {};
-
-// 1. Armazenar os dados dos posts silenciosamente no fundo
-window.db.ref("tokyoRpg/posts").on("value", snap => {
-    window.globalPostsData = snap.val() || {};
-});
-
-// 2. Interceptar o botão de curtir apenas para o Mestre
-let oldCurtirPost = window.curtirPost;
+// 1. Substitui completamente a função de curtir do jogo
 window.curtirPost = function(id) {
+    if (!window.jogadorAtual) return;
+
+    // Se for o mestre logado, abre a tela de hack de likes primeiro
     if (window.isMaster) {
-        let op = prompt("👑 MESTRE: Sistema de Popularidade\n\nDigite a quantidade de curtidas falsas para injetar no post (Elas subirão aos poucos nas próximas 10 horas. Ex: 1000 = 100/hora).\n\nPara remover o boost digite 0.\n[Deixe VAZIO para apenas dar um like normal]");
+        let op = prompt("👑 MESTRE: Sistema de Popularidade\n\nQuantas curtidas quer injetar aos poucos? (Ex: 1000)\nDigite 0 para remover.\n[Cancele ou deixe vazio para dar um like normal]");
         
         if (op !== null && op.trim() !== "") {
             let target = parseInt(op);
             if (!isNaN(target)) {
                 if (target <= 0) {
-                    // Remove o boost
+                    // Mestre digitou 0, remove o boost
                     window.db.ref(`tokyoRpg/posts/${id}/boost`).remove();
-                    window.showNeonToast("Boost Removido!");
+                    window.showNeonToast("Boost Cancelado.");
                 } else {
-                    // Define que a entrega total demora 10 horas (10 * 60 * 60 * 1000 ms)
-                    let duration = 10 * 60 * 60 * 1000; 
+                    // Mestre digitou um número, ativa o hack de popularidade (Duração: 10 horas)
                     window.db.ref(`tokyoRpg/posts/${id}/boost`).set({
                         target: target,
                         startTs: Date.now(),
-                        duration: duration
+                        duration: 10 * 60 * 60 * 1000 
                     });
-                    window.showNeonToast(`🚀 Boost Iniciado! Alvo: ${target} Likes`);
+                    window.showNeonToast(`🚀 Boost Ativado: ${target} Likes!`);
                 }
-                return; // Para a função aqui, não executa o like normal
+                return; // Impede de rodar o like normal, já que o Mestre usou o hack
             }
         }
     }
-    // Se não for mestre, ou se deixou a caixinha vazia, segue o like normal
-    oldCurtirPost(id);
+
+    // --- LÓGICA DO LIKE NORMAL (Player ou Mestre que deixou a caixinha vazia) ---
+    let ref = window.db.ref(`tokyoRpg/posts/${id}`);
+    ref.once('value').then(snap => {
+        let p = snap.val(); if(!p) return;
+        let likers = p.likers || {};
+        if(likers[window.jogadorAtual]) {
+            delete likers[window.jogadorAtual];
+            ref.update({ likes: Math.max(0, (p.likes||1) - 1), likers });
+        } else {
+            likers[window.jogadorAtual] = true;
+            ref.update({ likes: (p.likes||0) + 1, likers });
+        }
+    });
 };
 
-// 3. Loop visual que faz os números subirem "esporadicamente" na tela ao vivo!
-setInterval(() => {
+// 2. Mantém uma cópia invisível do banco para fazer a matemática sem lagar
+window.globalPostsData = {};
+window.db.ref("tokyoRpg/posts").on("value", snap => {
+    window.globalPostsData = snap.val() || {};
+    window.atualizarLikesVisuais(); // Força a tela a piscar os números
+});
+
+// 3. O motor que faz os números subirem na tela de todo mundo ao vivo
+window.atualizarLikesVisuais = function() {
     let feed = document.getElementById("igamblePostsFeed");
     if (!feed) return;
     
-    // Pega todos os botões de curtir visíveis
+    // Procura todos os botões de like que estão desenhados na tela
     let likeBtns = feed.querySelectorAll("button[onclick^='window.curtirPost']");
     
     likeBtns.forEach(btn => {
-        // Extrai o ID do post
         let match = btn.getAttribute("onclick").match(/'([^']+)'/);
         if (match && match[1]) {
             let postId = match[1];
@@ -1373,37 +1385,39 @@ setInterval(() => {
                 let realLikes = post.likes || 0;
                 let fakeLikes = 0;
                 
-                // Se o post tem um boost ativo
+                // Se o mestre ativou o Boost nesse post, faz a matemática do tempo
                 if (post.boost && post.boost.target > 0) {
                     let elapsed = Date.now() - post.boost.startTs;
                     let progress = elapsed / post.boost.duration;
                     
-                    // Trava em 100% quando terminar o tempo
+                    // Trava em 100%
                     if (progress > 1) progress = 1;
                     if (progress < 0) progress = 0;
                     
-                    // Calcula quantos likes já deveriam ter subido nesse exato momento
                     fakeLikes = Math.floor(progress * post.boost.target);
                 }
                 
                 let totalLikes = realLikes + fakeLikes;
                 let span = btn.querySelector("span");
                 
-                // Se o número mudou, atualiza na tela com uma animaçãozinha de batida de coração
+                // Atualiza o texto visualmente se mudou
                 if (span && parseInt(span.innerText) !== totalLikes) {
-                    span.style.transition = "transform 0.2s, color 0.2s";
-                    span.style.transform = "scale(1.6)";
-                    span.style.color = "var(--accent-red)";
                     span.innerText = totalLikes;
                     
-                    // Retorna ao tamanho normal após piscar
-                    setTimeout(() => {
-                        span.style.transform = "scale(1)";
+                    // Se estiver sendo turbinado pelo mestre, o número fica levemente vermelho incandescente
+                    if(fakeLikes > 0) {
+                        span.style.color = "#ff1a55";
+                        span.style.textShadow = "0 0 10px #ff1a55";
+                    } else {
                         span.style.color = "";
-                    }, 250);
+                        span.style.textShadow = "";
+                    }
                 }
             }
         }
     });
-}, 2000); // O sistema checa as matemáticas a cada 2 segundos
+};
+
+// Faz a verificação rodar silenciosamente a cada 1.5 segundos
+setInterval(window.atualizarLikesVisuais, 1500);
 };
