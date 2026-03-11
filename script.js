@@ -1228,3 +1228,88 @@ window.enviarMsgGamble = function() {
   } catch (e) { window.showNeonToast("Erro ao enviar."); }
 };
 window.prepararEnvioMensagem = function() { return window.enviarMsgGamble(); };
+
+// =========================================================
+// PATCH DEFINITIVO: ÁUDIO TIKTOK SEM AUTO-MUTE
+// =========================================================
+
+// 1. Inicia liberado
+window.postAudioMuted = false;
+
+// Garante que o botão na tela também inicie verde e liberado
+setTimeout(() => {
+    let btnMute = document.getElementById("btnToggleMute");
+    if(btnMute) {
+        btnMute.innerText = "🔊 Áudio Liberado";
+        btnMute.style.borderColor = "#0f0";
+        btnMute.style.color = "#0f0";
+    }
+}, 500);
+
+// 2. Recriando o Olheiro (Observer)
+if(window.postObserver) window.postObserver.disconnect();
+
+window.postObserver = new IntersectionObserver((entries) => {
+    // Confere se a aba de Posts está ativada na tela
+    let postsView = document.getElementById("igamble-view-posts");
+    let isActiveTab = postsView && postsView.classList.contains("active");
+
+    entries.forEach(entry => {
+        let audioEl = entry.target.querySelector('audio.post-audio');
+        if(!audioEl) return;
+
+        // Só tenta tocar se o post estiver na tela, o áudio liberado, E a aba de posts estiver aberta!
+        if(entry.isIntersecting && isActiveTab) {
+            if(!window.postAudioMuted) {
+                audioEl.volume = 1.0;
+                audioEl.play().catch(e => {
+                    console.log("Aguardando interação do usuário...");
+                    // REMOVIDO O AUTO-MUTE AQUI! Agora ele insiste em tocar.
+                });
+            }
+        } else {
+            // Se saiu da tela, pausa e reseta
+            audioEl.pause();
+            audioEl.currentTime = 0;
+        }
+    });
+}, { threshold: 0.3 });
+
+// 3. Forçar o Play no clique da aba
+let fixTabSwitchIgamble = window.switchIGambleTab;
+window.switchIGambleTab = function(tabId, btnEl) {
+    if(fixTabSwitchIgamble) fixTabSwitchIgamble(tabId, btnEl);
+    
+    if(tabId === 'posts') {
+        setTimeout(() => {
+            let feed = document.getElementById("igamblePostsFeed");
+            if(!feed || window.postAudioMuted) return;
+            
+            // Acha o post que está visível no momento e força o play
+            let cards = feed.querySelectorAll('.post-card');
+            cards.forEach(card => {
+                let rect = card.getBoundingClientRect();
+                // Se o card está na área visível da tela
+                if(rect.top >= -200 && rect.top <= (window.innerHeight / 2)) {
+                    let a = card.querySelector('audio.post-audio');
+                    if(a) {
+                        a.volume = 1.0;
+                        a.play().catch(()=>{});
+                    }
+                }
+            });
+            
+            // Re-observa para garantir a rolagem
+            cards.forEach(c => {
+                window.postObserver.unobserve(c);
+                window.postObserver.observe(c);
+            });
+        }, 100);
+    } else {
+        // Se saiu da aba, cala todos os áudios
+        document.querySelectorAll('audio.post-audio').forEach(a => {
+            a.pause();
+            a.currentTime = 0;
+        });
+    }
+};
