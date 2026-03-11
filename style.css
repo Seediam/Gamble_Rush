@@ -868,261 +868,103 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 }
 
 /* =========================================================
-   PATCH: TEXTO NO CELULAR E AJUSTE DE OVERLAY
-   ========================================================= */
-@media(max-width: 600px) {
-    #igamble-view-posts .post-caption {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        z-index: 99 !important;
-        max-width: 75% !important;
-        bottom: 25px !important;    /* Levanta o texto um pouco mais no celular */
-        left: 15px !important;
-        font-size: 13px !important;
-        color: #fff !important;
-        background: rgba(0, 0, 0, 0.6) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-    }
-}
-
-/* Deixa a área da imagem clicável para o Double Tap funcionar melhor */
-#igamble-view-posts .post-overlay {
-    pointer-events: auto !important; 
-}
-#igamble-view-posts .post-caption {
-    pointer-events: auto !important; 
-}
-/* =========================================================
-   PATCH DEFINITIVO: SCROLL MAGNÉTICO TIKTOK E ENQUADRAMENTO
+   PATCH ABSOLUTO: TELA CHEIA, BOTÕES NA ESQUERDA E ENQUADRAMENTO
    ========================================================= */
 
-/* 1. O container geral da aba precisa ser um Flex rigoroso */
-#igamble-view-posts {
-    display: flex !important;
-    flex-direction: column !important;
-    padding: 8px !important;
-    box-sizing: border-box !important;
-    height: 100% !important;
-    overflow: hidden !important;
-}
-
-/* 2. O Segredo: flex: 1 com min-height: 0 obriga o feed a ocupar apenas o espaço que sobrou debaixo dos botões, sem vazar a tela! */
-#igamble-view-posts .feed-container {
-    flex: 1 !important;
-    min-height: 0 !important;
-    height: auto !important;
-    width: 100% !important;
-    margin: 0 !important;
-    border: 1px solid #222 !important;
-    border-radius: 12px !important;
-    background: #000 !important;
-    
-    /* FÍSICA DO TIKTOK */
-    overflow-y: scroll !important;
-    scroll-snap-type: y mandatory !important;
-    scroll-behavior: smooth !important;
-    -webkit-overflow-scrolling: touch !important; /* Deixa o deslize sedoso no Celular */
-}
-
-/* Esconde a barra de rolagem cinza para ficar imersivo */
-#igamble-view-posts .feed-container::-webkit-scrollbar {
-    display: none !important;
-}
-
-/* 3. Cada post tem exatos 100% do feed, nem 1 pixel a mais. */
-#igamble-view-posts .post-card {
-    flex: 0 0 100% !important; /* Proíbe o card de encolher ou crescer */
-    height: 100% !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    position: relative !important;
-    border: none !important;
-    
-    /* Trava a rolagem exatamente no topo do post */
-    scroll-snap-align: start !important; 
-    scroll-snap-stop: always !important; /* Impede de passar reto por 2 posts de uma vez num puxão forte */
-}
-
-/* 4. Enquadramento perfeito da Imagem */
-#igamble-view-posts .post-media {
-    object-fit: contain !important; /* Contain garante que a imagem aparece 100% sem NUNCA ser cortada */
-    width: 100% !important;
-    height: 100% !important;
-    position: absolute !important;
-    inset: 0 !important;
-    z-index: 2 !important;
-}
-
-/* 5. O Fundo borrado preenche os buracos de imagens que não são do tamanho da tela */
-#igamble-view-posts .post-media-bg {
-    object-fit: cover !important;
-    width: 100% !important;
-    height: 100% !important;
-    position: absolute !important;
-    inset: 0 !important;
-    z-index: 1 !important;
-    opacity: 0.3 !important;
-    filter: blur(25px) !important;
-    transform: scale(1.1) !important; /* Tira aquela bordinha branca estranha do blur */
-}
-/* =========================================================
-   PATCH FINAL: LAYOUT TIKTOK (BOTÕES E TEXTO SOBRE A IMAGEM)
-   ========================================================= */
-
-/* 1. O Overlay agora cobre a imagem toda, mas deixa o clique passar (para o Double Tap funcionar) */
-#igamble-view-posts .post-overlay {
-    position: absolute !important;
-    inset: 0 !important;
-    z-index: 30 !important;
-    pointer-events: none !important; /* Deixa o clique vazar pra imagem */
-    padding: 15px !important;
-}
-
-/* O Topo (Foto e Nome) precisa ser clicável */
-#igamble-view-posts .post-header {
-    pointer-events: auto !important; 
-}
-
-/* 2. Reset do Corpo (Onde ficam botões e texto) */
-#igamble-view-posts .post-body {
-    position: absolute !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    pointer-events: none !important; 
-}
-
-/* 3. LEGENDA: Flutuando no canto inferior esquerdo COM fundo transparente */
-#igamble-view-posts .post-caption {
-    position: absolute !important;
+/* 1. Botões Flutuantes (Um em cima do outro na ESQUERDA) */
+.floating-controls {
     bottom: 25px !important;
     left: 15px !important;
-    width: calc(100% - 90px) !important; /* Deixa um espaço na direita para os botões */
-    max-height: 150px !important;
-    
-    /* Fundo de vidro transparente (Igual perfil) */
-    background: rgba(0, 0, 0, 0.55) !important;
-    backdrop-filter: blur(5px) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    border-radius: 12px !important;
-    
-    padding: 12px !important;
-    color: #fff !important;
-    font-size: 13px !important;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8) !important;
-    
-    overflow-y: auto !important;
-    pointer-events: auto !important; /* Permite rolar o texto se for grande */
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-}
-
-/* 4. BOTÕES (Sidebar): Flutuando no canto inferior direito */
-#igamble-view-posts .post-sidebar {
-    position: absolute !important;
-    bottom: 25px !important;
-    right: 15px !important;
-    
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: column !important; /* Empilha um em cima do outro */
     gap: 15px !important;
-    
-    pointer-events: auto !important; /* Permite clicar nos botões */
-    z-index: 50 !important;
+    z-index: 9999 !important;
 }
 
-/* 5. AJUSTES FINOS PARA O CELULAR */
+/* 2. Afasta o App para não ficar por baixo dos botões flutuantes */
+#gameContainer {
+    padding-left: 85px !important; /* Libera espaço na esquerda pros botões */
+    padding-bottom: 20px !important;
+    padding-top: 10px !important;
+}
+
 @media(max-width: 600px) {
-    #igamble-view-posts .post-caption {
-        bottom: 35px !important; /* Sobe um pouco pra não bater nos botões do OS */
-        left: 10px !important;
-        width: calc(100% - 70px) !important;
-        font-size: 12px !important;
-        padding: 10px !important;
-    }
-    
-    #igamble-view-posts .post-sidebar {
-        bottom: 35px !important;
-        right: 10px !important;
-        gap: 10px !important;
-    }
-    
-    /* Diminui um pouco os botões no celular */
-    #igamble-view-posts .post-btn-vert {
-        width: 42px !important;
-        height: 42px !important;
-        font-size: 18px !important;
-        border-radius: 12px !important;
-    }
+    #gameContainer { padding-left: 75px !important; }
 }
 
-/* =========================================================
-   PATCH DEFINITIVO: SCROLL TIKTOK (ANTI-BUG CHROME/EDGE)
-   ========================================================= */
+/* 3. Diminui o topo (Aba Chat, Posts, Embates) para dar mais tela */
+.igamble-nav {
+    padding: 5px !important;
+    border-bottom: none !important;
+}
+.igamble-nav button {
+    padding: 5px 15px !important;
+    font-size: 12px !important;
+}
 
-/* 1. Trava a aba inteira para NUNCA passar da tela */
-#igamble-view-posts {
+/* 4. Trava a altura do App INTEIRO para caber perfeitamente na tela */
+#tab-igamble {
+    height: calc(100vh - 40px) !important; /* Usa a tela quase toda */
     display: flex !important;
     flex-direction: column !important;
-    height: calc(100vh - 160px) !important;
-    overflow: hidden !important;
-    padding: 10px !important;
+}
+
+#igamble-view-posts {
+    flex: 1 !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
     box-sizing: border-box !important;
 }
 
-/* 2. Força o Feed a ocupar só o que sobra, sem empurrar nada */
+/* 5. Feed Magnético e Bloqueado */
 #igamble-view-posts .feed-container {
-    flex: 1 1 0 !important;       /* Regra mágica pro Chrome/Edge respeitarem os limites */
-    min-height: 0 !important;
+    flex: 1 !important;
     height: 100% !important;
-    width: 100% !important;
+    min-height: 0 !important;
     margin: 0 !important;
-    padding: 0 !important;
-    border: 1px solid #333 !important;
-    border-radius: 12px !important;
     background: #000 !important;
+    border-radius: 12px !important;
+    border: 1px solid #333 !important;
     
-    /* SCROLL MAGNÉTICO */
     overflow-y: scroll !important;
     scroll-snap-type: y mandatory !important;
     scroll-behavior: smooth !important;
     -webkit-overflow-scrolling: touch !important;
 }
-
 #igamble-view-posts .feed-container::-webkit-scrollbar { display: none !important; }
 
-/* 3. O Post TEM que ser exatamente do tamanho do Feed, 0 vazamentos */
+/* 6. Post Card (Tamanho exato da tela visível, 0 vazamentos) */
 #igamble-view-posts .post-card {
     position: relative !important;
-    height: 100% !important; 
+    height: 100% !important;
     width: 100% !important;
-    flex: 0 0 100% !important; 
+    flex: 0 0 100% !important;
     max-height: 100% !important;
     overflow: hidden !important;
-    scroll-snap-align: center !important; /* Center fixa melhor que o start em alguns celulares */
+    scroll-snap-align: start !important;
     scroll-snap-stop: always !important;
     border-bottom: 2px solid #222 !important;
     box-sizing: border-box !important;
 }
 
-/* 4. Imagem em tela cheia REAL, sem cortar */
+/* 7. ENQUADRAMENTO DA IMAGEM: 100% visível, nunca corta */
 #igamble-view-posts .post-media {
     position: absolute !important;
-    top: 0 !important; left: 0 !important;
-    width: 100% !important; height: 100% !important;
-    object-fit: contain !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important; /* <-- A MÁGICA TÁ AQUI */
     z-index: 2 !important;
     background: transparent !important;
 }
 
-/* 5. Fundo borrado no fundo */
+/* Fundo borrado para preencher as sobras */
 #igamble-view-posts .post-media-bg {
     position: absolute !important;
-    top: 0 !important; left: 0 !important;
-    width: 100% !important; height: 100% !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
     object-fit: cover !important;
     z-index: 1 !important;
     opacity: 0.3 !important;
@@ -1130,15 +972,15 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     transform: scale(1.1) !important;
 }
 
-/* 6. Overlay invisível para os botões ficarem por cima */
+/* 8. OVERLAY: Deixa os cliques passarem para o duplo-clique funcionar */
 #igamble-view-posts .post-overlay {
     position: absolute !important;
     inset: 0 !important;
     z-index: 10 !important;
-    pointer-events: none !important; /* Deixa o duplo-clique atravessar para a foto! */
+    pointer-events: none !important;
 }
 
-/* 7. Cabeçalho (Foto e Nome) no Topo Absoluto */
+/* 9. CABEÇALHO (Foto e Nome) */
 #igamble-view-posts .post-header {
     position: absolute !important;
     top: 15px !important;
@@ -1147,20 +989,19 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     pointer-events: auto !important;
 }
 
-/* 8. LEGENDA: Chumbada no Canto Inferior Esquerdo por cima da foto */
+/* 10. LEGENDA: Chumbada no Canto Inferior Esquerdo (Fundo Transparente) */
 #igamble-view-posts .post-caption {
     position: absolute !important;
-    bottom: 20px !important;
+    bottom: 15px !important;
     left: 15px !important;
-    width: calc(100% - 85px) !important; /* Desvia da sidebar */
-    max-height: 120px !important;
-    margin: 0 !important;
+    width: calc(100% - 75px) !important; /* Desvia dos botões na direita */
+    max-height: 100px !important;
     
-    background: rgba(0, 0, 0, 0.65) !important;
-    backdrop-filter: blur(8px) !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(5px) !important;
     border: 1px solid rgba(255,255,255,0.15) !important;
     border-radius: 12px !important;
-    padding: 10px 12px !important;
+    padding: 10px !important;
     
     color: #fff !important;
     font-size: 13px !important;
@@ -1168,34 +1009,16 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     
     overflow-y: auto !important;
     pointer-events: auto !important;
+    margin: 0 !important;
 }
 
-/* 9. BOTÕES: Chumbados no Canto Inferior Direito por cima da foto */
+/* 11. BOTÕES (Curtir/Comentar): Chumbados no Canto Inferior Direito */
 #igamble-view-posts .post-sidebar {
     position: absolute !important;
-    bottom: 20px !important;
+    bottom: 15px !important;
     right: 10px !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 12px !important;
     pointer-events: auto !important;
-}
-
-/* 10. Ajustes de Celular */
-@media(max-width: 600px) {
-    #igamble-view-posts { height: calc(100vh - 120px) !important; } /* Aumenta a tela no celular */
-    #igamble-view-posts .post-caption {
-        bottom: 30px !important; /* Levanta pra não bater no botão Home */
-        left: 10px !important;
-        width: calc(100% - 70px) !important;
-        font-size: 12px !important;
-    }
-    #igamble-view-posts .post-sidebar {
-        bottom: 30px !important;
-        right: 5px !important;
-    }
-    #igamble-view-posts .post-btn-vert {
-        width: 42px !important;
-        height: 42px !important;
-    }
 }
