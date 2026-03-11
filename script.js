@@ -1313,26 +1313,25 @@ window.switchIGambleTab = function(tabId, btnEl) {
         });
     }
 // =========================================================
-// PATCH V2: SISTEMA DE POPULARIDADE E LIKES DO MESTRE
+// PATCH V3: LIKES DO MESTRE (DUPLA VERIFICAÇÃO DE LOGIN)
 // =========================================================
 
-// 1. Substitui completamente a função de curtir do jogo
+// 1. Substitui a função de curtir do jogo
 window.curtirPost = function(id) {
     if (!window.jogadorAtual) return;
 
-    // Se for o mestre logado, abre a tela de hack de likes primeiro
-    if (window.isMaster) {
+    // FIX AQUI: Verifica se tem o serial de Mestre OU se o nome do boneco é MESTRE
+    if (window.isMaster || window.jogadorAtual === "MESTRE") {
         let op = prompt("👑 MESTRE: Sistema de Popularidade\n\nQuantas curtidas quer injetar aos poucos? (Ex: 1000)\nDigite 0 para remover.\n[Cancele ou deixe vazio para dar um like normal]");
         
         if (op !== null && op.trim() !== "") {
             let target = parseInt(op);
             if (!isNaN(target)) {
                 if (target <= 0) {
-                    // Mestre digitou 0, remove o boost
                     window.db.ref(`tokyoRpg/posts/${id}/boost`).remove();
                     window.showNeonToast("Boost Cancelado.");
                 } else {
-                    // Mestre digitou um número, ativa o hack de popularidade (Duração: 10 horas)
+                    // Duração do Boost: 10 horas subindo sem parar
                     window.db.ref(`tokyoRpg/posts/${id}/boost`).set({
                         target: target,
                         startTs: Date.now(),
@@ -1340,12 +1339,12 @@ window.curtirPost = function(id) {
                     });
                     window.showNeonToast(`🚀 Boost Ativado: ${target} Likes!`);
                 }
-                return; // Impede de rodar o like normal, já que o Mestre usou o hack
+                return; // Impede de rodar o like normal
             }
         }
     }
 
-    // --- LÓGICA DO LIKE NORMAL (Player ou Mestre que deixou a caixinha vazia) ---
+    // --- LÓGICA DO LIKE NORMAL (Para Players) ---
     let ref = window.db.ref(`tokyoRpg/posts/${id}`);
     ref.once('value').then(snap => {
         let p = snap.val(); if(!p) return;
@@ -1360,19 +1359,18 @@ window.curtirPost = function(id) {
     });
 };
 
-// 2. Mantém uma cópia invisível do banco para fazer a matemática sem lagar
+// 2. Mantém uma cópia invisível do banco para fazer a matemática
 window.globalPostsData = {};
 window.db.ref("tokyoRpg/posts").on("value", snap => {
     window.globalPostsData = snap.val() || {};
-    window.atualizarLikesVisuais(); // Força a tela a piscar os números
+    window.atualizarLikesVisuais();
 });
 
-// 3. O motor que faz os números subirem na tela de todo mundo ao vivo
+// 3. O motor visual que faz os números subirem na tela
 window.atualizarLikesVisuais = function() {
     let feed = document.getElementById("igamblePostsFeed");
     if (!feed) return;
     
-    // Procura todos os botões de like que estão desenhados na tela
     let likeBtns = feed.querySelectorAll("button[onclick^='window.curtirPost']");
     
     likeBtns.forEach(btn => {
@@ -1385,12 +1383,10 @@ window.atualizarLikesVisuais = function() {
                 let realLikes = post.likes || 0;
                 let fakeLikes = 0;
                 
-                // Se o mestre ativou o Boost nesse post, faz a matemática do tempo
                 if (post.boost && post.boost.target > 0) {
                     let elapsed = Date.now() - post.boost.startTs;
                     let progress = elapsed / post.boost.duration;
                     
-                    // Trava em 100%
                     if (progress > 1) progress = 1;
                     if (progress < 0) progress = 0;
                     
@@ -1400,11 +1396,10 @@ window.atualizarLikesVisuais = function() {
                 let totalLikes = realLikes + fakeLikes;
                 let span = btn.querySelector("span");
                 
-                // Atualiza o texto visualmente se mudou
                 if (span && parseInt(span.innerText) !== totalLikes) {
                     span.innerText = totalLikes;
                     
-                    // Se estiver sendo turbinado pelo mestre, o número fica levemente vermelho incandescente
+                    // Fica vermelho neon enquanto tiver recebendo Boost
                     if(fakeLikes > 0) {
                         span.style.color = "#ff1a55";
                         span.style.textShadow = "0 0 10px #ff1a55";
@@ -1418,6 +1413,6 @@ window.atualizarLikesVisuais = function() {
     });
 };
 
-// Faz a verificação rodar silenciosamente a cada 1.5 segundos
+// Rodar a checagem a cada 1.5s
 setInterval(window.atualizarLikesVisuais, 1500);
 };
