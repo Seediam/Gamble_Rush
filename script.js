@@ -1420,6 +1420,11 @@ document.addEventListener('dblclick', function(e) {
     // Detecta se clicou no post
     let card = e.target.closest('.post-card');
     if(card && window.jogadorAtual) {
+        // Bloqueio de spam para evitar lag
+        if(card.getAttribute('data-liking') === 'true') return;
+        card.setAttribute('data-liking', 'true');
+        setTimeout(() => card.removeAttribute('data-liking'), 1000); // Libera depois de 1s
+
         let btn = card.querySelector("button[onclick^='window.curtirPost']");
         if(btn) {
             let match = btn.getAttribute("onclick").match(/'([^']+)'/);
@@ -1434,8 +1439,20 @@ document.addEventListener('dblclick', function(e) {
                     // Só dá like, não tira o like
                     if(!likers[window.jogadorAtual]) { 
                         likers[window.jogadorAtual] = true;
-                        ref.update({ likes: (p.likes||0) + 1, likers });
-                        window.spawnPurpleHeart(e.clientX, e.clientY); // Coração no clique
+                        ref.update({ likes: (p.likes||0) + 1, likers }).then(() => {
+                            window.spawnPurpleHeart(e.clientX, e.clientY);
+                            
+                            // Atualiza os contadores na tela instantaneamente (sem recarregar do firebase)
+                            let heartBtn = card.querySelector('.post-btn-vert');
+                            if(heartBtn) {
+                                heartBtn.classList.add('liked');
+                                let sp = heartBtn.querySelector('span');
+                                if(sp) sp.innerText = (p.likes||0) + 1;
+                            }
+                        });
+                    } else {
+                        // Se já tinha curtido, só solta os corações roxos pra fazer graça
+                        window.spawnPurpleHeart(e.clientX, e.clientY);
                     }
                 });
             }
