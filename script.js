@@ -1313,25 +1313,52 @@ window.switchIGambleTab = function(tabId, btnEl) {
         });
     }
 // =========================================================
-// PATCH V3: LIKES DO MESTRE (DUPLA VERIFICAÇÃO DE LOGIN)
+// IGAMBLE POSTS: LÓGICA UNIFICADA (LIKES, ÁUDIO E DOUBLE TAP)
 // =========================================================
 
-// 1. Substitui a função de curtir do jogo
+// --- 1. CONTROLE DE ÁUDIO E SCROLL ---
+window.postAudioMuted = false;
+if(window.postObserver) window.postObserver.disconnect();
+
+window.postObserver = new IntersectionObserver((entries) => {
+    let postsView = document.getElementById("igamble-view-posts");
+    let isActiveTab = postsView && postsView.classList.contains("active");
+
+    entries.forEach(entry => {
+        let audioEl = entry.target.querySelector('audio.post-audio');
+        if(!audioEl) return;
+
+        // Se o post estiver no meio da tela (60% visível)
+        if(entry.isIntersecting && isActiveTab) {
+            if(!window.postAudioMuted) {
+                // Silencia todos os outros antes de tocar esse
+                document.querySelectorAll('audio.post-audio').forEach(a => {
+                    if(a !== audioEl) { a.pause(); a.currentTime = 0; }
+                });
+                audioEl.volume = 1.0;
+                audioEl.play().catch(()=>{});
+            }
+        } else {
+            audioEl.pause();
+            audioEl.currentTime = 0;
+        }
+    });
+}, { threshold: 0.6 });
+
+// --- 2. SISTEMA DE CURTIR (MESTRE VS PLAYER) ---
 window.curtirPost = function(id) {
     if (!window.jogadorAtual) return;
 
-    // FIX AQUI: Verifica se tem o serial de Mestre OU se o nome do boneco é MESTRE
+    // Se for Mestre (Pelo Serial ou pelo Nome)
     if (window.isMaster || window.jogadorAtual === "MESTRE") {
-        let op = prompt("👑 MESTRE: Sistema de Popularidade\n\nQuantas curtidas quer injetar aos poucos? (Ex: 1000)\nDigite 0 para remover.\n[Cancele ou deixe vazio para dar um like normal]");
-        
+        let op = prompt("👑 MESTRE: Boost de Popularidade\nQuantas curtidas injetar aos poucos? (Ex: 1000)\n0 para remover.\n[Deixe vazio para like normal]");
         if (op !== null && op.trim() !== "") {
             let target = parseInt(op);
             if (!isNaN(target)) {
                 if (target <= 0) {
                     window.db.ref(`tokyoRpg/posts/${id}/boost`).remove();
-                    window.showNeonToast("Boost Cancelado.");
+                    window.showNeonToast("Boost Removido.");
                 } else {
-                    // Duração do Boost: 10 horas subindo sem parar
                     window.db.ref(`tokyoRpg/posts/${id}/boost`).set({
                         target: target,
                         startTs: Date.now(),
@@ -1339,12 +1366,12 @@ window.curtirPost = function(id) {
                     });
                     window.showNeonToast(`🚀 Boost Ativado: ${target} Likes!`);
                 }
-                return; // Impede de rodar o like normal
+                return; 
             }
         }
     }
 
-    // --- LÓGICA DO LIKE NORMAL (Para Players) ---
+    // Like Normal do Player
     let ref = window.db.ref(`tokyoRpg/posts/${id}`);
     ref.once('value').then(snap => {
         let p = snap.val(); if(!p) return;
@@ -1359,62 +1386,73 @@ window.curtirPost = function(id) {
     });
 };
 
-// 2. Mantém uma cópia invisível do banco para fazer a matemática
-window.globalPostsData = {};
-window.db.ref("tokyoRpg/posts").on("value", snap => {
-    window.globalPostsData = snap.val() || {};
-    window.atualizarLikesVisuais();
-});
+// --- 3. ANIMAÇÕES DE CORAÇÃO E DUPLO CLIQUE ---
 
-// 3. O motor visual que faz os números subirem na tela
-// Função que desenha o coração na tela
-window.spawnFloatingHeart = function(card) {
+// Coração Roxo (O SEU LIKE)
+window.spawnPurpleHeart = function(x, y) {
     let heart = document.createElement("div");
-    heart.className = "floating-heart";
-    heart.innerText = "❤";
-    
-    // Aleatoriza a posição Horizontal (X) para não subirem todos em linha reta exata
-    let randomX = Math.random() * 50 - 25; 
-    heart.style.marginRight = randomX + "px";
-    
-    card.appendChild(heart);
-    
-    // Deleta o coração do HTML depois que a animação acaba (2 seg) para não travar o PC
-    setTimeout(() => {
-        if(heart.parentElement) heart.remove();
-    }, 2000);
+    heart.className = "floating-heart-purple";
+    heart.innerText = "💜"; // Coração roxo
+    heart.style.left = x + "px";
+    heart.style.top = y + "px";
+    document.body.appendChild(heart);
+    setTimeout(() => { if(heart.parentElement) heart.remove(); }, 1000);
 };
 
-// Variaveis para segurar a matemática dos "Pulos" aleatórios
-window.localDisplayedFakeLikes = window.localDisplayedFakeLikes || {};
-window.burstThresholds = window.burstThresholds || {};
-
-// Função que desenha o coração no MEIO da tela
+// Coração Vermelho (Live/Boost do Mestre)
 window.spawnFloatingHeart = function(card) {
     let heart = document.createElement("div");
     heart.className = "floating-heart";
     heart.innerText = "❤";
-    
-    // Espalha um pouquinho para os lados (-50px até +50px) para não subirem em linha reta
     let randomX = Math.random() * 100 - 50; 
     heart.style.marginLeft = randomX + "px";
-    
-    // Varia um pouquinho o tamanho de cada coração
     let scale = 0.7 + Math.random() * 0.5;
     heart.style.fontSize = (45 * scale) + "px";
-    
     card.appendChild(heart);
-    
     setTimeout(() => { if(heart.parentElement) heart.remove(); }, 2500);
 };
 
-// O motor visual com a IA de Pulos (Chunks)
-window.atualizarLikesVisuais = function() {
+// DUPLO CLIQUE NA IMAGEM (DOUBLE TAP)
+document.addEventListener('dblclick', function(e) {
+    // Detecta se clicou no post
+    let card = e.target.closest('.post-card');
+    if(card && window.jogadorAtual) {
+        let btn = card.querySelector("button[onclick^='window.curtirPost']");
+        if(btn) {
+            let match = btn.getAttribute("onclick").match(/'([^']+)'/);
+            if(match && match[1]) {
+                let postId = match[1];
+                let ref = window.db.ref(`tokyoRpg/posts/${postId}`);
+                
+                ref.once('value').then(snap => {
+                    let p = snap.val(); if(!p) return;
+                    let likers = p.likers || {};
+                    
+                    // Só dá like, não tira o like
+                    if(!likers[window.jogadorAtual]) { 
+                        likers[window.jogadorAtual] = true;
+                        ref.update({ likes: (p.likes||0) + 1, likers });
+                    }
+                    // SPAWNA O CORAÇÃO ROXO EXATAMENTE ONDE O MOUSE ESTÁ!
+                    window.spawnPurpleHeart(e.clientX, e.clientY);
+                });
+            }
+        }
+    }
+});
+
+// --- 4. MOTOR MATEMÁTICO DOS LIKES FALSOS DO MESTRE ---
+window.globalPostsData = {};
+window.localDisplayedFakeLikes = window.localDisplayedFakeLikes || {};
+window.burstThresholds = window.burstThresholds || {};
+
+window.db.ref("tokyoRpg/posts").on("value", snap => { window.globalPostsData = snap.val() || {}; });
+
+setInterval(() => {
     let feed = document.getElementById("igamblePostsFeed");
     if (!feed) return;
     
     let likeBtns = feed.querySelectorAll("button[onclick^='window.curtirPost']");
-    
     likeBtns.forEach(btn => {
         let match = btn.getAttribute("onclick").match(/'([^']+)'/);
         if (match && match[1]) {
@@ -1423,7 +1461,7 @@ window.atualizarLikesVisuais = function() {
             
             if (post) {
                 let realLikes = post.likes || 0;
-                let fakeMathLikes = 0; // O que a matemática diz que já deveria ter
+                let fakeMathLikes = 0;
                 
                 if (post.boost && post.boost.target > 0) {
                     let elapsed = Date.now() - post.boost.startTs;
@@ -1437,31 +1475,15 @@ window.atualizarLikesVisuais = function() {
                 
                 let currentDisplayedFake = window.localDisplayedFakeLikes[postId] || 0;
                 
-                // IA que decide o tamanho do pacote com base no total que o Mestre colocou
                 if (!window.burstThresholds[postId]) {
-                    let ratePerSec = (post.boost?.target || 0) / (10 * 60 * 60);
-                    let ops = [1, 2, 3]; // Se for pouco like, pula de pouquinho
-                    if (ratePerSec >= 1 && ratePerSec < 5) ops = [1, 3, 5, 10]; // Médio
-                    else if (ratePerSec >= 5) ops = [5, 10, 15, 25]; // Se for muito like, pula de 25 em 25
-                    
-                    window.burstThresholds[postId] = ops[Math.floor(Math.random() * ops.length)];
+                    window.burstThresholds[postId] = Math.floor(Math.random() * 5) + 1;
                 }
                 
-                // A diferença entre o que tá na tela e o que a matemática manda ter
                 let diff = fakeMathLikes - currentDisplayedFake;
-                
-                // Se a diferença atingiu o "Pulo" aleatório sorteado
                 if (diff >= window.burstThresholds[postId] || (post.boost && Date.now() - post.boost.startTs >= post.boost.duration && diff > 0)) {
                     currentDisplayedFake += diff;
                     window.localDisplayedFakeLikes[postId] = currentDisplayedFake;
-                    
-                    // Sorteia o tamanho do PRÓXIMO pulo
-                    let ratePerSec = (post.boost?.target || 0) / (10 * 60 * 60);
-                    let ops = [1, 2, 3];
-                    if (ratePerSec >= 1 && ratePerSec < 5) ops = [1, 3, 5, 10];
-                    else if (ratePerSec >= 5) ops = [5, 10, 15, 25, 50];
-                    
-                    window.burstThresholds[postId] = ops[Math.floor(Math.random() * ops.length)];
+                    window.burstThresholds[postId] = Math.floor(Math.random() * 5) + 1;
                 }
                 
                 let totalLikes = realLikes + currentDisplayedFake;
@@ -1469,13 +1491,10 @@ window.atualizarLikesVisuais = function() {
                 
                 if (span) {
                     let screenVal = parseInt(span.innerText) || 0;
-                    
-                    // SE O NÚMERO DA TELA MUDOU!
                     if (screenVal !== totalLikes) {
                         if (totalLikes > screenVal) {
                             let card = btn.closest('.post-card');
                             if (card) {
-                                // Solta no máximo 6 corações por pulo para não travar o PC
                                 let jump = totalLikes - screenVal;
                                 let heartsToSpawn = Math.min(jump, 6);
                                 for(let i = 0; i < heartsToSpawn; i++) {
@@ -1483,123 +1502,12 @@ window.atualizarLikesVisuais = function() {
                                 }
                             }
                         }
-                        
                         span.innerText = totalLikes;
-                        
-                        // Pisca o número
-                        span.style.transition = "transform 0.1s";
-                        span.style.transform = "scale(1.5)";
-                        
-                        if(currentDisplayedFake > 0) {
-                            span.style.color = "#ff1a55";
-                            span.style.textShadow = "0 0 10px #ff1a55";
-                        } else {
-                            span.style.color = "";
-                            span.style.textShadow = "";
-                        }
-                        
-                        setTimeout(() => { span.style.transform = "scale(1)"; }, 150);
+                        span.style.color = currentDisplayedFake > 0 ? "#ff1a55" : "";
                     }
                 }
             }
         }
     });
-};
-
-// Se não tiver essa linha no código ainda, mantenha para rodar o motor
-setInterval(window.atualizarLikesVisuais, 1000);
-
-    // =========================================================
-// PATCH: REAÇÕES, ÁUDIO DUPLICADO E DOUBLE-TAP TIKTOK
-// =========================================================
-
-// 1. TRAZENDO DE VOLTA AS REAÇÕES DO CHAT
-window.abrirEmojiReacao = function(msgKey, event) { 
-    window.msgAtualParaReagir = msgKey; 
-    let p = document.getElementById("emojiPopupDynamic"); 
-    if(!p) return;
-    
-    p.style.display="flex"; 
-    let x = event.clientX;
-    let y = event.clientY - 10;
-    
-    // Evita que a caixinha abra fora da tela
-    if (x + 180 > window.innerWidth) x = window.innerWidth - 190;
-    if (y + 120 > window.innerHeight) y = window.innerHeight - 140;
-    
-    p.style.left = x + "px"; 
-    p.style.top = y + "px"; 
-};
-
-window.executarReacao = function(emoji) { 
-    if(!window.msgAtualParaReagir) return; 
-    window.db.ref(`tokyoRpg/chat/${window.msgAtualParaReagir}/reacoes/${emoji}`).once('value').then(s => { 
-        window.db.ref(`tokyoRpg/chat/${window.msgAtualParaReagir}/reacoes/${emoji}`).set((s.val()||0)+1); 
-        let p = document.getElementById("emojiPopupDynamic");
-        if(p) p.style.display="none"; 
-    }); 
-};
-
-// 2. CONSERTANDO O ÁUDIO DUPLICADO NO PC
-if(window.postObserver) window.postObserver.disconnect();
-
-window.postObserver = new IntersectionObserver((entries) => {
-    let postsView = document.getElementById("igamble-view-posts");
-    let isActiveTab = postsView && postsView.classList.contains("active");
-
-    entries.forEach(entry => {
-        let audioEl = entry.target.querySelector('audio.post-audio');
-        if(!audioEl) return;
-
-        if(entry.isIntersecting && isActiveTab) {
-            if(!window.postAudioMuted) {
-                // O SEGREDO AQUI: Pausa TODOS os outros áudios antes de tocar esse
-                document.querySelectorAll('audio.post-audio').forEach(a => {
-                    if(a !== audioEl) { a.pause(); a.currentTime = 0; }
-                });
-                
-                audioEl.volume = 1.0;
-                audioEl.play().catch(()=>{});
-            }
-        } else {
-            audioEl.pause();
-            audioEl.currentTime = 0;
-        }
-    });
-}, { threshold: 0.5 }); // Aumentei pra 50% pra garantir que só pega o que tá no centro do PC
-
-// 3. CURTIR COM 2 TOQUES NA IMAGEM (DOUBLE TAP)
-document.addEventListener('dblclick', function(e) {
-    // Verifica se clicou duas vezes em alguma parte da imagem do post
-    let media = e.target.closest('.post-media') || e.target.closest('.post-media-bg') || e.target.closest('.post-overlay');
-    
-    if(media && window.jogadorAtual) {
-        let card = media.closest('.post-card');
-        if(card) {
-            // Pega o ID do post escondido no botão de curtir
-            let btn = card.querySelector("button[onclick^='window.curtirPost']");
-            if(btn) {
-                let match = btn.getAttribute("onclick").match(/'([^']+)'/);
-                if(match && match[1]) {
-                    let postId = match[1];
-                    let ref = window.db.ref(`tokyoRpg/posts/${postId}`);
-                    
-                    // Curte o post diretamente (Ignora o painel do Mestre no duplo clique)
-                    ref.once('value').then(snap => {
-                        let p = snap.val(); if(!p) return;
-                        let likers = p.likers || {};
-                        
-                        // Só curte se ainda não curtiu (double tap não tira o like, só dá)
-                        if(!likers[window.jogadorAtual]) { 
-                            likers[window.jogadorAtual] = true;
-                            ref.update({ likes: (p.likes||0) + 1, likers });
-                            // Solta um coração gigante na tela na hora
-                            if(window.spawnFloatingHeart) window.spawnFloatingHeart(card);
-                        }
-                    });
-                }
-            }
-        }
-    }
-});
+}, 1000);
 };
