@@ -395,8 +395,16 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 .feed-container::-webkit-scrollbar { display: none; }
 
 #igamble-view-posts {
-  flex: 1;
-  min-height: 0;
+    flex: 1 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    /* Removido o display: flex !important para respeitar a classe .active */
+    flex-direction: column !important;
+    background: #000;
+}
+
+#igamble-view-posts.active {
+    display: flex !important;
 }
 
 #igamble-view-posts .feed-container{
@@ -490,18 +498,16 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
   pointer-events: none !important;
 }
 
-#igamble-view-posts .post-sidebar{
-  position: absolute !important;
-  bottom: 18px !important;
-  left: calc(50% + (var(--imgW) / 2) + var(--gap)) !important;
-  right: auto !important;
-
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 14px !important;
-
-  pointer-events: auto !important;
-  z-index: 20 !important;
+#igamble-view-posts .post-sidebar {
+    position: absolute !important;
+    bottom: 25px !important;
+    right: 15px !important;
+    left: auto !important; /* Anula qualquer comportamento de empurrar para o lado */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    pointer-events: auto !important;
+    z-index: 20 !important;
 }
 
 .post-btn-vert{
@@ -956,6 +962,7 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     #igamble-view-posts .post-sidebar {
         bottom: 35px !important;
         right: 10px !important;
+        left: auto !important; /* Fixa no lado direito por cima da foto */
         gap: 10px !important;
     }
     #igamble-view-posts .post-btn-vert {
@@ -966,18 +973,6 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
         backdrop-filter: blur(5px) !important;
         border: 1px solid rgba(255,255,255,0.2) !important;
     }
-}
-
-/* 9. Animações de Coração */
-.floating-heart {
-    position: absolute;
-    bottom: 45%; left: 50%;
-    color: var(--accent-red);
-    font-size: 45px;
-    z-index: 100;
-    pointer-events: none;
-    animation: floatHeartAnim 2.5s forwards;
-    text-shadow: 0 0 15px var(--accent-red);
 }
 
 .floating-heart-purple {
@@ -1001,4 +996,37 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
     50% { transform: translate(-50%, -70px) scale(1.2); opacity: 1; }
     100% { transform: translate(-50%, -100px) scale(1.5); opacity: 0; }
+}
+/* ESTILO DO POPUP DE EMOJIS DO CHAT */
+.emoji-popup {
+    position: fixed;
+    background: rgba(10, 10, 15, 0.95);
+    border: 1px solid var(--accent-blue);
+    border-radius: 8px;
+    padding: 10px;
+    display: none; /* Escondido por padrão */
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 200px;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+    z-index: 9999 !important; /* Força ficar na frente de tudo */
+}
+
+.emoji-popup .emoji-btn {
+    background: #000;
+    border: 1px solid #333;
+    font-size: 20px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.emoji-popup .emoji-btn:hover {
+    border-color: var(--accent-blue);
+    transform: scale(1.1);
 }
