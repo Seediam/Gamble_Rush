@@ -99,23 +99,36 @@
             <div id="userLog" class="user-list"></div>
         </div>
 
-        <!-- SISTEMA OPERACIONAL (SMARTPHONE UI) -->
+              <!-- SISTEMA OPERACIONAL (SMARTPHONE UI) -->
         <div id="phoneOverlay">
-            <div class="phone-frame">
+            <div class="phone-frame" id="phoneFrameUI">
                 
                 <!-- TELA INICIAL (APPS NO BG.PNG) -->
-                <div class="phone-apps-grid">
+                <div class="phone-apps-grid" id="phoneMainScreen">
                     <button class="app-hitbox" onclick="window.abrirApp('tab-loja')" title="Gamblezon"></button>
                     <button class="app-hitbox" onclick="window.abrirApp('tab-mapa')" title="Gamble Maps"></button>
-                    <button class="app-hitbox" onclick="window.abrirApp('tab-igamble')" title="iGAMBLE"></button>
+                    <button class="app-hitbox" onclick="window.abrirIgambleMenu()" title="iGAMBLE"></button>
                     <button class="app-hitbox" onclick="window.abrirApp('tab-personagem')" title="My Gamble"></button>
                     <button class="app-hitbox locked" onclick="window.abrirApp('none', true, 'NuGamble está Fora do Ar!')" title="NuGamble"></button>
                     <button class="app-hitbox" onclick="window.abrirApp('tab-panteao')" title="Patronos"></button>
                     <button class="app-hitbox locked" id="hb-casa" title="Gamble House"></button>
                     <button class="app-hitbox locked" id="hb-celular" title="Gamblenger"></button>
                 </div>
+
+                <!-- SUB-MENU iGAMBLE (bg2.png) -->
+                <div id="phoneIgambleScreen" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%;">
+                    <!-- G-Chat -->
+                    <button class="app-hitbox" style="position:absolute; top:33%; left:12%; width:35%; height:16%;" onclick="window.abrirIgambleApp('chat')"></button>
+                    <!-- G-Post -->
+                    <button class="app-hitbox" style="position:absolute; top:33%; left:53%; width:35%; height:16%;" onclick="window.abrirIgambleApp('posts')"></button>
+                    <!-- G-Challenger -->
+                    <button class="app-hitbox" style="position:absolute; top:52%; left:12%; width:35%; height:16%;" onclick="window.abrirIgambleApp('embates')"></button>
+                    
+                    <!-- Botão Back -->
+                    <button class="app-hitbox" style="position:absolute; bottom:10%; left:12%; width:28%; height:8%;" onclick="window.voltarPhoneMain()"></button>
+                </div>
                 
-                <button class="close-phone-btn" onclick="window.deslogar()">✖</button>
+                <button class="close-phone-btn" id="btnClosePhone" onclick="window.deslogar()">✖</button>
             </div>
         </div>
 
