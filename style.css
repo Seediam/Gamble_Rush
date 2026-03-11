@@ -761,3 +761,37 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
   .shop-item { flex: 0 0 100%; } /* 1 por vez no celular */
   .shop-nav-btn { width: 35px; height: 35px; font-size: 16px; }
 }
+
+/* =========================================================
+   PATCH: REAÇÕES DO CHAT ALINHADAS
+   ========================================================= */
+.react-add {
+    background: transparent;
+    border: 1px dashed var(--accent-blue);
+    color: var(--accent-blue);
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+    font-weight: bold;
+}
+.react-add:hover {
+    background: var(--accent-blue);
+    color: #000;
+    box-shadow: 0 0 10px var(--accent-blue);
+}
+.react-btn {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #333;
+    color: #fff;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: inherit;
+}
+
