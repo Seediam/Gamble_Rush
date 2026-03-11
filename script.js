@@ -1329,7 +1329,7 @@ window.postObserver = new IntersectionObserver((entries) => {
 }, { threshold: 0.3 });
 
 // 3. Forçar o Play no clique da aba
-let fixTabSwitchIgamble = window.switchIGambleTab;
+var fixTabSwitchIgamble = window.switchIGambleTab;
 window.switchIGambleTab = function(tabId, btnEl) {
     if(fixTabSwitchIgamble) fixTabSwitchIgamble(tabId, btnEl);
     
@@ -1590,11 +1590,13 @@ window.mentionState = { active: false, inputEl: null, startPos: 0 };
 // =========================================================
 // NOVO SISTEMA DE MENÇÕES (TIPO INSTAGRAM)
 // =========================================================
+// =========================================================
+// NOVO SISTEMA DE MENÇÕES (TIPO INSTAGRAM) - VERSÃO BLINDADA
+// =========================================================
+
 window.handleMention = function(e, inputEl) {
-    // Pega o texto do começo até onde o cursor está
     let textBeforeCursor = inputEl.value.substring(0, inputEl.selectionStart);
-    
-    // RegEx Mágica: Verifica se a última palavra digitada começa com @ 
+    // Pega o que está sendo digitado depois do último '@'
     let match = textBeforeCursor.match(/(?:^|\s)@([^ \n]*)$/);
 
     if (match) {
@@ -1606,49 +1608,69 @@ window.handleMention = function(e, inputEl) {
 };
 
 window.renderNovaMencao = function(inputEl, query) {
-    let containerId = inputEl.id + "_mentionWrapper";
+    let containerId = "mentionMasterBox";
     let drop = document.getElementById(containerId);
     
-    // Se o menu ainda não existir perto do input, a gente cria grudado nele!
+    // 1. Cria a caixa do zero se ela não existir
     if (!drop) {
         drop = document.createElement("div");
         drop.id = containerId;
-        
-        // O pulo do gato: CSS Absoluto Bottom 100%. Ele nasce NA BARRA e sobe.
-        drop.style.cssText = "position:absolute; bottom:100%; left:0; width:100%; max-height:220px; background:#111; border:1px solid #00f0ff; border-radius:12px 12px 0 0; z-index:9999999; overflow-y:auto; box-shadow:0 -10px 20px rgba(0,240,255,0.2); display:none;";
-        
-        // Pega a caixa-mãe onde o input está e injeta o menu lá dentro
-        if (inputEl.parentElement) {
-            inputEl.parentElement.style.position = "relative";
-            inputEl.parentElement.appendChild(drop);
-        }
+        document.body.appendChild(drop);
     }
     
-    // Pega TODO MUNDO do Firebase direto, sem filtro de post
-    let users = Object.values(window.usersGlobais || {});
+    // 2. Injeta o CSS mais agressivo possível pra sobrepor a tela preta
+    drop.style.cssText = `
+        position: fixed !important;
+        z-index: 2147483647 !important; /* Valor máximo possível na web */
+        background: #0a0a0f !important;
+        border: 2px solid #00e5ff !important;
+        border-radius: 12px !important;
+        max-height: 250px !important;
+        overflow-y: auto !important;
+        width: 280px !important;
+        box-shadow: 0 0 30px rgba(0, 229, 255, 0.5) !important;
+        display: none;
+    `;
     
-    // Procura por quem o usuário digitou
-    let filtered = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query)).slice(0, 15); // Mostra até 15 pessoas
+    // 3. Puxa todos os jogadores que existem no seu banco
+    let users = [];
+    if (window.usersGlobais) {
+        users = Object.values(window.usersGlobais);
+    } else {
+        // Se o banco falhar, joga uns falsos pra gente saber que o menu abre
+        users = [{nome:"ErroDeConexao"}, {nome:"TesteGamble"}];
+    }
+    
+    // 4. Filtra por quem ele está digitando (ex: @miu)
+    let filtered = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query)).slice(0, 10);
     
     if (filtered.length === 0) {
         drop.style.display = "none";
         return;
     }
     
-    // Renderiza a lista lindona
+    // 5. Monta a lista visual de pessoas
     drop.innerHTML = filtered.map(u => {
         let av = u.avatarUrl || u.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
         return `
-        <div style="display:flex; align-items:center; gap:10px; padding:12px 15px; cursor:pointer; border-bottom:1px solid #222; color:#fff; transition:0.2s;" 
+        <div style="display:flex; align-items:center; gap:12px; padding:12px 15px; cursor:pointer; border-bottom:1px solid #1a1a24; color:#fff;" 
              onclick="window.inserirNovaMencao('${inputEl.id}', '${u.nome}')"
-             onmouseover="this.style.background='#222'" 
+             onmouseover="this.style.background='#1a1a24'" 
              onmouseout="this.style.background='transparent'">
-            <img src="${av}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1px solid #555;">
-            <span style="font-weight:bold; font-size:14px; color:var(--accent-blue, #00f0ff);">${u.nome}</span>
+            <img src="${av}" style="width:34px; height:34px; border-radius:50%; object-fit:cover; border:1px solid #555;">
+            <span style="font-weight:bold; font-size:15px; text-shadow: 0 0 5px #00e5ff;">${u.nome}</span>
         </div>`;
     }).join("");
     
     drop.style.display = "block";
+
+    // 6. Faz o menu grudar exatamente em cima do input que você tá digitando
+    let rect = inputEl.getBoundingClientRect();
+    setTimeout(() => {
+        let dropHeight = drop.offsetHeight || 150;
+        drop.style.left = rect.left + "px";
+        drop.style.top = (rect.top - dropHeight - 10) + "px"; 
+    }, 5);
 };
 
 window.inserirNovaMencao = function(inputId, nome) {
@@ -1658,13 +1680,13 @@ window.inserirNovaMencao = function(inputId, nome) {
     let textBeforeCursor = inputEl.value.substring(0, inputEl.selectionStart);
     let textAfterCursor = inputEl.value.substring(inputEl.selectionStart);
     
-    // Substitui o @ e a letra que tava digitando pelo nome da pessoa com espaço no final
+    // Troca o "@texto" pelo nome escolhido + 1 espaço
     let newTextBefore = textBeforeCursor.replace(/(^|\s)@([^ \n]*)$/, `$1@${nome} `);
     
     inputEl.value = newTextBefore + textAfterCursor;
-    inputEl.focus(); // Devolve o foco pra você continuar digitando
+    inputEl.focus(); 
     
-    // Move o cursor para logo depois do nome inserido
+    // Coloca a barrinha piscante logo depois do nome inserido
     let newPos = newTextBefore.length;
     inputEl.setSelectionRange(newPos, newPos);
     
@@ -1672,18 +1694,17 @@ window.inserirNovaMencao = function(inputId, nome) {
 };
 
 window.fecharNovaMencao = function() {
-    // Esconde qualquer menu de menção que estiver aberto na tela
-    document.querySelectorAll("[id$='_mentionWrapper']").forEach(el => el.style.display = "none");
+    let drop = document.getElementById("mentionMasterBox");
+    if(drop) drop.style.display = "none";
 };
 
-// Se clicar fora, a janelinha some automaticamente
+// Clicar em qualquer lugar fora, fecha o menuzinho
 document.addEventListener('click', function(e) {
-    if (!e.target.closest("[id$='_mentionWrapper']") && !e.target.closest('input') && !e.target.closest('textarea')) {
+    if (!e.target.closest('#mentionMasterBox') && !e.target.closest('input') && !e.target.closest('textarea')) {
         window.fecharNovaMencao();
     }
 });
 // =========================================================
-
 
 // =========================================================
 // SISTEMA DE COMENTÁRIOS DO IGAMBLE POST (INSTA HUD)
