@@ -1591,7 +1591,84 @@ window.mentionState = { active: false, inputEl: null, startPos: 0 };
 // NOVO SISTEMA DE MENÇÕES (TIPO INSTAGRAM)
 // =========================================================
 // =========================================================
-// NOVO SISTEMA DE MENÇÕES (TIPO INSTAGRAM) - VERSÃO BLINDADA
+
+// =========================================================
+// SISTEMA DE COMENTÁRIOS DO IGAMBLE POST (INSTA HUD)
+// =========================================================
+window.currentPostIdForComment = null;
+
+window.abrirComentarios = function(postId) {
+    window.currentPostIdForComment = postId;
+    document.getElementById("commentsOverlay").style.display = "flex";
+    window.carregarComentarios(postId);
+};
+
+window.fecharComentarios = function() {
+    window.currentPostIdForComment = null;
+    document.getElementById("commentsOverlay").style.display = "none";
+    document.getElementById("commentsList").innerHTML = ""; // limpa a lista
+};
+
+// Fechar se clicar fora do painel no fundo escuro
+document.getElementById('commentsOverlay').addEventListener('click', function(e) {
+    if (e.target === this) { window.fecharComentarios(); }
+});
+
+window.carregarComentarios = function(postId) {
+    let list = document.getElementById("commentsList");
+    list.innerHTML = "<div style='text-align:center; color:#aaa; margin-top:20px;'>Carregando...</div>";
+    
+    window.db.ref(`tokyoRpg/posts/${postId}/comentarios`).on('value', snap => {
+        // Se mudou de aba ou fechou, ignora a att
+        if(window.currentPostIdForComment !== postId) return; 
+        
+        let data = snap.val();
+        if(!data) { list.innerHTML = "<div style='text-align:center; color:#555; margin-top:20px;'>Seja o primeiro a comentar!</div>"; return; }
+        
+        let html = "";
+        let sortedKeys = Object.keys(data).sort((a,b) => data[a].timestamp - data[b].timestamp); // Mais antigos primeiro
+
+        sortedKeys.forEach(k => {
+            let c = data[k];
+            let u = window.usersGlobais[c.autor] || {};
+            let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${c.autor}`;
+            let nome = u.nome || c.autor;
+            
+            // Transformar @menções em azulzinho e bold pra ficar mais bonito (Opcional)
+            let textoBonito = (c.texto||"").replace(/@(\w+)/g, '<span style="color:var(--accent-blue); font-weight:bold;">@$1</span>');
+
+            html += `
+                <div class="comment-item">
+                    <img src="${avatar}" class="comment-avatar">
+                    <div class="comment-content">
+                        <div class="comment-name">${nome}</div>
+                        <div>${textoBonito}</div>
+                    </div>
+                </div>
+            `;
+        });
+        list.innerHTML = html;
+        // Rola pro final pra ver o último comentário
+        setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+    });
+};
+
+window.enviarComentario = function() {
+    if(!window.currentPostIdForComment || !window.jogadorAtual) return;
+    let inp = document.getElementById("commentInput");
+    let txt = inp.value.trim();
+    if(!txt) return;
+    
+    window.db.ref(`tokyoRpg/posts/${window.currentPostIdForComment}/comentarios`).push({
+        autor: window.jogadorAtual,
+        texto: txt,
+        timestamp: Date.now()
+    }).then(() => {
+        inp.value = ""; // Limpa a caixa de texto
+        window.closeMentionDropdown();
+    });
+};
+    // NOVO SISTEMA DE MENÇÕES (TIPO INSTAGRAM) - VERSÃO BLINDADA
 // =========================================================
 
 window.handleMention = function(e, inputEl) {
@@ -1706,82 +1783,6 @@ document.addEventListener('click', function(e) {
 });
 // =========================================================
 
-// =========================================================
-// SISTEMA DE COMENTÁRIOS DO IGAMBLE POST (INSTA HUD)
-// =========================================================
-window.currentPostIdForComment = null;
-
-window.abrirComentarios = function(postId) {
-    window.currentPostIdForComment = postId;
-    document.getElementById("commentsOverlay").style.display = "flex";
-    window.carregarComentarios(postId);
-};
-
-window.fecharComentarios = function() {
-    window.currentPostIdForComment = null;
-    document.getElementById("commentsOverlay").style.display = "none";
-    document.getElementById("commentsList").innerHTML = ""; // limpa a lista
-};
-
-// Fechar se clicar fora do painel no fundo escuro
-document.getElementById('commentsOverlay').addEventListener('click', function(e) {
-    if (e.target === this) { window.fecharComentarios(); }
-});
-
-window.carregarComentarios = function(postId) {
-    let list = document.getElementById("commentsList");
-    list.innerHTML = "<div style='text-align:center; color:#aaa; margin-top:20px;'>Carregando...</div>";
-    
-    window.db.ref(`tokyoRpg/posts/${postId}/comentarios`).on('value', snap => {
-        // Se mudou de aba ou fechou, ignora a att
-        if(window.currentPostIdForComment !== postId) return; 
-        
-        let data = snap.val();
-        if(!data) { list.innerHTML = "<div style='text-align:center; color:#555; margin-top:20px;'>Seja o primeiro a comentar!</div>"; return; }
-        
-        let html = "";
-        let sortedKeys = Object.keys(data).sort((a,b) => data[a].timestamp - data[b].timestamp); // Mais antigos primeiro
-
-        sortedKeys.forEach(k => {
-            let c = data[k];
-            let u = window.usersGlobais[c.autor] || {};
-            let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${c.autor}`;
-            let nome = u.nome || c.autor;
-            
-            // Transformar @menções em azulzinho e bold pra ficar mais bonito (Opcional)
-            let textoBonito = (c.texto||"").replace(/@(\w+)/g, '<span style="color:var(--accent-blue); font-weight:bold;">@$1</span>');
-
-            html += `
-                <div class="comment-item">
-                    <img src="${avatar}" class="comment-avatar">
-                    <div class="comment-content">
-                        <div class="comment-name">${nome}</div>
-                        <div>${textoBonito}</div>
-                    </div>
-                </div>
-            `;
-        });
-        list.innerHTML = html;
-        // Rola pro final pra ver o último comentário
-        setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
-    });
-};
-
-window.enviarComentario = function() {
-    if(!window.currentPostIdForComment || !window.jogadorAtual) return;
-    let inp = document.getElementById("commentInput");
-    let txt = inp.value.trim();
-    if(!txt) return;
-    
-    window.db.ref(`tokyoRpg/posts/${window.currentPostIdForComment}/comentarios`).push({
-        autor: window.jogadorAtual,
-        texto: txt,
-        timestamp: Date.now()
-    }).then(() => {
-        inp.value = ""; // Limpa a caixa de texto
-        window.closeMentionDropdown();
-    });
-};
     // =========================================================
 // SISTEMA DE NOTIFICAÇÕES (ONLINE E OFFLINE)
 // =========================================================
