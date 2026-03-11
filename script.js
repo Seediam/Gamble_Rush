@@ -1739,4 +1739,129 @@ window.enviarComentario = function() {
         window.closeMentionDropdown();
     });
 };
+    // =========================================================
+// SISTEMA DE NOTIFICAÇÕES (ONLINE E OFFLINE)
+// =========================================================
+
+// Envia uma notificação para um usuário específico
+window.enviarNotificacao = function(alvo, tipo, remetente, texto, linkId = null) {
+    if (!window.db || !alvo || alvo === remetente) return;
+    
+    window.db.ref(`tokyoRpg/notifications/${alvo}`).push({
+        tipo: tipo, // 'mention_post', 'mention_comment', 'chat_reply'
+        remetente: remetente,
+        texto: texto,
+        linkId: linkId,
+        lida: false,
+        timestamp: Date.now()
+    });
+};
+
+// Escuta notificações não lidas para o usuário atual
+window.iniciarEscutaNotificacoes = function() {
+    if (!window.jogadorAtual || !window.db) return;
+    
+    window.db.ref(`tokyoRpg/notifications/${window.jogadorAtual}`).on("value", snap => {
+        let notificacoes = snap.val() || {};
+        let naoLidas = 0;
+        
+        Object.keys(notificacoes).forEach(key => {
+            let notif = notificacoes[key];
+            if (!notif.lida) {
+                naoLidas++;
+                // Mostra popup estilo Instagram se for recente (nos últimos 10 segundos)
+                // Ou se a pessoa acabou de logar (pegou no celular)
+                if (Date.now() - notif.timestamp < 10000 || !window.notificacoesAntigasExibidas) {
+                    window.showNeonToast(`🔔 ${notif.remetente}: ${notif.texto}`);
+                    // Marca como exibida para não spammar toda vez que recarregar
+                    window.db.ref(`tokyoRpg/notifications/${window.jogadorAtual}/${key}`).update({ lida: true });
+                }
+            }
+        });
+        window.notificacoesAntigasExibidas = true;
+        
+        // Atualiza a bolinha (badge) no bg2 ou menu
+        window.atualizarBadgeNotificacoes(naoLidas);
+    });
+};
+
+window.atualizarBadgeNotificacoes = function(qtd) {
+    let badge = document.getElementById("notificacoesBadge");
+    if (!badge) {
+        // Criar o badge dinamicamente se não existir no HTML
+        let btnChat = document.querySelector(".igamble-tab-btn"); // Exemplo de onde colocar
+        if(btnChat) {
+            badge = document.createElement("span");
+            badge.id = "notificacoesBadge";
+            badge.style.cssText = "background:red; color:white; border-radius:50%; padding:2px 6px; font-size:10px; margin-left:5px;";
+            btnChat.appendChild(badge);
+        }
+    }
+    
+    if (badge) {
+        badge.innerText = qtd;
+        badge.style.display = qtd > 0 ? "inline-block" : "none";
+    }
+};
+    window.processarMencoes = function(texto, autor, tipoContexto, contextoId) {
+    // Regex para pegar tudo que começa com @
+    let regex = /@(\w+)/g;
+    let matches = [...texto.matchAll(regex)];
+    
+    matches.forEach(match => {
+        let mencionado = match[1];
+        // Aqui você pode adicionar a lógica para validar se a pessoa está nos comentários, é o dono, etc.
+        // Por enquanto, notifica qualquer usuário real do banco
+        if (window.usersGlobais && window.usersGlobais[mencionado]) {
+            let msg = tipoContexto === 'post' ? "mencionou você em um post" : "mencionou você em um comentário";
+            window.enviarNotificacao(mencionado, 'mention_' + tipoContexto, autor, msg, contextoId);
+        }
+    });
+};
+    window.mensagemEmResposta = null; // Armazena a mensagem que está sendo respondida
+
+window.responderMensagem = function(nome, texto) {
+    window.mensagemEmResposta = { nome, texto };
+    document.getElementById("replyToName").innerText = nome;
+    document.getElementById("replyToText").innerText = texto;
+    document.getElementById("chatReplyPreview").style.display = "block";
+    document.getElementById("chatInputMsg").focus();
+};
+
+window.cancelarResposta = function() {
+    window.mensagemEmResposta = null;
+    document.getElementById("chatReplyPreview").style.display = "none";
+};
+
+// Modifique a função enviarMsgGamble para incluir os dados da resposta
+window.enviarMsgGamble = function() {
+    try {
+        if (!window.db) return;
+        if (!window.jogadorAtual) return;
+        const inp = document.getElementById("chatInputMsg");
+        const txt = (inp.value || "").trim(); 
+        if (!txt) return;
+
+        let msgData = { 
+            nome: window.jogadorAtual, 
+            texto: txt, 
+            data: new Date().toLocaleTimeString(), 
+            ts: Date.now() 
+        };
+
+        // Adiciona dados do reply se existir
+        if (window.mensagemEmResposta) {
+            msgData.replyTo = window.mensagemEmResposta.nome;
+            msgData.replyText = window.mensagemEmResposta.texto;
+            
+            // Notifica o usuário que foi respondido
+            window.enviarNotificacao(window.mensagemEmResposta.nome, 'chat_reply', window.jogadorAtual, "respondeu sua mensagem no chat");
+        }
+
+        window.db.ref("tokyoRpg/chat").push(msgData);
+        
+        inp.value = "";
+        window.cancelarResposta(); // Limpa o estado
+    } catch (e) { console.error("Erro ao enviar.", e); }
+};
 };
