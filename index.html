@@ -543,7 +543,31 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
             </div>
         </div>
     </div>
+	
+    <!-- ============================================== -->
+    <!-- DROPDOWN DE MENÇÕES (@) -->
+    <div id="mentionDropdown" class="mention-dropdown" style="display:none;"></div>
 
+    <!-- OVERLAY DE COMENTÁRIOS (INSTAGRAM STYLE) -->
+    <div id="commentsOverlay" class="comments-overlay" style="display:none;">
+        <div class="comments-panel" id="commentsPanel">
+            <div class="comments-header">
+                <div class="drag-handle" onclick="window.fecharComentarios()"></div>
+                <h3>Comentários</h3>
+                <button class="close-comments-btn" onclick="window.fecharComentarios()">✖</button>
+            </div>
+            <div class="comments-list" id="commentsList"></div>
+            <div class="comments-input-area">
+                <input type="text" id="commentInput" placeholder="Adicione um comentário..." oninput="window.handleMention(event, this)" onkeydown="if(event.key==='Enter') window.enviarComentario()">
+                <button class="neon-icon-btn" onclick="window.enviarComentario()">➤</button>
+            </div>
+        </div>
+    </div>
+    <!-- ============================================== -->
+
+    <!-- CARREGAR O SCRIPT SEPARADO -->
+    <script src="script.js"></script>
+</body>
     <!-- CARREGAR O SCRIPT SEPARADO -->
     <script src="script.js"></script>
 </body>
