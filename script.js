@@ -2092,13 +2092,19 @@ window.startReply = function(toName, text, msgKey){
 
   const box = document.getElementById("replyPreview");
   if(box) box.style.display = "flex";
+
   const n = document.getElementById("replyToName");
   const t = document.getElementById("replyToText");
   if(n) n.innerText = "Respondendo: " + (toName || "");
   if(t) t.innerText = (text || "");
 
   const inp = document.getElementById("chatInputMsg");
-  if(inp) inp.focus();
+  if(inp){
+    // Só adiciona se ainda não tiver
+    const tag = "@" + (toName||"") + " ";
+    if(toName && !inp.value.startsWith(tag)) inp.value = tag + inp.value;
+    inp.focus();
+  }
 };
 
 window.cancelReply = function(){
