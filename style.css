@@ -893,4 +893,76 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 #igamble-view-posts .post-caption {
     pointer-events: auto !important; 
 }
+/* =========================================================
+   PATCH DEFINITIVO: SCROLL MAGNÉTICO TIKTOK E ENQUADRAMENTO
+   ========================================================= */
 
+/* 1. O container geral da aba precisa ser um Flex rigoroso */
+#igamble-view-posts {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 8px !important;
+    box-sizing: border-box !important;
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+/* 2. O Segredo: flex: 1 com min-height: 0 obriga o feed a ocupar apenas o espaço que sobrou debaixo dos botões, sem vazar a tela! */
+#igamble-view-posts .feed-container {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border: 1px solid #222 !important;
+    border-radius: 12px !important;
+    background: #000 !important;
+    
+    /* FÍSICA DO TIKTOK */
+    overflow-y: scroll !important;
+    scroll-snap-type: y mandatory !important;
+    scroll-behavior: smooth !important;
+    -webkit-overflow-scrolling: touch !important; /* Deixa o deslize sedoso no Celular */
+}
+
+/* Esconde a barra de rolagem cinza para ficar imersivo */
+#igamble-view-posts .feed-container::-webkit-scrollbar {
+    display: none !important;
+}
+
+/* 3. Cada post tem exatos 100% do feed, nem 1 pixel a mais. */
+#igamble-view-posts .post-card {
+    flex: 0 0 100% !important; /* Proíbe o card de encolher ou crescer */
+    height: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    border: none !important;
+    
+    /* Trava a rolagem exatamente no topo do post */
+    scroll-snap-align: start !important; 
+    scroll-snap-stop: always !important; /* Impede de passar reto por 2 posts de uma vez num puxão forte */
+}
+
+/* 4. Enquadramento perfeito da Imagem */
+#igamble-view-posts .post-media {
+    object-fit: contain !important; /* Contain garante que a imagem aparece 100% sem NUNCA ser cortada */
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+}
+
+/* 5. O Fundo borrado preenche os buracos de imagens que não são do tamanho da tela */
+#igamble-view-posts .post-media-bg {
+    object-fit: cover !important;
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 1 !important;
+    opacity: 0.3 !important;
+    filter: blur(25px) !important;
+    transform: scale(1.1) !important; /* Tira aquela bordinha branca estranha do blur */
+}
