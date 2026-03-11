@@ -1612,41 +1612,32 @@ window.handleMention = function(e, inputEl) {
 window.showMentionDropdown = function(inputEl, query) {
     let drop = document.getElementById("mentionDropdown");
     
-    // Se o menu não existir, cria dinamicamente
+    // Se não existir, cria
     if (!drop) {
         drop = document.createElement("div");
         drop.id = "mentionDropdown";
         document.body.appendChild(drop);
     }
     
-    // FORÇA o CSS direto no Javascript pra evitar qualquer bug de esconder atrás do fundo preto
-    drop.style.position = "fixed";
-    drop.style.zIndex = "9999999"; 
-    drop.style.background = "#111";
-    drop.style.border = "1px solid var(--accent-blue, #00f0ff)";
-    drop.style.borderRadius = "8px";
-    drop.style.maxHeight = "200px";
-    drop.style.overflowY = "auto";
-    drop.style.width = "250px";
-    drop.style.boxShadow = "0 0 15px rgba(0, 240, 255, 0.3)";
+    // BLINDAGEM MÁXIMA CSS: Força ele a ficar fixo, no topo, ignorando o painel de fundo
+    drop.style.cssText = "position: fixed !important; z-index: 9999999 !important; background: #111 !important; border: 1px solid #00f0ff !important; border-radius: 8px !important; max-height: 200px !important; overflow-y: auto !important; width: 250px !important; box-shadow: 0 0 15px rgba(0,240,255,0.5) !important; display: block !important;";
     
     let users = [];
     let envolvidos = new Set();
 
-    // LÓGICA CORRIGIDA PARA PEGAR OS COMENTÁRIOS E O ID DO POST
     if (inputEl.id === "commentInput") {
-        let postId = window.currentPostIdForComment; // NOME CORRETO DA VARIÁVEL
+        let postId = window.currentPostIdForComment;
         let post = window.globalPostsData ? window.globalPostsData[postId] : null;
         
-        // 1. Sempre pode se mencionar
+        // 1. Sempre adiciona a pessoa jogando
         if (window.jogadorAtual) envolvidos.add(window.jogadorAtual);
         
         if (post) {
-            // 2. Dono do post
+            // 2. Adiciona o dono do post
             if (post.autor) envolvidos.add(post.autor);
             if (post.autorId) envolvidos.add(post.autorId);
             
-            // 3. Pessoas que comentaram (a chave correta no seu firebase é 'comentarios')
+            // 3. Adiciona quem comentou
             if (post.comentarios) {
                 Object.values(post.comentarios).forEach(c => {
                     if (c.autor) envolvidos.add(c.autor);
@@ -1655,31 +1646,32 @@ window.showMentionDropdown = function(inputEl, query) {
             }
         }
     } else {
-        // Se estiver no chat principal, carrega todo mundo
         if (window.usersGlobais) {
-            Object.keys(window.usersGlobais).forEach(nome => envolvidos.add(nome));
+            Object.keys(window.usersGlobais).forEach(n => envolvidos.add(n));
         }
     }
 
-    // Pega os avatares
+    // Pega as imagens de perfil
     envolvidos.forEach(nome => {
         if (!nome) return;
         if (window.usersGlobais && window.usersGlobais[nome]) {
             users.push(window.usersGlobais[nome]);
         } else {
-            users.push({ nome: nome }); // Fallback
+            users.push({ nome: nome }); 
         }
     });
 
-    // Filtra pelo que a pessoa digitou depois do @
+    // Se estiver vazio, adiciona pelo menos um teste para a gente ver que funcionou
+    if (users.length === 0) users.push({ nome: "Convidado" });
+
+    // Filtra pelo texto
     let filtered = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
 
     if (filtered.length === 0) { 
-        drop.style.display = "none"; 
+        drop.style.cssText = "display: none !important;";
         return; 
     }
 
-    // Monta o visual de cada jogador
     drop.innerHTML = filtered.map(u => {
         let av = u.avatarUrl || u.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
         return `
@@ -1692,32 +1684,22 @@ window.showMentionDropdown = function(inputEl, query) {
         </div>`;
     }).join("");
 
-    // Exibe e alinha EXATAMENTE em cima da caixa de texto
-    drop.style.display = "block";
     let rect = inputEl.getBoundingClientRect();
-    let dropHeight = drop.offsetHeight || 150;
     
-    drop.style.left = rect.left + "px";
-    drop.style.top = (rect.top - dropHeight - 10) + "px"; 
-};
-window.selectMention = function(nome) {
-    let s = window.mentionState;
-    if (!s.active || !s.inputEl) return;
-    
-    let val = s.inputEl.value;
-    let before = val.substring(0, s.startPos);
-    let after = val.substring(s.inputEl.selectionStart);
-    
-    s.inputEl.value = before + "@" + nome + " " + after;
-    s.inputEl.focus(); // Devolve o foco pro input
-    
-    window.closeMentionDropdown();
+    // Delay de 10ms para o HTML desenhar a caixa e a gente poder medir a altura dela pra posicionar
+    setTimeout(() => {
+        let dropHeight = drop.offsetHeight || 150;
+        drop.style.left = rect.left + "px";
+        drop.style.top = (rect.top - dropHeight - 10) + "px";
+    }, 10);
 };
 
 window.closeMentionDropdown = function() {
-    window.mentionState.active = false;
+    if (window.mentionState) window.mentionState.active = false;
     let drop = document.getElementById("mentionDropdown");
-    if(drop) drop.style.display = "none";
+    if(drop) {
+        drop.style.cssText = "display: none !important;";
+    }
 };
 
 // Esconde o dropdown de menção se clicar fora
