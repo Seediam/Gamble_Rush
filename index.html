@@ -19,7 +19,13 @@
         <h2 id="eatingTitle" class="eating-text">CONSUMINDO...</h2>
         <div class="eating-bar-bg"><div id="eatingFill" class="eating-bar-fill"></div></div>
     </div>
-
+	
+    <!-- TELA DE ATUALIZAÇÃO FALSA -->
+    <div id="updateOverlay" class="eating-overlay" style="z-index: 9500; background: rgba(0,0,0,0.98);">
+        <h2 id="updateAppName" class="neon-blue" style="margin-bottom: 10px; font-size: 20px;">ATUALIZANDO...</h2>
+        <div class="eating-bar-bg" style="border-color: var(--accent-blue);"><div id="updateBarFill" class="eating-bar-fill" style="background: var(--accent-blue); box-shadow: 0 0 20px var(--accent-blue); width: 0%;"></div></div>
+        <p id="updateMbText" style="color: #aaa; font-size: 12px; margin-top: 10px; font-family: monospace;">0.0 MB / 0.0 MB</p>
+    </div>
     <div id="loadingTerminal">
         <div style="width: 300px; padding: 20px; text-align: left;">
             <p id="loadingText" style="color:#0f0; font-size:12px;"></p>
@@ -344,7 +350,7 @@
                   <div id="igamble-view-posts" class="igamble-view" style="padding: 10px; overflow:hidden; background:#000;">
                     <!-- barra superior -->
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                      <button class="action-btn" id="btnToggleMute" style="border-color:#aaa; color:#aaa;" onclick="window.toggleGambleMute()">🔇 Áudio Bloqueado</button>
+                      <button class="action-btn" id="btnToggleMute" style="border-color:#0f0; color:#0f0;" onclick="window.toggleGambleMute()">🔊 Áudio Liberado</button>
                       <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue);" onclick="window.togglePostCreator()">➕ Criar Post</button>
                     </div>
 
