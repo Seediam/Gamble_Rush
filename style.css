@@ -1084,7 +1084,44 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 /* =========================================================
    WHATSAPP REPLY (G-CHAT) + NOTIFICAÇÕES DE MENÇÃO
    ========================================================= */
+.msg-headline{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
 
+.msg-sender{
+  color: var(--accent-blue);
+  font-size: 14px;
+}
+
+.msg-time{
+  color:#555;
+  font-size:10px;
+  margin-left:auto; /* empurra a hora pro canto */
+}
+
+.msg-reply-btn{
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--accent-blue);
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding: 0;
+  line-height: 1;
+  transition: 0.15s;
+}
+
+.msg-reply-btn:hover{
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 10px rgba(0,229,255,0.35);
+  transform: scale(1.05);
+}
 /* Reply preview acima do input do chat */
 .reply-preview{
   display:flex;
