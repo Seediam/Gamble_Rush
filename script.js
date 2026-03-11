@@ -1312,4 +1312,98 @@ window.switchIGambleTab = function(tabId, btnEl) {
             a.currentTime = 0;
         });
     }
+    // =========================================================
+// PATCH: SISTEMA DE POPULARIDADE (LIKES FALSOS DO MESTRE)
+// =========================================================
+
+window.globalPostsData = {};
+
+// 1. Armazenar os dados dos posts silenciosamente no fundo
+window.db.ref("tokyoRpg/posts").on("value", snap => {
+    window.globalPostsData = snap.val() || {};
+});
+
+// 2. Interceptar o botão de curtir apenas para o Mestre
+let oldCurtirPost = window.curtirPost;
+window.curtirPost = function(id) {
+    if (window.isMaster) {
+        let op = prompt("👑 MESTRE: Sistema de Popularidade\n\nDigite a quantidade de curtidas falsas para injetar no post (Elas subirão aos poucos nas próximas 10 horas. Ex: 1000 = 100/hora).\n\nPara remover o boost digite 0.\n[Deixe VAZIO para apenas dar um like normal]");
+        
+        if (op !== null && op.trim() !== "") {
+            let target = parseInt(op);
+            if (!isNaN(target)) {
+                if (target <= 0) {
+                    // Remove o boost
+                    window.db.ref(`tokyoRpg/posts/${id}/boost`).remove();
+                    window.showNeonToast("Boost Removido!");
+                } else {
+                    // Define que a entrega total demora 10 horas (10 * 60 * 60 * 1000 ms)
+                    let duration = 10 * 60 * 60 * 1000; 
+                    window.db.ref(`tokyoRpg/posts/${id}/boost`).set({
+                        target: target,
+                        startTs: Date.now(),
+                        duration: duration
+                    });
+                    window.showNeonToast(`🚀 Boost Iniciado! Alvo: ${target} Likes`);
+                }
+                return; // Para a função aqui, não executa o like normal
+            }
+        }
+    }
+    // Se não for mestre, ou se deixou a caixinha vazia, segue o like normal
+    oldCurtirPost(id);
+};
+
+// 3. Loop visual que faz os números subirem "esporadicamente" na tela ao vivo!
+setInterval(() => {
+    let feed = document.getElementById("igamblePostsFeed");
+    if (!feed) return;
+    
+    // Pega todos os botões de curtir visíveis
+    let likeBtns = feed.querySelectorAll("button[onclick^='window.curtirPost']");
+    
+    likeBtns.forEach(btn => {
+        // Extrai o ID do post
+        let match = btn.getAttribute("onclick").match(/'([^']+)'/);
+        if (match && match[1]) {
+            let postId = match[1];
+            let post = window.globalPostsData[postId];
+            
+            if (post) {
+                let realLikes = post.likes || 0;
+                let fakeLikes = 0;
+                
+                // Se o post tem um boost ativo
+                if (post.boost && post.boost.target > 0) {
+                    let elapsed = Date.now() - post.boost.startTs;
+                    let progress = elapsed / post.boost.duration;
+                    
+                    // Trava em 100% quando terminar o tempo
+                    if (progress > 1) progress = 1;
+                    if (progress < 0) progress = 0;
+                    
+                    // Calcula quantos likes já deveriam ter subido nesse exato momento
+                    fakeLikes = Math.floor(progress * post.boost.target);
+                }
+                
+                let totalLikes = realLikes + fakeLikes;
+                let span = btn.querySelector("span");
+                
+                // Se o número mudou, atualiza na tela com uma animaçãozinha de batida de coração
+                if (span && parseInt(span.innerText) !== totalLikes) {
+                    span.style.transition = "transform 0.2s, color 0.2s";
+                    span.style.transform = "scale(1.6)";
+                    span.style.color = "var(--accent-red)";
+                    span.innerText = totalLikes;
+                    
+                    // Retorna ao tamanho normal após piscar
+                    setTimeout(() => {
+                        span.style.transform = "scale(1)";
+                        span.style.color = "";
+                    }, 250);
+                }
+            }
+        }
+    });
+}, 2000); // O sistema checa as matemáticas a cada 2 segundos
 };
