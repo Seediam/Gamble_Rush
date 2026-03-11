@@ -236,12 +236,13 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 
 /* === IGAMBLE CHAT PREMIUM === */
 #tab-igamble {
-    height: calc(100vh - 130px);
+    height: calc(100vh - 50px);
     overflow: hidden;
+    display: none; /* Força sumir quando inativo */
 }
 
 #tab-igamble.active {
-    display: flex;
+    display: flex !important; /* Exige que apareça quando ativo */
     flex-direction: column;
 }
 
@@ -863,19 +864,21 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
    ========================================================= */
 
 /* 1. Trava a altura do App para o scroll magnético não quebrar */
-#tab-igamble {
+/* 1. Trava a altura do App para o scroll magnético não quebrar */
+#tab-igamble.active {
     height: calc(100vh - 50px) !important;
-    display: flex !important;
-    flex-direction: column !important;
 }
 
 #igamble-view-posts {
-    flex: 1 !important;
-    min-height: 0 !important;
-    padding: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    display: none; /* Desliga o important */
+    flex-direction: column;
     background: #000;
+}
+#igamble-view-posts.active {
+    display: flex !important; /* Só mostra quando a sub-aba estiver ativa */
 }
 
 /* 2. O Feed: Rola perfeitamente 1 por 1 */
