@@ -257,8 +257,9 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 }
 
 /* --- NAVEGAÇÃO INTERNA DO IGAMBLE --- */
+/* --- NAVEGAÇÃO INTERNA DO IGAMBLE --- */
 .igamble-nav {
-    display: flex;
+    display: none !important; /* Antigamente era flex. Escondido para forçar a navegação via Celular bg2.png */
     justify-content: center;
     gap: 10px;
     padding: 10px;
