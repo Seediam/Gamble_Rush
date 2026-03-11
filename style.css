@@ -867,3 +867,30 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     pointer-events: auto !important; 
 }
 
+/* =========================================================
+   PATCH: TEXTO NO CELULAR E AJUSTE DE OVERLAY
+   ========================================================= */
+@media(max-width: 600px) {
+    #igamble-view-posts .post-caption {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        z-index: 99 !important;
+        max-width: 75% !important;
+        bottom: 25px !important;    /* Levanta o texto um pouco mais no celular */
+        left: 15px !important;
+        font-size: 13px !important;
+        color: #fff !important;
+        background: rgba(0, 0, 0, 0.6) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+    }
+}
+
+/* Deixa a área da imagem clicável para o Double Tap funcionar melhor */
+#igamble-view-posts .post-overlay {
+    pointer-events: auto !important; 
+}
+#igamble-view-posts .post-caption {
+    pointer-events: auto !important; 
+}
+
