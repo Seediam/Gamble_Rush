@@ -407,20 +407,32 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     display: flex !important;
 }
 
-#igamble-view-posts .feed-container{
-  height: calc(100vh - 210px) !important; 
-  max-height: none !important;
+#igamble-view-posts .feed-container {
+    flex: 1 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-y: scroll !important;
+    scroll-snap-type: y mandatory !important;
+    scroll-behavior: smooth !important;
+    -webkit-overflow-scrolling: touch !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    box-sizing: border-box !important;
 }
+#igamble-view-posts .feed-container::-webkit-scrollbar { display: none !important; }
 
-#igamble-view-posts .post-card{
-  position: relative !important;
-  display: block !important;
-  height: calc(100vh - 210px) !important;
-  max-height: none !important;
-  min-height: 520px;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  --imgW: 420px;
-  --gap: 18px;
+/* 3. O Post: Ocupa 100% da tela visível, sem passar 1 pixel */
+#igamble-view-posts .post-card {
+    height: 100% !important;
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    position: relative !important;
+    scroll-snap-align: start !important;
+    scroll-snap-stop: always !important;
+    border-bottom: 2px solid #111 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important; /* Impede a borda de quebrar o scroll */
+    min-height: 0 !important; /* Anula o 520px antigo */
 }
 
 #igamble-view-posts .post-media{
