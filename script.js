@@ -42,7 +42,7 @@ window.locaisMapa = {
 window.conexoesMapa = [ {de:"p1", para:"p2"}, {de:"p2", para:"p3"}, {de:"p1", para:"p4"}, {de:"p1", para:"p5"}, {de:"p5", para:"p6"}, {de:"p1", para:"p9"}, {de:"p9", para:"p10"}, {de:"p10", para:"p11"}, {de:"p11", para:"p12"}, {de:"p2", para:"p13"}, {de:"p13", para:"p14"}, {de:"p3", para:"p8"}, {de:"p7", para:"p6"}, {de:"p3", para:"p7"}, {de:"p2", para:"p15"}, {de:"p4", para:"p13"} ];
 window.rotasSecretasGaia = [ {de:"p1", para:"p6"}, {de:"p15", para:"p10"}, {de:"p8", para:"p14"}, {de:"p11", para:"p4"} ];
 
-window.filtroLojaAtual = "Tudo"; window.editandoItemId = null;
+window.filtroLojaAtual = "Promoções"; window.editandoItemId = null;
 window.GRID_COLS = 5; window.GRID_ROWS = 3; window.CELL_SIZE = 45; window.GRID_GAP = 1; window.REAL_CELL_SIZE = window.CELL_SIZE + window.GRID_GAP;
 window.tetrisMatrix = []; window.arrastandoKey = null; window.itemArrastado = null; window.offsetX = 0; window.offsetY = 0; window.origin = null; window.initPos = {c:-1, r:-1};
 
@@ -120,12 +120,11 @@ window.abrirApp = function(appId, isLocked, lockMsg) {
     if(appId === 'tab-casa') window.drawCasaBoard();
     if(appId === 'tab-panteao') window.renderizarPanteao();
     
-    // NOVO: Força o chat a rolar para o final toda vez que for aberto!
     if(appId === 'tab-igamble') {
         setTimeout(() => {
             let chatBox = document.getElementById("chatMessages");
             if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-        }, 50); // O delay de 50ms é essencial para o navegador renderizar a tela antes de calcular o fundo
+        }, 50); 
     }
 };
 
@@ -646,7 +645,7 @@ window.removerItemMochila = function(k, ev) {
 };
 
 // =========================================================
-// NOVA LÓGICA DE GIRAR: NOME NOVO (GIRARITEM) PARA FORÇAR O CACHE
+// NOVA LÓGICA DE GIRAR
 // =========================================================
 window.girarItemMochila = function(k, w, h, eq, ev) {
     if(ev) ev.stopPropagation(); 
@@ -749,7 +748,7 @@ window.girarItemMochila = function(k, w, h, eq, ev) {
         }, 200);
     }
 };
-// FUNÇÃO NOVA: INVERTE A LARGURA E ALTURA NO BANCO DE DADOS
+
 window.rotacionarItem = function(k, w, h, eq, ev) {
     if(ev) ev.stopPropagation(); 
     
@@ -765,79 +764,6 @@ window.rotacionarItem = function(k, w, h, eq, ev) {
     }
     
     window.db.ref().update(up);
-};
-
-
-
-window.iniciarArrasteTetris = function(e) {
-    if(e.target.closest('.btn-excluir-item') || e.target.tagName.toLowerCase() === 'button') return;
-    e.preventDefault(); window.itemArrastado = e.currentTarget; window.arrastandoKey = window.itemArrastado.getAttribute('data-key');
-    let gridEl = document.getElementById("grid-personagem");
-    let rectOrig = window.itemArrastado.getBoundingClientRect();
-
-    if (window.itemArrastado.parentElement === gridEl) {
-        window.origin = 'grid'; window.initPos = {c: parseInt(window.itemArrastado.getAttribute('data-c')), r: parseInt(window.itemArrastado.getAttribute('data-r'))};
-        let w = parseInt(window.itemArrastado.getAttribute('data-w')); let h = parseInt(window.itemArrastado.getAttribute('data-h'));
-        for(let row=window.initPos.r; row<window.initPos.r+h; row++) for(let col=window.initPos.c; col<window.initPos.c+w; col++) window.tetrisMatrix[row][col] = 0; 
-    } else { 
-        window.origin = 'inv'; 
-        let gridRect = gridEl.getBoundingClientRect();
-        window.itemArrastado.style.margin = "0";
-        window.itemArrastado.style.left = (rectOrig.left - gridRect.left) + 'px';
-        window.itemArrastado.style.top = (rectOrig.top - gridRect.top) + 'px';
-        gridEl.appendChild(window.itemArrastado); 
-    }
-    
-    window.itemArrastado.classList.add('dragging'); window.itemArrastado.style.position = 'absolute'; 
-    let newRect = window.itemArrastado.getBoundingClientRect();
-    window.offsetX = e.clientX - newRect.left; window.offsetY = e.clientY - newRect.top;
-
-    document.addEventListener('pointermove', window.arrastarTetris); document.addEventListener('pointerup', window.soltarTetris);
-};
-window.arrastarTetris = function(e) { e.preventDefault(); window.moverTetris(e); };
-window.moverTetris = function(e) {
-    if(!window.itemArrastado) return; const gridRect = document.getElementById("grid-personagem").getBoundingClientRect();
-    window.itemArrastado.style.left = `${e.clientX - gridRect.left - window.offsetX}px`; window.itemArrastado.style.top = `${e.clientY - gridRect.top - window.offsetY}px`;
-};
-window.soltarTetris = function(e) {
-    document.removeEventListener('pointermove', window.arrastarTetris); document.removeEventListener('pointerup', window.soltarTetris);
-    if(!window.itemArrastado) return; window.itemArrastado.classList.remove('dragging');
-    const w = parseInt(window.itemArrastado.getAttribute('data-w')), h = parseInt(window.itemArrastado.getAttribute('data-h'));
-    
-    let rawLeft = parseFloat(window.itemArrastado.style.left || 0); let rawTop = parseFloat(window.itemArrastado.style.top || 0);
-    let tC = Math.round(rawLeft / window.REAL_CELL_SIZE); let tR = Math.round(rawTop / window.REAL_CELL_SIZE);
-
-    if (tC < 0 || tC + w > window.GRID_COLS || tR < 0 || tR + h > window.GRID_ROWS) {
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: false, c: null, r: null});
-    } else {
-        let livre = true;
-        for(let r=tR; r<tR+h; r++) for(let c=tC; c<tC+w; c++) if(window.tetrisMatrix[r][c] === 1) livre = false;
-        if(livre) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: true, c: tC, r: tR});
-        else {
-            if(window.origin === 'grid') window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: true, c: window.initPos.c, r: window.initPos.r});
-            else window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: false, c: null, r: null});
-        }
-    }
-    window.arrastandoKey = null; window.itemArrastado = null; window.renderizarMochila();
-};
-
-window.consumirComida = function(k, poder, cd, ev) { 
-    if(ev) ev.stopPropagation(); 
-    let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill");
-    if(!ov || !fill) return;
-    ov.style.display="flex"; fill.style.width="0%"; void fill.offsetWidth; // Reflow force
-    setTimeout(()=>{ fill.style.transition=`width ${cd}s linear`; fill.style.width="100%"; }, 50);
-    setTimeout(()=>{
-        ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]);
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+parseInt(poder)));
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove();
-        window.showNeonToast(`Nutrição +${poder}% restaurada.`);
-    }, cd*1000); 
-};
-window.removerItemMochila = function(k, ev) { 
-    if(ev) ev.stopPropagation(); let item = window.usersGlobais[window.jogadorAtual]?.mochila?.[k];
-    if(item && item.eq) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).update({eq: false, c: null, r: null}); } 
-    else { if(confirm("Descartar item permanentemente?")) window.db.ref('tokyoRpg/users/' + window.jogadorAtual + '/mochila/' + k).remove(); }
 };
 
 // --- CASA VTT ---
@@ -871,12 +797,18 @@ window.removerMoveCasa = function(cellId, ev) { ev.stopPropagation(); window.db.
 window.salvarConfigCasa = function() { if(!window.jogadorAtual) return; let nome = document.getElementById("casaNomeInp").value; let bg = document.getElementById("casaBgInp").value; window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/casaConfig`).update({ nome: nome, bg: bg }); window.showNeonToast("Casa Salva!"); };
 
 // --- 8. LOJA E MASTER ---
-window.filtrarLoja = function(t, btn) { window.filtroLojaAtual = t; document.querySelectorAll(".shop-tab-btn").forEach(b=>b.classList.remove("active")); btn.classList.add("active"); window.renderizarLojaUI(); };
+window.filtrarLoja = function(t, btn) { 
+    window.filtroLojaAtual = t; 
+    document.querySelectorAll(".shop-tab-btn").forEach(b=>b.classList.remove("active")); 
+    btn.classList.add("active"); 
+    window.renderizarLojaUI(); 
+};
 
+// FIX: Lógica do Carousel e Cards
 window.renderizarLojaUI = function() {
-    let b = document.getElementById("shopGrid"); if(!b) return; b.innerHTML="";
+    let b = document.getElementById("shopGrid"); if(!b) return; 
+    b.innerHTML="";
     
-    // AQUI ESTÁ A CORREÇÃO: Força o painel do Mestre a aparecer se você for Mestre!
     let mPanel = document.getElementById("masterShopPanel");
     if(mPanel) mPanel.style.display = window.isMaster ? "block" : "none";
 
@@ -888,23 +820,41 @@ window.renderizarLojaUI = function() {
         let show = false;
         if(window.filtroLojaAtual === "Promoções" && i.isPromo === true) show = true;
         else if(window.filtroLojaAtual === i.tipo) show = true;
+        else if(window.filtroLojaAtual === "Tudo") show = true;
 
         if(show) {
-            let promoTag = i.isPromo ? `<div style="position:absolute; top:-10px; right:-10px; background:var(--accent-red); color:#fff; font-size:10px; font-weight:bold; padding:3px 8px; border-radius:5px; box-shadow:0 0 10px var(--accent-red); z-index:5; pointer-events:none;">PROMO</div>` : '';
+            let promoTag = i.isPromo ? `<div class="shop-promo-tag">PROMO</div>` : '';
+            let mC = window.isMaster ? `onclick="window.prepararEdicaoLoja('${k}')" class="shop-item master-edit" style="cursor:pointer;" title="Clique para Editar"` : `class="shop-item"`;
             
-            // Adicionei uma borda vermelha tracejada para o Mestre saber onde clicar!
-            let mC = window.isMaster ? `onclick="window.prepararEdicaoLoja('${k}')" class="shop-item master-edit" style="cursor:pointer; border:1px dashed #f00;" title="Clique para Editar"` : `class="shop-item"`;
-            
-            b.innerHTML += `<div ${mC}>${promoTag}<div><span style="font-size:10px;color:#aaa;">${window.iconesMercado[i.tipo]||''} [${i.w}x${i.h} | ${i.peso}kg | ${i.cd||0}s]</span><h3 class="neon-blue">${i.nome}</h3><p style="font-size:12px;color:#ccc;">${i.desc}</p></div><h2 class="neon-green">${i.preco}¥</h2><button class="action-btn" onclick="window.comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}', ${i.poder||0}, '${i.buffType||''}', ${i.w||1}, ${i.h||1}, ${i.extraW||0}, ${i.extraH||0}, ${i.peso||1}, ${i.cd||2}, event)">Comprar</button></div>`;
+            b.innerHTML += `<div ${mC}>
+                ${promoTag}
+                <div class="shop-item-content">
+                    <span style="font-size:10px;color:#aaa;">${window.iconesMercado[i.tipo]||''} [${i.w}x${i.h} | ${i.peso}kg | ${i.cd||0}s]</span>
+                    <h3 class="neon-blue">${i.nome}</h3>
+                    <p style="font-size:12px;color:#ccc;">${i.desc}</p>
+                </div>
+                <div class="shop-item-footer">
+                    <h2 class="neon-green">${i.preco}¥</h2>
+                    <button class="action-btn" onclick="window.comprarItem('${k}','${i.nome}',${i.preco},'${i.tipo}','${i.desc}', ${i.poder||0}, '${i.buffType||''}', ${i.w||1}, ${i.h||1}, ${i.extraW||0}, ${i.extraH||0}, ${i.peso||1}, ${i.cd||2}, event)">Comprar</button>
+                </div>
+            </div>`;
         }
     });
+};
+
+// FIX: Função de Navegação para o Carousel
+window.navegarLoja = function(dir) {
+    let grid = document.getElementById("shopGrid");
+    if(!grid) return;
+    // Move 80% do que estiver visível no momento na tela, criando um slide perfeito.
+    let moveAmount = grid.clientWidth * 0.8; 
+    grid.scrollBy({ left: dir * moveAmount, behavior: 'smooth' });
 };
 
 window.prepararEdicaoLoja = function(id) {
     if(!window.isMaster) return; let i = window.lojaGlobal[id]; if(!i) return; window.editandoItemId = id;
     window.setElVal("niType", i.tipo); window.setElVal("niName", i.nome); window.setElVal("niDesc", i.desc); window.setElVal("niBuffType", i.buffType || ""); window.setElVal("niPoder", i.poder || ""); window.setElVal("niW", i.w || 1); window.setElVal("niH", i.h || 1); window.setElVal("niPrice", i.preco); window.setElVal("niExW", i.extraW || 0); window.setElVal("niExH", i.extraH || 0); window.setElVal("niPeso", i.peso || 1); window.setElVal("niCD", i.cd || 2);
     
-    // Marca a caixinha de promo se o item for promo
     let chk = document.getElementById("niPromo"); if(chk) chk.checked = (i.isPromo === true);
 
     if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Salvar Alterações";
@@ -952,27 +902,13 @@ window.comprarItem = function(id, n, p, t, d, poder, buff, w, h, exW, exH, peso,
 window.carregarAvatares = function() {
     let g = document.getElementById("avatarGridDisplay"); if(!g) return; g.innerHTML = "";
     
-    // Expandimos as listas de sementes (seeds) para gerar mais opções de rostos
     let hs = ["Jack", "Leo", "Felix", "Sam", "Arthur", "Ryan", "Oliver", "Caleb", "Zane", "Eli", "Noah", "Luke", "Gabe", "Max", "Ivan", "Finn", "Hugo", "Ezra", "Milo", "Levi", "Owen", "Asher", "Silas", "Theo"];
     let ms = ["Ane", "Lucy", "Jude", "Mia", "Zoe", "Lily", "Eva", "Ruby", "Cleo", "Nora", "Iris", "Lia", "Fay", "Gia", "Ivy", "Luna", "Mila", "Aria", "Ella", "Chloe", "Maya", "Kira", "Sia", "Nina"];
-    
-    // Mais bots também
     let bs = ["Bot1", "Bot2", "Bot3", "Bot4", "Bot5", "Bot6", "Bot7", "Bot8", "Bot9", "Bot10", "Bot11", "Bot12", "Bot13", "Bot14", "Bot15"];
     
-    // Humanos masculinos no estilo ADVENTURER
-    hs.forEach(s => { 
-        g.innerHTML += `<img src="https://api.dicebear.com/9.x/adventurer/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/adventurer/svg?seed=${s}')">`; 
-    });
-    
-    // Humanos femininos no estilo ADVENTURER
-    ms.forEach(s => { 
-        g.innerHTML += `<img src="https://api.dicebear.com/9.x/adventurer/svg?seed=${s}Female" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/adventurer/svg?seed=${s}Female')">`; 
-    });
-    
-    // Bots VOLTANDO para o estilo original BOTTTS
-    bs.forEach(s => { 
-        g.innerHTML += `<img src="https://api.dicebear.com/9.x/bottts/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/bottts/svg?seed=${s}')">`; 
-    });
+    hs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/adventurer/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/adventurer/svg?seed=${s}')">`; });
+    ms.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/adventurer/svg?seed=${s}Female" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/adventurer/svg?seed=${s}Female')">`; });
+    bs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/bottts/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/bottts/svg?seed=${s}')">`; });
 };
 window.selecionarAvatarLoja = function(el, url) { window.urlSelecionadaStudio = url; document.querySelectorAll('.av-thumb').forEach(e=>e.classList.remove('selected')); el.classList.add('selected'); };
 window.salvarAvatarCustom = function() {
@@ -991,11 +927,6 @@ window.comprarTituloChat = function() {
 window.msgAtualParaReagir = "";
 window.abrirEmojiReacao = function(msgKey, event) { window.msgAtualParaReagir = msgKey; let p = document.getElementById("emojiPopupDynamic"); p.style.display="flex"; p.style.left = event.clientX + "px"; p.style.top = (event.clientY - 10) + "px"; };
 window.executarReacao = function(emoji) { if(!window.msgAtualParaReagir) return; window.db.ref(`tokyoRpg/chat/${window.msgAtualParaReagir}/reacoes/${emoji}`).once('value').then(s => { window.db.ref(`tokyoRpg/chat/${window.msgAtualParaReagir}/reacoes/${emoji}`).set((s.val()||0)+1); window.setElDisplay("emojiPopupDynamic", "none"); }); };
-window.prepararEnvioMensagem = function() { 
-    if(!window.jogadorAtual) return; let t = document.getElementById("chatInp").value.trim(); let i = document.getElementById("chatImageFile"); if(!t && (!i || i.files.length === 0)) return; 
-    if(i && i.files.length > 0) { let f = i.files[0]; if(f.size > 2000000) { alert("Máx 2MB"); return;} let r = new FileReader(); r.onload = (e) => { window.db.ref('tokyoRpg/chat').push({ nome: window.jogadorAtual, texto: t, imagemUrl: e.target.result, data: new Date().toLocaleTimeString() }); i.value = ""; window.setElVal("chatInp", ""); }; r.readAsDataURL(f); } 
-    else { let iLink = null; if((t.startsWith("http://") || t.startsWith("https://")) && t.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i)) { iLink = t; t = ""; } window.db.ref('tokyoRpg/chat').push({ nome: window.jogadorAtual, texto: t, imagemUrl: iLink, data: new Date().toLocaleTimeString() }); window.setElVal("chatInp", ""); } 
-};
 
 window.enviarSMS = function() { if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual].numero) return; let dest = document.getElementById("smsDestino").value.trim(); let msg = document.getElementById("smsTexto").value.trim(); let meuNum = window.usersGlobais[window.jogadorAtual].numero; if(!dest || !msg) return; let achou = false; Object.keys(window.usersGlobais).forEach(userKey => { if(window.usersGlobais[userKey].numero === dest) achou = true; }); if(!achou) { window.showNeonToast("O número não existe."); return; } let timestamp = Date.now(); let pacote = { de: meuNum, para: dest, msg: msg, data: new Date().toLocaleTimeString() }; window.db.ref('tokyoRpg/sms/' + dest + '/' + timestamp).set(pacote); window.db.ref('tokyoRpg/sms/' + meuNum + '/' + timestamp).set(pacote); document.getElementById("smsTexto").value = ""; };
 
@@ -1036,10 +967,6 @@ window.onload = function() {
         window.db.ref('tokyoRpg/users').on('value', s => { 
             window.usersGlobais = s.val()||{}; 
             window.renderizarFicha(); window.renderizarMochila(); window.drawMapVisuals(); window.drawCasaBoard(); window.desenharListaUsuarios(); window.renderizarPanteao(); window.updateTacticalBoard();
-            if(window.jogadorAtual && window.usersGlobais[window.jogadorAtual]) { 
-                let u = window.usersGlobais[window.jogadorAtual];
-                if(document.getElementById("walletDesktop")) document.getElementById("walletDesktop").innerText = (u.carteira||0) + " ¥";
-            }
         });
         window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; window.drawMapVisuals(); window.desenharListaUsuarios(); });
         window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; window.drawMapVisuals(); });
@@ -1076,25 +1003,11 @@ window.onload = function() {
         });
     }
     
-    // Relógio Local
-    setInterval(() => {
-        let d = new Date();
-        let timeStr = d.getHours().toString().padStart(2,'0') + ":" + d.getMinutes().toString().padStart(2,'0');
-        if (document.getElementById('clockTime')) document.getElementById('clockTime').innerText = timeStr;
-        if(document.getElementById('clockTimeDesktop')) document.getElementById('clockTimeDesktop').innerText = timeStr;
-    }, 1000);
-    
-    // Auto abre o login ao iniciar
     window.abrirModal();
+};
 
-// =========================================================
-// iGAMBLE: POSTAR E INTERAGIR (TIKTOK / INSTA STYLE) - FIXED
-// =========================================================
-
-window.postAudioMuted = true; // começa mutado por regra do navegador
+window.postAudioMuted = true;
 window.currentPostIdComment = null;
-
-// evita encadear switch várias vezes
 window._igamblePostsSwitchHooked = window._igamblePostsSwitchHooked || false;
 
 window.toggleGambleMute = function() {
@@ -1111,7 +1024,6 @@ window.toggleGambleMute = function() {
         return;
     }
 
-    // tenta tocar o primeiro áudio visível
     document.querySelectorAll('audio.post-audio').forEach(a => {
         let rect = a.getBoundingClientRect();
         if(rect.top >= 0 && rect.bottom <= window.innerHeight) a.play().catch(()=>{});
@@ -1124,27 +1036,6 @@ window.togglePostCreator = function() {
     let cur = (bx.style.display || "");
     bx.style.display = (cur === "none" || cur === "") ? "block" : "none";
 };
-
-// Quando clica na aba de posts, revela os poderes do Mestre
-(function hookSwitchOnce(){
-    if(window._igamblePostsSwitchHooked) return;
-    window._igamblePostsSwitchHooked = true;
-
-    let oldSwitch = window.switchIGambleTab;
-    window.switchIGambleTab = function(tabId, btnEl) {
-        if(oldSwitch) oldSwitch(tabId, btnEl);
-
-        if(tabId === 'posts') {
-            let isAdmin = !!window.isMaster;
-            let cn = document.getElementById("postCustomName");
-            let ca = document.getElementById("postCustomAvatar");
-            let la = document.getElementById("lblAd");
-            if(cn) cn.style.display = isAdmin ? "block" : "none";
-            if(ca) ca.style.display = isAdmin ? "block" : "none";
-            if(la) la.style.display = isAdmin ? "inline-block" : "none";
-        }
-    };
-})();
 
 window.enviarPost = function() {
     if(!window.jogadorAtual && !window.isMaster) { window.showNeonToast("Faça login!"); return; }
@@ -1163,19 +1054,7 @@ window.enviarPost = function() {
 
     let postarNoBanco = function(n, a, idAutor, finalImg) {
         let payload = {
-            autor: n,
-            autorId: idAutor,
-            avatar: a,
-            texto: txt,
-            imagem: finalImg || "",
-            audio: audio,
-            timestamp: Date.now(),
-            isAd: (window.isMaster && isAd),
-            likes: 0,
-            reposts: 0,
-            likers: {},
-            reposters: {},
-            comentarios: {}
+            autor: n, autorId: idAutor, avatar: a, texto: txt, imagem: finalImg || "", audio: audio, timestamp: Date.now(), isAd: (window.isMaster && isAd), likes: 0, reposts: 0, likers: {}, reposters: {}, comentarios: {}
         };
 
         window.db.ref('tokyoRpg/posts').push(payload).then(() => {
@@ -1189,38 +1068,20 @@ window.enviarPost = function() {
 
             let bx = document.getElementById("postCreatorBox");
             if(bx) bx.style.display = "none";
-
             window.showNeonToast("Publicado!");
         });
     };
 
-    // resolve autor
     if(window.isMaster) {
-        let nome = cName || "SISTEMA";
-        let avatar = cAv || "https://api.dicebear.com/9.x/bottts/svg?seed=Master";
-        if(imgFile) {
-            if(imgFile.size > 2000000) { window.showNeonToast("Imagem Max 2MB!"); return; }
-            let r = new FileReader();
-            r.onload = (e) => postarNoBanco(nome, avatar, "MESTRE", e.target.result);
-            r.readAsDataURL(imgFile);
-        } else {
-            postarNoBanco(nome, avatar, "MESTRE", imgUrl);
-        }
+        let nome = cName || "SISTEMA"; let avatar = cAv || "https://api.dicebear.com/9.x/bottts/svg?seed=Master";
+        if(imgFile) { let r = new FileReader(); r.onload = (e) => postarNoBanco(nome, avatar, "MESTRE", e.target.result); r.readAsDataURL(imgFile); } else { postarNoBanco(nome, avatar, "MESTRE", imgUrl); }
         return;
     }
 
     let u = window.usersGlobais?.[window.jogadorAtual];
-    let nome = u?.nome || window.jogadorAtual;
-    let avatar = u?.avatarUrl || u?.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${nome}`;
+    let nome = u?.nome || window.jogadorAtual; let avatar = u?.avatarUrl || u?.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${nome}`;
 
-    if(imgFile) {
-        if(imgFile.size > 2000000) { window.showNeonToast("Imagem Max 2MB!"); return; }
-        let r = new FileReader();
-        r.onload = (e) => postarNoBanco(nome, avatar, window.jogadorAtual, e.target.result);
-        r.readAsDataURL(imgFile);
-    } else {
-        postarNoBanco(nome, avatar, window.jogadorAtual, imgUrl);
-    }
+    if(imgFile) { let r = new FileReader(); r.onload = (e) => postarNoBanco(nome, avatar, window.jogadorAtual, e.target.result); r.readAsDataURL(imgFile); } else { postarNoBanco(nome, avatar, window.jogadorAtual, imgUrl); }
 };
 
 window.curtirPost = function(id) {
@@ -1229,13 +1090,8 @@ window.curtirPost = function(id) {
     ref.once('value').then(snap => {
         let p = snap.val(); if(!p) return;
         let likers = p.likers || {};
-        if(likers[window.jogadorAtual]) {
-            delete likers[window.jogadorAtual];
-            ref.update({ likes: Math.max(0, (p.likes||1) - 1), likers });
-        } else {
-            likers[window.jogadorAtual] = true;
-            ref.update({ likes: (p.likes||0) + 1, likers });
-        }
+        if(likers[window.jogadorAtual]) { delete likers[window.jogadorAtual]; ref.update({ likes: Math.max(0, (p.likes||1) - 1), likers }); } 
+        else { likers[window.jogadorAtual] = true; ref.update({ likes: (p.likes||0) + 1, likers }); }
     });
 };
 
@@ -1245,173 +1101,28 @@ window.repostarPost = function(id) {
     ref.once('value').then(snap => {
         let p = snap.val(); if(!p) return;
         let rps = p.reposters || {};
-        if(!rps[window.jogadorAtual]) {
-            rps[window.jogadorAtual] = true;
-            ref.update({ reposts: (p.reposts||0) + 1, reposters: rps });
-            window.showNeonToast("Compartilhado!");
-        }
+        if(!rps[window.jogadorAtual]) { rps[window.jogadorAtual] = true; ref.update({ reposts: (p.reposts||0) + 1, reposters: rps }); window.showNeonToast("Compartilhado!"); }
     });
 };
 
-// comentários (se você tiver o modal)
-window.abrirComentarios = function(id) {
-    window.currentPostIdComment = id;
-    let modal = document.getElementById("commentsModal");
-    if(modal) modal.style.display = "flex";
-
-    window.db.ref(`tokyoRpg/posts/${id}/comentarios`).off(); // evita duplicar listener
-    window.db.ref(`tokyoRpg/posts/${id}/comentarios`).on('value', snap => {
-        let list = document.getElementById("commentsList");
-        if(!list) return;
-
-        list.innerHTML = "";
-        let c = snap.val();
-        if(!c) { list.innerHTML = "<p style='color:#aaa;'>Nenhum comentário ainda...</p>"; return; }
-
-        Object.keys(c).forEach(k => {
-            let cx = c[k];
-            list.innerHTML += `<div style="background:#111; padding:10px; border-radius:8px; border-left:2px solid var(--accent-blue); margin-bottom:8px;">
-                <strong style="color:var(--accent-blue);">${cx.nome}:</strong> <span style="color:#ccc;">${cx.txt}</span>
-            </div>`;
-        });
-        list.scrollTop = list.scrollHeight;
-    });
-};
-
-window.enviarComentario = function() {
-    if(!window.jogadorAtual || !window.currentPostIdComment) return;
-    let inp = document.getElementById("commentInp"); if(!inp) return;
-    let txt = inp.value.trim(); if(!txt) return;
-
-    let nome = window.isMaster ? "MESTRE" : (window.usersGlobais?.[window.jogadorAtual]?.nome || window.jogadorAtual);
-    window.db.ref(`tokyoRpg/posts/${window.currentPostIdComment}/comentarios`).push({ nome, txt, ts: Date.now() });
-    inp.value = "";
-};
-
-// =========================================================
-// OBSERVADOR DE SCROLL (AUTO-PLAY NO ÁUDIO)
-// =========================================================
 window.postObserver = window.postObserver || new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         let audioEl = entry.target.querySelector('audio.post-audio');
         if(!audioEl) return;
-
-        if(entry.isIntersecting) {
-            if(!window.postAudioMuted) {
-                audioEl.currentTime = 0;
-                audioEl.play().catch(()=>{});
-            }
-        } else {
-            audioEl.pause();
-        }
+        if(entry.isIntersecting) { if(!window.postAudioMuted) { audioEl.currentTime = 0; audioEl.play().catch(()=>{}); } } else { audioEl.pause(); }
     });
 }, { threshold: 0.6 });
 
-// =========================================================
-// INICIAR LISTENERS (POSTS + EMBATES)
-// =========================================================
-window.iniciarListenersIgamble = function() {
-    if(!window.db) return;
-
-    // POSTS
-    window.db.ref('tokyoRpg/posts').on('value', snap => {
-        let feed = document.getElementById("igamblePostsFeed");
-        if(!feed) return;
-
-        feed.innerHTML = "";
-        let data = snap.val();
-        if(!data) return;
-
-        let postsArray = Object.keys(data)
-            .map(k => ({ id: k, ...data[k] }))
-            .sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
-
-        postsArray.forEach(p => {
-            let d = new Date(p.timestamp || Date.now());
-            let timeStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} - ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
-
-            let hasBg = p.imagem ? `<img src="${p.imagem}" class="post-media-bg">` : '';
-            let hasImg = p.imagem ? `<img src="${p.imagem}" class="post-media">` : '';
-            let hasAudio = p.audio ? `<audio class="post-audio" loop src="${p.audio}"></audio>` : '';
-
-            let iLiked = (p.likers && window.jogadorAtual && p.likers[window.jogadorAtual]) ? "liked" : "";
-            let iReposted = (p.reposters && window.jogadorAtual && p.reposters[window.jogadorAtual]) ? "reposted" : "";
-            let numComents = p.comentarios ? Object.keys(p.comentarios).length : 0;
-
-            // exclusão: mestre ou autorId = jogadorAtual
-            let isMyPost = !!(window.jogadorAtual && p.autorId === window.jogadorAtual);
-            let delBtn = (window.isMaster || isMyPost)
-                ? `<button class="post-del-btn" onclick="window.db.ref('tokyoRpg/posts/${p.id}').remove()">EXCLUIR</button>`
-                : '';
-
-            let adTag = p.isAd ? `<span class="post-ad-tag">⭐ PATROCINADO</span>` : '';
-
-            feed.innerHTML += `
-            <div class="post-card" id="post-${p.id}">
-                ${hasBg}
-                ${hasImg}
-                ${hasAudio}
-
-                <div class="post-overlay">
-                    <div class="post-header">
-                        <div class="post-header-left">
-                            <img src="${p.avatar || 'https://api.dicebear.com/9.x/adventurer/svg?seed=Anon'}" class="post-avatar">
-                            <div>
-                                <div class="post-name">${p.autor || '---'} ${adTag}</div>
-                                <div style="font-size:10px; color:#aaa;">${timeStr}</div>
-                            </div>
-                        </div>
-                        ${delBtn}
-                    </div>
-
-                    <div class="post-body">
-                        <div class="post-caption">${p.texto || ""}</div>
-
-                        <div class="post-sidebar">
-                            <button class="post-btn-vert ${iLiked}" onclick="window.curtirPost('${p.id}')">❤ <span>${p.likes||0}</span></button>
-                            <button class="post-btn-vert" onclick="window.abrirComentarios('${p.id}')">💬 <span>${numComents}</span></button>
-                            <button class="post-btn-vert ${iReposted}" onclick="window.repostarPost('${p.id}')">🔄 <span>${p.reposts||0}</span></button>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-
-        });
-
-        // re-observar sem duplicar
-        try {
-            document.querySelectorAll('.post-card').forEach(card => {
-                window.postObserver.unobserve(card);
-                window.postObserver.observe(card);
-            });
-        } catch(e) {}
-    });
-
-    // EMBATES - mantém o seu listener existente, se você já tiver em outro arquivo, pode remover daqui
-};
-// =========================================================
-// FIX FINAL: iGAMBLE TAB SWITCH (CHAT / POSTS / EMBATES)
-// Cole no FINAL do script.js
-// =========================================================
 window.switchIGambleTab = function(tabId, btnEl) {
-  // ativa botão
   document.querySelectorAll(".igamble-tab-btn").forEach(b => b.classList.remove("active"));
   if(btnEl) btnEl.classList.add("active");
 
-  // ativa view
   document.querySelectorAll(".igamble-view").forEach(v => v.classList.remove("active"));
   const target = document.getElementById("igamble-view-" + tabId);
   if(target) target.classList.add("active");
 
-  // pós-ação: chat -> scroll
-  if(tabId === "chat") {
-    setTimeout(() => {
-      const cb = document.getElementById("chatMessages");
-      if(cb) cb.scrollTop = cb.scrollHeight;
-    }, 50);
-  }
+  if(tabId === "chat") { setTimeout(() => { const cb = document.getElementById("chatMessages"); if(cb) cb.scrollTop = cb.scrollHeight; }, 50); }
 
-  // pós-ação: embates -> painel mestre + datalist
   if(tabId === "embates") {
     const mPanel = document.getElementById("masterEmbatePanel");
     if(mPanel) mPanel.style.display = window.isMaster ? "block" : "none";
@@ -1419,306 +1130,101 @@ window.switchIGambleTab = function(tabId, btnEl) {
     if(window.isMaster && window.db) {
       window.db.ref("tokyoRpg/users").once("value").then(snap => {
         const dl = document.getElementById("listaJogadoresDatalist");
-        if(!dl) return;
-        dl.innerHTML = "";
-        const data = snap.val();
-        if(!data) return;
-        Object.keys(data).forEach(k => {
-          const u = data[k] || {};
-          const nome = u.nome || k;
-          const av = u.avatarUrl || u.avatar || "";
-          dl.innerHTML += `<option value="${nome}" data-av="${av}"></option>`;
-        });
+        if(!dl) return; dl.innerHTML = "";
+        const data = snap.val(); if(!data) return;
+        Object.keys(data).forEach(k => { const u = data[k] || {}; const nome = u.nome || k; const av = u.avatarUrl || u.avatar || ""; dl.innerHTML += `<option value="${nome}" data-av="${av}"></option>`; });
       });
     }
   }
 
-  // pós-ação: posts -> campos mestre + iniciar listener do feed (se existir)
   if(tabId === "posts") {
     const isAdmin = !!window.isMaster;
-    const cn = document.getElementById("postCustomName");
-    const ca = document.getElementById("postCustomAvatar");
-    const la = document.getElementById("lblAd");
+    const cn = document.getElementById("postCustomName"); const ca = document.getElementById("postCustomAvatar"); const la = document.getElementById("lblAd");
+    if(cn) cn.style.display = isAdmin ? "block" : "none"; if(ca) ca.style.display = isAdmin ? "block" : "none"; if(la) la.style.display = isAdmin ? "inline-block" : "none";
 
-    if(cn) cn.style.display = isAdmin ? "block" : "none";
-    if(ca) ca.style.display = isAdmin ? "block" : "none";
-    if(la) la.style.display = isAdmin ? "inline-block" : "none";
-
-    // inicia listener do feed apenas 1x (se você usa igamble-posts.js)
-    if(!window._postsListenerStarted && typeof window.iniciarListenersIgamble === "function") {
-      window._postsListenerStarted = true;
-      window.iniciarListenersIgamble();
-    }
+    if(!window._postsListenerStarted && typeof window.iniciarListenersIgamble === "function") { window._postsListenerStarted = true; window.iniciarListenersIgamble(); }
   }
 };
-/// =========================================================
-// PATCH: POSTS (exclusão por autor) + EMBATES (listener + criar)
-// Cole no FINAL do script.js (ou substitua as funções abaixo)
-// =========================================================
 
-// flag para não duplicar listeners
 window._igambleListenersStarted = window._igambleListenersStarted || false;
 
-/**
- * Regra de exclusão:
- * - Mestre (serial 4053-DC1) pode excluir qualquer post
- * - Player pode excluir se:
- *    a) autorId === jogadorAtual
- *    b) fallback: autor == nome do player ou == jogadorAtual (para posts antigos)
- */
 window.canDeletePost = function(post) {
-  if (!post) return false;
-  if (window.isMaster) return true;
-  if (!window.jogadorAtual) return false;
-
-  const myUser = window.usersGlobais?.[window.jogadorAtual] || {};
-  const myName = (myUser.nome || window.jogadorAtual || "").toString();
-
+  if (!post) return false; if (window.isMaster) return true; if (!window.jogadorAtual) return false;
+  const myUser = window.usersGlobais?.[window.jogadorAtual] || {}; const myName = (myUser.nome || window.jogadorAtual || "").toString();
   if (post.autorId && post.autorId === window.jogadorAtual) return true;
-
-  // fallback pra posts antigos/sem autorId
   const autor = (post.autor || "").toString();
   if (autor && (autor === myName || autor === window.jogadorAtual)) return true;
-
   return false;
 };
 
 window.excluirPost = function(postId) {
   if (!window.db || !postId) return;
-  window.db.ref(`tokyoRpg/posts/${postId}`).remove().then(() => {
-    window.showNeonToast("Post excluído!");
-  }).catch((e) => {
-    console.error("Falha ao excluir post:", e);
-    window.showNeonToast("Falha ao excluir.");
-  });
+  window.db.ref(`tokyoRpg/posts/${postId}`).remove().then(() => { window.showNeonToast("Post excluído!"); }).catch((e) => { window.showNeonToast("Falha ao excluir."); });
 };
 
-// =========================================================
-// EMBATES: criar + finalizar
-// =========================================================
 window.criarEmbate = function() {
-  if (!window.isMaster) return;
-  if (!window.db) { window.showNeonToast("Firebase não conectado."); return; }
-
-  const payload = {
-    f1: (document.getElementById("emF1")?.value || "Lutador 1").trim(),
-    f2: (document.getElementById("emF2")?.value || "Lutador 2").trim(),
-    img1: (document.getElementById("emImg1")?.value || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador1").trim(),
-    img2: (document.getElementById("emImg2")?.value || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador2").trim(),
-    local: (document.getElementById("emLocal")?.value || "Arena Desconhecida").trim(),
-    desc: (document.getElementById("emDesc")?.value || "Embate Oficial").trim(),
-    premio: parseInt(document.getElementById("emPremio")?.value || "0", 10) || 0,
-    status: "ativo",
-    timestamp: Date.now()
-  };
-
-  window.db.ref("tokyoRpg/embates").push(payload).then(() => {
-    window.showNeonToast("Embate criado!");
-    ["emF1","emF2","emImg1","emImg2","emDesc","emPremio"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.value = "";
-    });
-  }).catch((e) => {
-    console.error("Falha ao criar embate:", e);
-    window.showNeonToast("Falha ao criar embate.");
-  });
+  if (!window.isMaster) return; if (!window.db) return;
+  const payload = { f1: (document.getElementById("emF1")?.value || "Lutador 1").trim(), f2: (document.getElementById("emF2")?.value || "Lutador 2").trim(), img1: (document.getElementById("emImg1")?.value || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador1").trim(), img2: (document.getElementById("emImg2")?.value || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador2").trim(), local: (document.getElementById("emLocal")?.value || "Arena Desconhecida").trim(), desc: (document.getElementById("emDesc")?.value || "Embate Oficial").trim(), premio: parseInt(document.getElementById("emPremio")?.value || "0", 10) || 0, status: "ativo", timestamp: Date.now() };
+  window.db.ref("tokyoRpg/embates").push(payload).then(() => { window.showNeonToast("Embate criado!"); ["emF1","emF2","emImg1","emImg2","emDesc","emPremio"].forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; }); });
 };
 
 window.finalizarEmbate = function(id, f1, f2) {
   if(!window.isMaster || !window.db) return;
-  const winOp = prompt(`Vencedor?\n1: ${f1}\n2: ${f2}\n3: Empate`);
-  if(!winOp) return;
-
-  let vencedorNome = "Empate / Sem Resultado";
-  if(winOp === "1") vencedorNome = f1;
-  if(winOp === "2") vencedorNome = f2;
-
+  const winOp = prompt(`Vencedor?\n1: ${f1}\n2: ${f2}\n3: Empate`); if(!winOp) return;
+  let vencedorNome = "Empate / Sem Resultado"; if(winOp === "1") vencedorNome = f1; if(winOp === "2") vencedorNome = f2;
   const urlFalencia = prompt("URL da imagem/gif da morte do perdedor (ou deixe vazio):") || "";
-  window.db.ref(`tokyoRpg/embates/${id}`).update({
-    status: "finalizado",
-    vencedor: vencedorNome,
-    urlMorte: urlFalencia
-  }).then(() => window.showNeonToast("Embate finalizado!"));
+  window.db.ref(`tokyoRpg/embates/${id}`).update({ status: "finalizado", vencedor: vencedorNome, urlMorte: urlFalencia }).then(() => window.showNeonToast("Embate finalizado!"));
 };
 
-// =========================================================
-// LISTENERS: POSTS + EMBATES (garante que embates apareçam)
-// =========================================================
 window.iniciarListenersIgamble = function() {
-  if (!window.db) return;
-  if (window._igambleListenersStarted) return;
-  window._igambleListenersStarted = true;
+  if (!window.db) return; if (window._igambleListenersStarted) return; window._igambleListenersStarted = true;
 
-  // -------------------
-  // POSTS
-  // -------------------
   window.db.ref("tokyoRpg/posts").on("value", snap => {
-    const feed = document.getElementById("igamblePostsFeed");
-    if(!feed) return;
-
-    feed.innerHTML = "";
-    const data = snap.val();
-    if(!data) return;
-
-    const postsArray = Object.keys(data)
-      .map(id => ({ id, ...data[id] }))
-      .sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+    const feed = document.getElementById("igamblePostsFeed"); if(!feed) return; feed.innerHTML = "";
+    const data = snap.val(); if(!data) return;
+    const postsArray = Object.keys(data).map(id => ({ id, ...data[id] })).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
 
     postsArray.forEach(p => {
-      const d = new Date(p.timestamp || Date.now());
-      const timeStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} - ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+      const d = new Date(p.timestamp || Date.now()); const timeStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} - ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+      const hasBg = p.imagem ? `<img src="${p.imagem}" class="post-media-bg">` : ""; const hasImg = p.imagem ? `<img src="${p.imagem}" class="post-media">` : ""; const hasAudio = p.audio ? `<audio class="post-audio" loop src="${p.audio}"></audio>` : "";
+      const iLiked = (p.likers && window.jogadorAtual && p.likers[window.jogadorAtual]) ? "liked" : ""; const iReposted = (p.reposters && window.jogadorAtual && p.reposters[window.jogadorAtual]) ? "reposted" : ""; const numComents = p.comentarios ? Object.keys(p.comentarios).length : 0;
+      const delBtn = window.canDeletePost(p) ? `<button class="post-del-btn" onclick="window.excluirPost('${p.id}')">EXCLUIR</button>` : ""; const adTag = p.isAd ? `<span class="post-ad-tag">⭐ PATROCINADO</span>` : "";
 
-      const hasBg = p.imagem ? `<img src="${p.imagem}" class="post-media-bg">` : "";
-      const hasImg = p.imagem ? `<img src="${p.imagem}" class="post-media">` : "";
-      const hasAudio = p.audio ? `<audio class="post-audio" loop src="${p.audio}"></audio>` : "";
-
-      const iLiked = (p.likers && window.jogadorAtual && p.likers[window.jogadorAtual]) ? "liked" : "";
-      const iReposted = (p.reposters && window.jogadorAtual && p.reposters[window.jogadorAtual]) ? "reposted" : "";
-      const numComents = p.comentarios ? Object.keys(p.comentarios).length : 0;
-
-      const delBtn = window.canDeletePost(p)
-        ? `<button class="post-del-btn" onclick="window.excluirPost('${p.id}')">EXCLUIR</button>`
-        : "";
-
-      const adTag = p.isAd ? `<span class="post-ad-tag">⭐ PATROCINADO</span>` : "";
-
-      feed.innerHTML += `
-        <div class="post-card" id="post-${p.id}">
-          ${hasBg}
-          ${hasImg}
-          ${hasAudio}
-
-          <div class="post-overlay">
-            <div class="post-header">
-              <div class="post-header-left">
-                <img src="${p.avatar || "https://api.dicebear.com/9.x/adventurer/svg?seed=Anon"}" class="post-avatar">
-                <div>
-                  <div class="post-name">${p.autor || "---"} ${adTag}</div>
-                  <div style="font-size:10px; color:#aaa;">${timeStr}</div>
-                </div>
-              </div>
-              ${delBtn}
-            </div>
-
-            <div class="post-body">
-              <div class="post-caption">${p.texto || ""}</div>
-
-              <div class="post-sidebar">
-                <button class="post-btn-vert ${iLiked}" onclick="window.curtirPost('${p.id}')">❤ <span>${p.likes||0}</span></button>
-                <button class="post-btn-vert" onclick="window.abrirComentarios('${p.id}')">💬 <span>${numComents}</span></button>
-                <button class="post-btn-vert ${iReposted}" onclick="window.repostarPost('${p.id}')">🔄 <span>${p.reposts||0}</span></button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
+      feed.innerHTML += `<div class="post-card" id="post-${p.id}">${hasBg}${hasImg}${hasAudio}<div class="post-overlay"><div class="post-header"><div class="post-header-left"><img src="${p.avatar || "https://api.dicebear.com/9.x/adventurer/svg?seed=Anon"}" class="post-avatar"><div><div class="post-name">${p.autor || "---"} ${adTag}</div><div style="font-size:10px; color:#aaa;">${timeStr}</div></div></div>${delBtn}</div><div class="post-body"><div class="post-caption">${p.texto || ""}</div><div class="post-sidebar"><button class="post-btn-vert ${iLiked}" onclick="window.curtirPost('${p.id}')">❤ <span>${p.likes||0}</span></button><button class="post-btn-vert" onclick="window.abrirComentarios('${p.id}')">💬 <span>${numComents}</span></button><button class="post-btn-vert ${iReposted}" onclick="window.repostarPost('${p.id}')">🔄 <span>${p.reposts||0}</span></button></div></div></div></div>`;
     });
-
-    // autoplay/mute observer (se existir)
-    try {
-      if (window.postObserver) {
-        document.querySelectorAll(".post-card").forEach(card => {
-          window.postObserver.unobserve(card);
-          window.postObserver.observe(card);
-        });
-      }
-    } catch(e) {}
+    try { if (window.postObserver) { document.querySelectorAll(".post-card").forEach(card => { window.postObserver.unobserve(card); window.postObserver.observe(card); }); } } catch(e) {}
   });
 
-  // -------------------
-  // EMBATES (o que tava faltando)
-  // -------------------
   window.db.ref("tokyoRpg/embates").on("value", snap => {
-    const lista = document.getElementById("listaEmbates");
-    if(!lista) return;
-
-    lista.innerHTML = "";
-    const data = snap.val();
-    if(!data) return;
-
-    const embatesArray = Object.keys(data)
-      .map(id => ({ id, ...data[id] }))
-      .sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+    const lista = document.getElementById("listaEmbates"); if(!lista) return; lista.innerHTML = "";
+    const data = snap.val(); if(!data) return;
+    const embatesArray = Object.keys(data).map(id => ({ id, ...data[id] })).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
 
     embatesArray.forEach(e => {
       let statusHtml = "", masterBtn = "", winnerHtml = "";
-
       if(e.status === "ativo" || !e.status) {
         statusHtml = `<div style="position:absolute; top:10px; left:10px; font-size:10px; color:#0f0; display:flex; align-items:center; gap:5px;"><div class="status-dot blink" style="background:#0f0;"></div> ATIVO</div>`;
-        if(window.isMaster) {
-          masterBtn = `<div style="margin-top:15px; border-top:1px dashed #333; padding-top:10px; display:flex; gap:10px;">
-            <button class="action-btn" style="flex:1; border-color:#0f0; color:#0f0; font-size:10px;" onclick="window.finalizarEmbate('${e.id}', '${(e.f1||"").replace(/'/g,"\\'")}', '${(e.f2||"").replace(/'/g,"\\'")}')">Coroar Vencedor</button>
-            <button class="action-btn" style="border-color:#f00; color:#f00; font-size:10px;" onclick="window.db.ref('tokyoRpg/embates/${e.id}').remove()">Excluir</button>
-          </div>`;
-        }
+        if(window.isMaster) { masterBtn = `<div style="margin-top:15px; border-top:1px dashed #333; padding-top:10px; display:flex; gap:10px;"><button class="action-btn" style="flex:1; border-color:#0f0; color:#0f0; font-size:10px;" onclick="window.finalizarEmbate('${e.id}', '${(e.f1||"").replace(/'/g,"\\'")}', '${(e.f2||"").replace(/'/g,"\\'")}')">Coroar Vencedor</button><button class="action-btn" style="border-color:#f00; color:#f00; font-size:10px;" onclick="window.db.ref('tokyoRpg/embates/${e.id}').remove()">Excluir</button></div>`; }
       } else {
         statusHtml = `<div style="position:absolute; top:10px; left:10px; font-size:10px; color:#f00; display:flex; align-items:center; gap:5px;"><div class="status-dot" style="background:#f00;"></div> FINALIZADO</div>`;
         const deadImgHtml = e.urlMorte ? `<img src="${e.urlMorte}" style="width:100%; max-height:200px; object-fit:cover; border:1px solid #f00; border-radius:8px; margin-top:10px;">` : '';
-        winnerHtml = `<div style="margin-top:15px; background:#110000; padding:15px; border:1px solid var(--accent-gold); border-radius:8px;">
-          <h2 style="color:var(--accent-gold); margin-bottom:5px;">🏆 VENCEDOR: ${e.vencedor || "---"}</h2>
-          ${(e.premio||0) > 0 ? `<p style="color:#0f0; font-weight:bold; font-size:12px;">Prêmio Declarado: ${e.premio} ¥</p>` : ''}
-          ${deadImgHtml}
-        </div>`;
+        winnerHtml = `<div style="margin-top:15px; background:#110000; padding:15px; border:1px solid var(--accent-gold); border-radius:8px;"><h2 style="color:var(--accent-gold); margin-bottom:5px;">🏆 VENCEDOR: ${e.vencedor || "---"}</h2>${(e.premio||0) > 0 ? `<p style="color:#0f0; font-weight:bold; font-size:12px;">Prêmio Declarado: ${e.premio} ¥</p>` : ''}${deadImgHtml}</div>`;
         if(window.isMaster) masterBtn = `<button class="action-btn" style="width:100%; border-color:#f00; color:#f00; font-size:10px; margin-top:10px;" onclick="window.db.ref('tokyoRpg/embates/${e.id}').remove()">Apagar Histórico</button>`;
       }
-
-      lista.innerHTML += `
-        <div class="embate-card">
-          ${statusHtml}
-          <h3 class="neon-red" style="margin-top:15px;">📍 ${e.local || "Arena Desconhecida"}</h3>
-          <div class="embate-desc">"${e.desc || ""}"</div>
-          <div class="embate-vs-container">
-            <div class="embate-fighter">
-              <img src="${e.img1 || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador1"}" class="embate-fighter-avatar">
-              <span class="embate-fighter-name">${e.f1 || "Lutador 1"}</span>
-            </div>
-            <div class="embate-vs-text">VS</div>
-            <div class="embate-fighter">
-              <img src="${e.img2 || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador2"}" class="embate-fighter-avatar" style="border-color:#00e5ff; box-shadow: 0 0 15px rgba(0,229,255,0.2);">
-              <span class="embate-fighter-name" style="color:#00e5ff;">${e.f2 || "Lutador 2"}</span>
-            </div>
-          </div>
-          ${winnerHtml}
-          ${masterBtn}
-        </div>
-      `;
+      lista.innerHTML += `<div class="embate-card">${statusHtml}<h3 class="neon-red" style="margin-top:15px;">📍 ${e.local || "Arena Desconhecida"}</h3><div class="embate-desc">"${e.desc || ""}"</div><div class="embate-vs-container"><div class="embate-fighter"><img src="${e.img1 || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador1"}" class="embate-fighter-avatar"><span class="embate-fighter-name">${e.f1 || "Lutador 1"}</span></div><div class="embate-vs-text">VS</div><div class="embate-fighter"><img src="${e.img2 || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador2"}" class="embate-fighter-avatar" style="border-color:#00e5ff; box-shadow: 0 0 15px rgba(0,229,255,0.2);"><span class="embate-fighter-name" style="color:#00e5ff;">${e.f2 || "Lutador 2"}</span></div></div>${winnerHtml}${masterBtn}</div>`;
     });
   });
 };
-// =========================================================
-// FIX: iGAMBLE Chat - enviar mensagem (IDs corretos do HTML atual)
-// Cola no FINAL do script.js
-// =========================================================
+
 window.enviarMsgGamble = function() {
   try {
     if (!window.db) { window.showNeonToast("Sem conexão com o servidor."); return; }
     if (!window.jogadorAtual) { window.showNeonToast("Faça login!"); return; }
-
     const inp = document.getElementById("chatInputMsg");
     if (!inp) { window.showNeonToast("Input do chat não encontrado."); return; }
-
-    const txt = (inp.value || "").trim();
-    if (!txt) return;
-
-    // envia para o mesmo lugar que você já renderiza: tokyoRpg/chat
-    window.db.ref("tokyoRpg/chat").push({
-      nome: window.jogadorAtual,
-      texto: txt,
-      imagemUrl: null,
-      data: new Date().toLocaleTimeString(),
-      ts: Date.now()
-    });
-
+    const txt = (inp.value || "").trim(); if (!txt) return;
+    window.db.ref("tokyoRpg/chat").push({ nome: window.jogadorAtual, texto: txt, imagemUrl: null, data: new Date().toLocaleTimeString(), ts: Date.now() });
     inp.value = "";
-  } catch (e) {
-    console.error("Erro ao enviar chat:", e);
-    window.showNeonToast("Erro ao enviar.");
-  }
+  } catch (e) { window.showNeonToast("Erro ao enviar."); }
 };
-
-// opcional: compatibilidade com código antigo que chama prepararEnvioMensagem()
-window.prepararEnvioMensagem = function() {
-  return window.enviarMsgGamble();
-};
-};
-
+window.prepararEnvioMensagem = function() { return window.enviarMsgGamble(); };
