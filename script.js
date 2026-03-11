@@ -1611,33 +1611,33 @@ window.handleMention = function(e, inputEl) {
 
 window.showMentionDropdown = function(inputEl, query) {
     let drop = document.getElementById("mentionDropdown");
-    if (!drop) return;
     
-    // Posiciona em cima do input atual
-    let rect = inputEl.getBoundingClientRect();
-    drop.style.left = rect.left + "px";
-    drop.style.top = (rect.top - 200) + "px"; // Ajustado para não colar muito no input
-    drop.style.display = "block";
-    drop.style.zIndex = "99999"; // GARANTE QUE VAI APARECER NA FRENTE DO MODAL DE COMENTÁRIOS
-
+    // Se o elemento não existir no HTML, nós criamos ele dinamicamente!
+    if (!drop) {
+        drop = document.createElement("div");
+        drop.id = "mentionDropdown";
+        drop.className = "mention-dropdown";
+        drop.style.display = "none";
+        document.body.appendChild(drop);
+    }
+    
     let users = [];
+    let envolvidos = new Set(); // Usa Set para não repetir nomes
 
-    // LÓGICA NOVA: Se for comentário, filtra os envolvidos no post
+    // LÓGICA: Se for comentário, filtra os envolvidos no post
     if (inputEl.id === "commentInput") {
         let postId = window.currentPostIdComment;
         let post = window.globalPostsData ? window.globalPostsData[postId] : null;
-        
-        let envolvidos = new Set();
         
         // 1. Você (sempre deve poder se mencionar)
         if (window.jogadorAtual) envolvidos.add(window.jogadorAtual);
         
         if (post) {
-            // 2. Dono do post (tenta pegar por 'autor' ou 'autorId')
+            // 2. Dono do post
             if (post.autor) envolvidos.add(post.autor);
             if (post.autorId) envolvidos.add(post.autorId);
             
-            // 3. Pessoas que comentaram (tenta pegar por 'autor' ou 'nome')
+            // 3. Pessoas que comentaram
             if (post.comments) {
                 Object.values(post.comments).forEach(c => {
                     if (c.autor) envolvidos.add(c.autor);
@@ -1645,22 +1645,24 @@ window.showMentionDropdown = function(inputEl, query) {
                 });
             }
         }
-
-        // Converte o Set (nomes únicos) para array de objetos de usuários
-        envolvidos.forEach(nome => {
-            if (!nome) return; // Ignora se vier vazio
-            if (window.usersGlobais && window.usersGlobais[nome]) {
-                users.push(window.usersGlobais[nome]);
-            } else {
-                users.push({ nome: nome }); // Caso não ache os dados globais, coloca só o nome
-            }
-        });
     } else {
-        // Se estiver criando um post novo (fora dos comentários), carrega todo mundo
-        users = Object.values(window.usersGlobais || {});
+        // Se estiver fora dos comentários, carrega todo mundo
+        if (window.usersGlobais) {
+            Object.keys(window.usersGlobais).forEach(nome => envolvidos.add(nome));
+        }
     }
 
-    // Filtra quem bate com o que foi digitado (ignorando maiúsculas/minúsculas)
+    // Converte os nomes únicos para a lista de usuários
+    envolvidos.forEach(nome => {
+        if (!nome) return;
+        if (window.usersGlobais && window.usersGlobais[nome]) {
+            users.push(window.usersGlobais[nome]);
+        } else {
+            users.push({ nome: nome }); // Fallback
+        }
+    });
+
+    // Filtra quem bate com o que foi digitado
     let filtered = users.filter(u => u && u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
 
     if (filtered.length === 0) { 
@@ -1668,17 +1670,29 @@ window.showMentionDropdown = function(inputEl, query) {
         return; 
     }
 
-    // Monta a lista visualmente
+    // Monta o HTML interno
     drop.innerHTML = filtered.map(u => {
         let av = u.avatarUrl || u.avatar || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
         return `
-        <div class="mention-item" style="display:flex; align-items:center; gap:10px; padding:8px; cursor:pointer; border-bottom:1px solid #333; background:#111;" onclick="window.selectMention('${u.nome}')">
+        <div class="mention-item" onclick="window.selectMention('${u.nome}')">
             <img src="${av}" style="width:24px; height:24px; border-radius:50%; object-fit:cover;" alt="">
             <span style="color:#fff; font-size:14px; font-weight:bold;">${u.nome}</span>
         </div>`;
     }).join("");
-};
 
+    // Posicionamento à prova de falhas (usa position: fixed em relação à tela)
+    let rect = inputEl.getBoundingClientRect();
+    drop.style.position = "fixed";
+    drop.style.left = rect.left + "px";
+    drop.style.top = (rect.top - drop.offsetHeight - 10) + "px"; // 10px acima do input
+    
+    // Se o dropdown ainda não tiver altura calculada, força um valor padrão para não bugar
+    if (drop.offsetHeight === 0) {
+        drop.style.top = (rect.top - 200) + "px"; 
+    }
+    
+    drop.style.display = "block";
+};
 window.selectMention = function(nome) {
     let s = window.mentionState;
     if (!s.active || !s.inputEl) return;
