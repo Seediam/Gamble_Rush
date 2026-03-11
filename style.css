@@ -394,17 +394,17 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 }
 .feed-container::-webkit-scrollbar { display: none; }
 
-#igamble-view-posts {
-    flex: 1 !important;
-    min-height: 0 !important;
-    padding: 0 !important;
-    display: none !important; /* Estava como flex */
-    flex-direction: column !important;
-    background: #000;
+/* --- VIEWS INTERNAS (Esconde/Mostra) --- */
+.igamble-view {
+    display: none !important; /* Força o display none em todas as views não ativas */
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
-#igamble-view-posts.active {
-    display: flex !important;
+.igamble-view.active {
+    display: flex !important; /* Visível APENAS quando o botão for clicado */
 }
 
 #igamble-view-posts .feed-container {
