@@ -480,44 +480,39 @@ window.initTacticalBoard = function() {
     let obsList = loc.obs || [];
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
-    // 1. Pega a config do banco ou usa o padrão 16x12
+    // 1. Pega configuração de tamanho e formato (ou usa padrão 16x12)
     let conf = window.submapasConfig[window.currentSubMapKey] || {cols: 16, rows: 12, shape: 'quadrado'};
     let cols = conf.cols;
     let rows = conf.rows;
     let shape = conf.shape;
 
-    // 2. Ajusta o CSS do Grid para o tamanho exato escolhido
+    // 2. Ajusta o Grid CSS dinamicamente
     b.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     b.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
-    // 3. Monta quadrado por quadrado
+    // 3. Monta e corta o grid
     for(let y=0; y<rows; y++) {
         for(let x=0; x<cols; x++) {
             let cid = `${x}_${y}`; 
             let isObs = obsList.includes(cid);
             let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
-
-            // MÁGICA DOS FORMATOS (Corta os pedaços da tela)
+            
             let isHidden = false;
             
+            // FÓRMULAS DE CORTE DE MAPA
             if (shape === 'l_shape') {
-                // Remove o quadrante superior direito
                 if (x >= Math.floor(cols/2) && y < Math.floor(rows/2)) isHidden = true;
             } 
             else if (shape === 'u_shape') {
-                // Remove o meio superior
                 if (x >= Math.floor(cols/4) && x < Math.floor(cols*0.75) && y < Math.floor(rows/2)) isHidden = true;
             } 
             else if (shape === 'cross') {
-                // Remove os 4 cantos
                 if ((x < Math.floor(cols/3) || x >= Math.floor(cols*0.66)) && (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66))) isHidden = true;
             } 
             else if (shape === 'corredor') {
-                // Deixa só uma linha no meio
                 if (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66)) isHidden = true;
             } 
             else if (shape === 'hexagono') {
-                // Corta as 4 pontas em diagonal (estilo arena octógono)
                 let hW = cols/2; let hH = rows/2;
                 let dx = Math.abs(x - hW + 0.5); let dy = Math.abs(y - hH + 0.5);
                 if ((dx / hW) + (dy / hH) > 1.3) isHidden = true; 
@@ -529,7 +524,6 @@ window.initTacticalBoard = function() {
             cell.id = `cell_${x}_${y}`; 
             cell.className = `tactical-cell ${obsClass} ${hideClass}`;
             
-            // Só permite clicar se não for um bloco escondido
             if (!isHidden) {
                 cell.onclick = () => window.clicarGrid(x, y, isObs); 
             }
@@ -538,11 +532,9 @@ window.initTacticalBoard = function() {
         }
     }
     
-    // Renderiza os overlays das salas se existirem
     let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = "";
     if(loc.salas && ro) {
         loc.salas.forEach(s => { 
-            // Calcula a porcentagem baseado no NOVO tamanho de colunas/linhas
             ro.innerHTML += `<div class="room-overlay" style="left:${(s.x/cols)*100}%; top:${(s.y/rows)*100}%; width:${(s.w/cols)*100}%; height:${(s.h/rows)*100}%;">${s.n}</div>`; 
         });
     }
@@ -551,25 +543,30 @@ window.initTacticalBoard = function() {
 window.updateTacticalBoard = function() {
     if(!window.currentSubMapKey) return;
     
-    // === CÓDIGO NOVO: MOSTRA O PAINEL SE FOR O MESTRE ===
+    // ======== A MÁGICA DE MOSTRAR OS BOTÕES DO MESTRE ========
     let painelMestre = document.getElementById("mestreVTT");
     if(painelMestre) {
         if(window.isMaster) {
-            painelMestre.style.display = "flex"; // Mostra os botões!
+            painelMestre.style.display = "flex"; // Libera a visão!
+            
+            // Tenta atualizar os inputs com os dados do mapa atual
+            let configAtual = window.submapasConfig[window.currentSubMapKey];
+            if(configAtual) {
+                if(document.getElementById("vttColsInp")) document.getElementById("vttColsInp").value = configAtual.cols;
+                if(document.getElementById("vttRowsInp")) document.getElementById("vttRowsInp").value = configAtual.rows;
+                if(document.getElementById("vttShapeInp")) document.getElementById("vttShapeInp").value = configAtual.shape;
+            }
         } else {
             painelMestre.style.display = "none"; // Esconde dos jogadores
         }
     }
-    // ====================================================
+    // ==========================================================
 
     let grid = window.submapasGlobais[window.currentSubMapKey] || {};
     let layer = document.getElementById("tokensLayer"); if(!layer) return;
-    
-    // ... (resto do código continua igualzinho ao que já estava) ...
     let loc = window.locaisMapa[window.currentSubMapKey] || {}; let obsList = loc.obs || [];
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
-    // Pega as novas dimensões dinâmicas
     let conf = window.submapasConfig[window.currentSubMapKey] || {cols: 16, rows: 12};
     let cols = conf.cols;
     let rows = conf.rows;
@@ -577,7 +574,6 @@ window.updateTacticalBoard = function() {
     let px = -1, py = -1;
     Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
 
-    // Highlight nas células de alcance (usando limites dinâmicos)
     for(let y=0; y<rows; y++) {
         for(let x=0; x<cols; x++) {
             let cid = `${x}_${y}`;
@@ -602,7 +598,6 @@ window.updateTacticalBoard = function() {
         let occupier = grid[cid]; if(!occupier) return;
         let parts = cid.split("_"); let x = parseInt(parts[0]); let y = parseInt(parts[1]);
         
-        // Evita desenhar token fora do mapa se o mestre diminuiu o grid com alguém lá
         if(x >= cols || y >= rows) return; 
 
         let tokenId = `token_${occupier}`; currentTokens.push(tokenId);
@@ -613,8 +608,6 @@ window.updateTacticalBoard = function() {
 
         let leftPos = `${(x / cols) * 100}%`;
         let topPos = `${(y / rows) * 100}%`;
-        
-        // Ajusta tamanho do token de acordo com a quantidade de colunas
         let tWidth = `${100 / cols}%`;
         let tHeight = `${100 / rows}%`;
 
