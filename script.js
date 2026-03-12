@@ -1623,23 +1623,30 @@ window.currentPostIdForComment = null;
 
 window.abrirComentarios = function(postId) {
     window.currentPostIdForComment = postId;
-    document.getElementById("commentsOverlay").style.display = "flex";
+    let overlay = document.getElementById("commentsOverlay");
+    if(overlay) overlay.style.display = "flex";
     window.carregarComentarios(postId);
 };
 
 window.fecharComentarios = function() {
     window.currentPostIdForComment = null;
-    document.getElementById("commentsOverlay").style.display = "none";
-    document.getElementById("commentsList").innerHTML = ""; // limpa a lista
+    let overlay = document.getElementById("commentsOverlay");
+    if(overlay) overlay.style.display = "none";
+    let list = document.getElementById("commentsList");
+    if(list) list.innerHTML = ""; // limpa a lista
 };
 
 // Fechar se clicar fora do painel no fundo escuro
-document.getElementById('commentsOverlay').addEventListener('click', function(e) {
-    if (e.target === this) { window.fecharComentarios(); }
-});
+let overlayEl = document.getElementById('commentsOverlay');
+if(overlayEl) {
+    overlayEl.addEventListener('click', function(e) {
+        if (e.target === this) { window.fecharComentarios(); }
+    });
+}
 
 window.carregarComentarios = function(postId) {
     let list = document.getElementById("commentsList");
+    if(!list) return;
     list.innerHTML = "<div style='text-align:center; color:#aaa; margin-top:20px;'>Carregando...</div>";
     
     window.db.ref(`tokyoRpg/posts/${postId}/comentarios`).on('value', snap => {
@@ -1658,7 +1665,7 @@ window.carregarComentarios = function(postId) {
             let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${c.autor}`;
             let nome = u.nome || c.autor;
             
-            // Transformar @menções em azulzinho e bold pra ficar mais bonito (Opcional)
+            // Transformar @menções em azulzinho e bold pra ficar mais bonito
             let textoBonito = (c.texto||"").replace(/@(\w+)/g, '<span style="color:var(--accent-blue); font-weight:bold;">@$1</span>');
 
             html += `
@@ -1680,6 +1687,7 @@ window.carregarComentarios = function(postId) {
 window.enviarComentario = function() {
     if(!window.currentPostIdForComment || !window.jogadorAtual) return;
     let inp = document.getElementById("commentInput");
+    if(!inp) return;
     let txt = inp.value.trim();
     if(!txt) return;
     
@@ -1689,7 +1697,7 @@ window.enviarComentario = function() {
         timestamp: Date.now()
     }).then(() => {
         inp.value = ""; // Limpa a caixa de texto
-        window.closeMentionDropdown();
+        if(typeof window.closeMentionDropdown === 'function') window.closeMentionDropdown();
     });
 };
 // =========================================================
