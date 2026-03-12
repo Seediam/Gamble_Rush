@@ -423,19 +423,27 @@ window.abrirSubMapa = function(k) {
     if(window.isMaster) { window.setElDisplay("mestreVTT", "flex"); }
     window.renderVttFoodActions();
 };
-window.fecharSubMapa = function() { window.setElDisplay("subMapCanvas", "none"); window.setElDisplay("mapCanvas", "block"); window.currentSubMapKey = ""; window.drawMapVisuals(); };
-window.mudarBgSubMapa = function() { let url = document.getElementById("vttBgInp").value; window.db.ref(`tokyoRpg/submapsBGs/${window.currentSubMapKey}`).set(url); window.showNeonToast("Fundo Salvo!"); };
-
-window.rolarDadoMovimento = function() {
-    if(!window.jogadorAtual) return;
-    if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Não é seu turno!"); return; }
-    let roll = Math.floor(Math.random()*4)+1; let p = window.getPesoStatus(window.usersGlobais[window.jogadorAtual]);
-    window.movimentosRestantes = p.sobrepeso ? Math.max(1, Math.floor(roll/2)) : roll;
-    window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
-    window.db.ref('tokyoRpg/mapDados').push({nome:window.jogadorAtual, texto:`Movimento: <span class="dice-result-box">${roll}</span> -> ${window.movimentosRestantes} passos`});
-    window.mostrarDadoOverlay(window.jogadorAtual, "Movimento", [roll], 4);
-    window.updateTacticalBoard();
+window.fecharSubMapa = function() {
+    let modal = document.getElementById("subMapModal");
+    if(modal) modal.style.display = "none";
+    
+    // LIMPEZA GERAL DO GRID (Isso resolve o bug do grid não fechar)
+    let gridContainer = document.getElementById("gridCells");
+    if(gridContainer) gridContainer.innerHTML = ""; 
+    let tokensLayer = document.getElementById("tokensLayer");
+    if(tokensLayer) tokensLayer.innerHTML = "";
+    
+    // Desacopla o jogador do mapa atual
+    if (window.currentSubMapKey && window.jogadorAtual) {
+        let grid = window.submapasGlobais[window.currentSubMapKey] || {};
+        let up = {};
+        Object.keys(grid).forEach(k => { if(grid[k] === window.jogadorAtual) up[k] = null; });
+        window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up);
+    }
+    
+    window.currentSubMapKey = ""; 
 };
+;
 
 window.iniciarIniciativaVTT = function() {
     if(!window.isMaster) return;
@@ -451,29 +459,65 @@ window.passarTurnoVTT = function() {
     window.movimentosRestantes = 0; window.setElText("movRestantes", "Passos Livres: 0");
 };
 
-window.clicarGrid = function(x,y, isObs) {
+window.clicarGrid = function(x,y, isObs, event) {
     if(!window.jogadorAtual) return;
-    let u = window.usersGlobais[window.jogadorAtual]; let isGaia = (u.deus && u.deus.includes("Gaia"));
+    let cid = `${x}_${y}`;
+    let customData = window.submapasCustom[window.currentSubMapKey] || {};
+    
+    // MASTER: SHIFT + Click (Menu de Editar Célula)
+    if(window.isMaster && event && event.shiftKey) {
+        let cData = customData[cid] || {};
+        document.getElementById("mcCid").value = cid;
+        document.getElementById("mcObs").checked = cData.isObs || false;
+        document.getElementById("mcImg").value = cData.img || "";
+        document.getElementById("mcPortal").value = cData.portal || "";
+        document.getElementById("masterCellModal").style.display = "flex";
+        return; 
+    }
+
+    let user = window.usersGlobais[window.jogadorAtual] || {}; 
+    let isGaia = (user.deus && typeof user.deus === 'string' && user.deus.includes("Gaia"));
     if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
     
     let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-    if(grid[`${x}_${y}`]) return; // Ocupado
+    if(grid[cid]) return; 
     
     let px = -1, py = -1; let isAlreadyOnBoard = false;
-    Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = cid.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
+    Object.keys(grid).forEach(k => { if(grid[k] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = k.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
 
     if(!window.isMaster && isAlreadyOnBoard) {
-        // Checa distância Chebyshev
         let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-        if(dist > window.movimentosRestantes) { return; } // Ignora cliques muito longe silenciosamente
+        if(dist > window.movimentosRestantes) return; 
         if(isObs && !isGaia) { window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return; }
         window.movimentosRestantes -= dist; window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
     } else if (isObs && !isGaia && !window.isMaster) {
         window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return;
     }
 
-    let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[`${x}_${y}`] = window.jogadorAtual;
-    window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up);
+    let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[cid] = window.jogadorAtual;
+    
+    window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up).then(() => {
+        let stepData = customData[cid];
+        
+        // === SISTEMA DE PORTAL CORRIGIDO ===
+        if(stepData && stepData.portal) {
+            window.showNeonToast(`Entrando no AP de ${stepData.portal}...`);
+            window.casaSendoVisitada = stepData.portal; 
+            
+            // 1º FECHA O MODAL DO MAPA (Isso resolve a tela preta que cobria as abas!)
+            let modalMap = document.getElementById("subMapModal");
+            if(modalMap) modalMap.style.display = "none";
+            
+            // 2º LIMPA O GRID
+            let gridContainer = document.getElementById("gridCells");
+            if(gridContainer) gridContainer.innerHTML = "";
+            window.currentSubMapKey = ""; 
+            
+            // 3º ABRE A ABA DA CASA NORMALMENTE
+            window.abrirApp('tab-casa', false);
+            setTimeout(window.renderizarCasaTetris, 300);
+        }
+    });
 };
 
 window.initTacticalBoard = function() {
