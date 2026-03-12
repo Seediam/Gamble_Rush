@@ -4329,16 +4329,53 @@ window.salvarFormatoMapa = function() {
     window.showNeonToast(`Terreno alterado para ${cols}x${rows} (${shape})!`);
 };
 window.desenharMapa = function() {
-    // 1. Esconde o mapa velho global e mostra a Mesa VTT
     let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none";
     let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
-    
-    // 2. Define uma sala padrão invisível para todo mundo cair nela juntos
+
+    // Se o jogador acabou de abrir o app e não está em nenhum mapa, joga ele na Mesa Principal
     if(!window.currentSubMapKey) {
-        window.currentSubMapKey = "Mesa_Principal";
+        window.abrirSubMapa("Mesa_Principal");
+    } else {
+        // Se ele já estava jogando, apenas recarrega o grid
+        window.initTacticalBoard();
+        window.updateTacticalBoard();
     }
-    
-    // 3. Renderiza o grid do VTT e os tokens
+};
+
+window.abrirSubMapa = function(localKey) {
+    window.currentSubMapKey = localKey;
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
+
+    // Pega o nome do mapa ou usa o código
+    let loc = window.locaisMapa[localKey] || { nome: localKey.replace(/_/g, " ") };
+    let titleEl = document.getElementById("subMapTitle");
+    if(titleEl) titleEl.innerText = loc.nome;
+
+    // Atualiza a imagem de Fundo diretamente no Wrapper do Grid
+    let bgUrl = window.submapasBGs[localKey] || "";
+    let wrapper = document.getElementById("vttWorldWrapper");
+    if(wrapper) {
+        if(bgUrl) {
+            wrapper.style.backgroundImage = `url('${bgUrl}')`;
+            wrapper.style.backgroundColor = "transparent";
+        } else {
+            wrapper.style.backgroundImage = "none";
+            wrapper.style.backgroundColor = "#111"; // Fundo cinza escuro caso o mestre não tenha colocado mapa
+        }
+    }
+
     window.initTacticalBoard();
     window.updateTacticalBoard();
+
+    // Garante que o Token do jogador seja criado no banco de dados na posição 0,0 caso ele não exista lá
+    if(window.jogadorAtual && window.db) {
+        window.db.ref(`tokyoRpg/submapas/${localKey}`).once('value', s => {
+            let currentGrid = s.val() || {};
+            let alreadyIn = Object.values(currentGrid).includes(window.jogadorAtual);
+            if(!alreadyIn) {
+                window.db.ref(`tokyoRpg/submapas/${localKey}/0_0`).set(window.jogadorAtual);
+            }
+        });
+    }
 };
