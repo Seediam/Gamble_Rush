@@ -3050,3 +3050,275 @@ window.enviarSMS = function() {
     
     document.getElementById("smsTexto").value = "";
 };
+// =========================================================
+// SISTEMA: GAMBLE HOUSE TETRIS E AJUSTES DE INVENTÁRIO
+// =========================================================
+
+// 1. Ocultamos os Móveis da Mochila Normal (Eles vão só para a Casa)
+window.renderizarMochila = function() {
+    let g = document.getElementById("grid-personagem"); let l = document.getElementById("lista-itens-soltos"); if(!g || !l) return;
+    if(window.arrastandoKey !== null) return; 
+
+    let extraW = 0, extraH = 0; let itens = window.usersGlobais[window.jogadorAtual]?.mochila || {};
+    Object.values(itens).forEach(i => { if(i.tipo === 'Mochila' && i.eq === true) { extraW += (parseInt(i.extraW) || 0); extraH += (parseInt(i.extraH) || 0); } });
+    
+    window.GRID_COLS = 5 + extraW; window.GRID_ROWS = 3 + extraH;
+    g.style.gridTemplateColumns = `repeat(${window.GRID_COLS}, 45px)`; g.style.gridTemplateRows = `repeat(${window.GRID_ROWS}, 45px)`;
+    g.innerHTML = ""; l.innerHTML = ""; window.tetrisMatrix = Array(window.GRID_ROWS).fill(null).map(()=>Array(window.GRID_COLS).fill(0));
+    for(let i = 0; i < (window.GRID_COLS * window.GRID_ROWS); i++) g.innerHTML += `<div class="grid-cell"></div>`;
+
+    let pesoStats = window.getPesoStatus(window.usersGlobais[window.jogadorAtual]);
+    let sP = document.getElementById("statusPeso"); if(sP) { sP.innerText = `Peso Atual: ${pesoStats.atual} / ${pesoStats.max} kg`; sP.style.color = pesoStats.sobrepeso?"#f00":"var(--accent-gold)"; }
+
+    let drop = {};
+    Object.keys(itens).forEach(k => { 
+        let i = itens[k]; 
+        if(i.tipo !== 'Móvel' && i.eq && (parseInt(i.c)+parseInt(i.w)>window.GRID_COLS || parseInt(i.r)+parseInt(i.h)>window.GRID_ROWS)) { 
+            drop[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/eq`] = false; drop[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/c`] = null; drop[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/r`] = null; 
+        } 
+    });
+    if(Object.keys(drop).length > 0) { window.db.ref().update(drop); return; } 
+
+    Object.keys(itens).forEach(k => {
+        let i = itens[k]; 
+        if (i.tipo === 'Móvel') return; // MÁGICA: Pula os móveis! Eles não aparecem na mochila de combate.
+
+        let w = parseInt(i.w) || 1; let h = parseInt(i.h) || 1;
+        let el = document.createElement('div'); el.className = `item-tetris ${i.tipo || 'Arma'}`; el.setAttribute('data-key', k); el.setAttribute('data-w', w); el.setAttribute('data-h', h);
+        el.style.width = `${(w * window.CELL_SIZE) + ((w-1) * window.GRID_GAP)}px`; el.style.height = `${(h * window.CELL_SIZE) + ((h-1) * window.GRID_GAP)}px`;
+        
+        let btnText = i.eq ? '▼' : '✖'; 
+        let btnTitle = i.eq ? 'Guardar na Mochila' : 'Descartar'; 
+        let btnClass = i.eq ? 'btn-excluir-item' : 'btn-excluir-item discard';
+        let btnRotate = `<button class="btn-rotate-item" title="Rotacionar" onpointerdown="window.girarItemMochila('${k}', ${w}, ${h}, ${i.eq}, event)">↻</button>`;
+        
+        el.innerHTML = `${btnRotate}<span>${window.iconesMercado[i.tipo]||''} ${i.nome}</span>${i.tipo === 'Comida' ? `<button onclick="window.consumirComida('${k}', ${i.poder||0}, ${i.cd||2}, event)" style="font-size:8px; padding:2px; margin-top:2px; background:#000; color:#0f0; border:1px solid #0f0; border-radius:2px; cursor:pointer; position:relative; z-index:5;">Comer</button>` : ''}<button class="${btnClass}" title="${btnTitle}" onpointerdown="window.removerItemMochila('${k}', event)">${btnText}</button>`;
+
+        if(i.eq === true && i.c !== undefined && i.r !== undefined && parseInt(i.c) < window.GRID_COLS && parseInt(i.r) < window.GRID_ROWS) {
+            let ic = parseInt(i.c); let ir = parseInt(i.r);
+            el.style.left = `${ic * window.REAL_CELL_SIZE}px`; el.style.top = `${ir * window.REAL_CELL_SIZE}px`;
+            el.setAttribute('data-c', ic); el.setAttribute('data-r', ir);
+            for(let row=ir; row<ir+h; row++) for(let col=ic; col<ic+w; col++) window.tetrisMatrix[row][col] = 1; 
+            g.appendChild(el);
+        } else {
+            el.style.position = 'relative'; el.style.left = 'auto'; el.style.top = 'auto';
+            l.appendChild(el);
+        }
+        el.addEventListener('pointerdown', window.iniciarArrasteTetris);
+    });
+    window.renderVttFoodActions();
+};
+
+// 2. Cálculo de Buffs passa a ler os Móveis instalados na Casa
+window.calcularMaxInteg = function(u) { 
+    let m = 100; 
+    if(u && u.mochila) {
+        Object.values(u.mochila).forEach(i => { 
+            if(i.tipo==="Móvel" && i.inHouse === true && i.buffType==="integ" && i.poder) { m += parseInt(i.poder); }
+        }); 
+    }
+    return m; 
+};
+
+window.calcularBuffsMoveis = function(u) { 
+    let buffs = { for:0, agi:0, int:0, vig:0, man:0 }; 
+    if(u && u.mochila) {
+        Object.values(u.mochila).forEach(i => { 
+            if(i.tipo==="Móvel" && i.inHouse === true && i.buffType && i.poder && buffs[i.buffType] !== undefined) { buffs[i.buffType] += parseInt(i.poder); }
+        }); 
+    }
+    return buffs; 
+};
+
+// 3. Sistema Tetris da Casa
+window.drawCasaBoard = function() { window.renderizarCasaTetris(); };
+
+window.renderizarCasaTetris = function() {
+    let g = document.getElementById("grid-casa");
+    let l = document.getElementById("lista-moveis-soltos");
+    if(!g || !l) return;
+    
+    window.CASA_COLS = 16;
+    window.CASA_ROWS = 10;
+    
+    g.style.gridTemplateColumns = `repeat(${window.CASA_COLS}, 45px)`; 
+    g.style.gridTemplateRows = `repeat(${window.CASA_ROWS}, 45px)`;
+    g.innerHTML = ""; l.innerHTML = ""; 
+    window.casaMatrix = Array(window.CASA_ROWS).fill(null).map(()=>Array(window.CASA_COLS).fill(0));
+    
+    for(let i = 0; i < (window.CASA_COLS * window.CASA_ROWS); i++) {
+        g.innerHTML += `<div class="grid-cell" style="background:rgba(0,0,0,0.4); border-color:rgba(255,255,255,0.1);"></div>`;
+    }
+
+    let itens = window.usersGlobais[window.jogadorAtual]?.mochila || {};
+    
+    let cData = window.usersGlobais[window.jogadorAtual]?.casaConfig;
+    if(cData && cData.bg) { 
+        g.style.backgroundImage = `url('${cData.bg}')`; 
+        g.style.backgroundSize = "100% 100%"; 
+    } else { g.style.backgroundImage = "none"; }
+
+    Object.keys(itens).forEach(k => {
+        let i = itens[k];
+        if (i.tipo !== 'Móvel') return; // Renderiza apenas Móveis
+        
+        let w = parseInt(i.w) || 1; let h = parseInt(i.h) || 1;
+        let el = document.createElement('div'); el.className = `item-tetris Móvel`; 
+        el.setAttribute('data-key', k); el.setAttribute('data-w', w); el.setAttribute('data-h', h);
+        el.style.width = `${(w * window.CELL_SIZE) + ((w-1) * window.GRID_GAP)}px`; 
+        el.style.height = `${(h * window.CELL_SIZE) + ((h-1) * window.GRID_GAP)}px`;
+        
+        let btnRotate = `<button class="btn-rotate-item" title="Rotacionar" onpointerdown="window.girarItemCasa('${k}', ${w}, ${h}, ${i.inHouse}, event)">↻</button>`;
+        let btnText = i.inHouse ? '▼' : '✖'; 
+        let btnTitle = i.inHouse ? 'Guardar no Depósito' : 'Vender/Descartar'; 
+        let btnClass = i.inHouse ? 'btn-excluir-item' : 'btn-excluir-item discard';
+        
+        el.innerHTML = `${btnRotate}<span>${window.iconesMercado[i.tipo]||''} ${i.nome}</span><button class="${btnClass}" title="${btnTitle}" onpointerdown="window.removerMovel('${k}', event)">${btnText}</button>`;
+
+        if(i.inHouse === true && i.hc !== undefined && i.hr !== undefined && parseInt(i.hc) < window.CASA_COLS && parseInt(i.hr) < window.CASA_ROWS) {
+            let ic = parseInt(i.hc); let ir = parseInt(i.hr);
+            el.style.left = `${ic * window.REAL_CELL_SIZE}px`; el.style.top = `${ir * window.REAL_CELL_SIZE}px`;
+            el.setAttribute('data-c', ic); el.setAttribute('data-r', ir);
+            for(let row=ir; row<ir+h; row++) {
+                for(let col=ic; col<ic+w; col++) {
+                    if (row < window.CASA_ROWS && col < window.CASA_COLS) window.casaMatrix[row][col] = 1; 
+                }
+            }
+            g.appendChild(el);
+        } else {
+            el.style.position = 'relative'; el.style.left = 'auto'; el.style.top = 'auto';
+            l.appendChild(el);
+        }
+        el.addEventListener('pointerdown', window.iniciarArrasteCasa);
+    });
+};
+
+window.iniciarArrasteCasa = function(e) {
+    if(e.target.closest('.btn-rotate-item') || e.target.tagName.toLowerCase() === 'button') return;
+    e.preventDefault(); 
+    window.itemArrastadoCasa = e.currentTarget; 
+    window.arrastandoKeyCasa = window.itemArrastadoCasa.getAttribute('data-key');
+    let gridEl = document.getElementById("grid-casa"); let rectOrig = window.itemArrastadoCasa.getBoundingClientRect();
+
+    if (window.itemArrastadoCasa.parentElement === gridEl) {
+        window.originCasa = 'grid'; window.initPosCasa = {c: parseInt(window.itemArrastadoCasa.getAttribute('data-c')), r: parseInt(window.itemArrastadoCasa.getAttribute('data-r'))};
+        let w = parseInt(window.itemArrastadoCasa.getAttribute('data-w')); let h = parseInt(window.itemArrastadoCasa.getAttribute('data-h'));
+        for(let row=window.initPosCasa.r; row<window.initPosCasa.r+h; row++) {
+            for(let col=window.initPosCasa.c; col<window.initPosCasa.c+w; col++) {
+                if(row < window.CASA_ROWS && col < window.CASA_COLS) window.casaMatrix[row][col] = 0; 
+            }
+        }
+    } else { 
+        window.originCasa = 'inv'; let gridRect = gridEl.getBoundingClientRect();
+        window.itemArrastadoCasa.style.margin = "0"; window.itemArrastadoCasa.style.left = (rectOrig.left - gridRect.left) + 'px'; window.itemArrastadoCasa.style.top = (rectOrig.top - gridRect.top) + 'px';
+        gridEl.appendChild(window.itemArrastadoCasa); 
+    }
+    
+    window.itemArrastadoCasa.classList.add('dragging'); window.itemArrastadoCasa.style.position = 'absolute'; 
+    let newRect = window.itemArrastadoCasa.getBoundingClientRect();
+    window.offsetXCasa = e.clientX - newRect.left; window.offsetYCasa = e.clientY - newRect.top;
+    document.addEventListener('pointermove', window.arrastarCasa); document.addEventListener('pointerup', window.soltarCasa);
+};
+
+window.arrastarCasa = function(e) { 
+    e.preventDefault(); if(!window.itemArrastadoCasa) return; 
+    const gridRect = document.getElementById("grid-casa").getBoundingClientRect();
+    window.itemArrastadoCasa.style.left = `${e.clientX - gridRect.left - window.offsetXCasa}px`; window.itemArrastadoCasa.style.top = `${e.clientY - gridRect.top - window.offsetYCasa}px`;
+};
+
+window.soltarCasa = function(e) {
+    document.removeEventListener('pointermove', window.arrastarCasa); document.removeEventListener('pointerup', window.soltarCasa);
+    if(!window.itemArrastadoCasa) return; window.itemArrastadoCasa.classList.remove('dragging');
+    const w = parseInt(window.itemArrastadoCasa.getAttribute('data-w')); const h = parseInt(window.itemArrastadoCasa.getAttribute('data-h'));
+    let rawLeft = parseFloat(window.itemArrastadoCasa.style.left || 0); let rawTop = parseFloat(window.itemArrastadoCasa.style.top || 0);
+    let tC = Math.round(rawLeft / window.REAL_CELL_SIZE); let tR = Math.round(rawTop / window.REAL_CELL_SIZE);
+
+    if (tC < 0 || tC + w > window.CASA_COLS || tR < 0 || tR + h > window.CASA_ROWS) {
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKeyCasa}`).update({inHouse: false, hc: null, hr: null});
+    } else {
+        let livre = true;
+        for(let r=tR; r<tR+h; r++) { for(let c=tC; c<tC+w; c++) { if(window.casaMatrix[r][c] === 1) livre = false; } }
+        if(livre) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKeyCasa}`).update({inHouse: true, hc: tC, hr: tR}); } 
+        else {
+            if(window.originCasa === 'grid') { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKeyCasa}`).update({inHouse: true, hc: window.initPosCasa.c, hr: window.initPosCasa.r}); } 
+            else { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKeyCasa}`).update({inHouse: false, hc: null, hr: null}); }
+        }
+    }
+    window.arrastandoKeyCasa = null; window.itemArrastadoCasa = null; 
+};
+
+window.girarItemCasa = function(k, w, h, inHouse, ev) {
+    if(ev) ev.stopPropagation(); 
+    let newW = parseInt(h); let newH = parseInt(w); let up = {};
+    if(inHouse) {
+        let itens = window.usersGlobais[window.jogadorAtual]?.mochila || {};
+        let tempMatrix = Array(window.CASA_ROWS).fill(null).map(()=>Array(window.CASA_COLS).fill(0));
+        
+        Object.keys(itens).forEach(ik => {
+            if(ik !== k && itens[ik].inHouse) {
+                let iW = parseInt(itens[ik].w)||1, iH = parseInt(itens[ik].h)||1;
+                let iC = parseInt(itens[ik].hc), iR = parseInt(itens[ik].hr);
+                if(!isNaN(iC) && !isNaN(iR)) {
+                    for(let row=iR; row<iR+iH; row++) {
+                        for(let col=iC; col<iC+iW; col++) { if(row<window.CASA_ROWS && col<window.CASA_COLS) tempMatrix[row][col] = 1; }
+                    }
+                }
+            }
+        });
+
+        let startC = parseInt(itens[k].hc); let startR = parseInt(itens[k].hr);
+        let targetC = startC; let targetR = startR; let found = false; let cabeNoLugar = true;
+        
+        if(startC + newW > window.CASA_COLS || startR + newH > window.CASA_ROWS) { cabeNoLugar = false; } 
+        else {
+            for(let row=startR; row<startR+newH; row++) {
+                for(let col=startC; col<startC+newW; col++) { if(tempMatrix[row][col] === 1) cabeNoLugar = false; }
+            }
+        }
+
+        if(cabeNoLugar) { found = true; } 
+        else {
+            let offsets = [];
+            for(let dy = -window.CASA_ROWS; dy <= window.CASA_ROWS; dy++) {
+                for(let dx = -window.CASA_COLS; dx <= window.CASA_COLS; dx++) { offsets.push({dx: dx, dy: dy, dist: Math.abs(dx) + Math.abs(dy)}); }
+            }
+            offsets.sort((a,b) => a.dist - b.dist);
+
+            for(let off of offsets) {
+                let nc = startC + off.dx; let nr = startR + off.dy;
+                if(nc >= 0 && nc + newW <= window.CASA_COLS && nr >= 0 && nr + newH <= window.CASA_ROWS) {
+                    let livre = true;
+                    for(let row=nr; row<nr+newH; row++) {
+                        for(let col=nc; col<nc+newW; col++) { if(tempMatrix[row][col] === 1) livre = false; }
+                    }
+                    if(livre) { found = true; targetC = nc; targetR = nr; break; }
+                }
+            }
+        }
+
+        if(found) {
+            let el = document.querySelector(`#grid-casa .item-tetris[data-key='${k}']`);
+            if(el) { el.style.transition = "transform 0.2s ease-in-out"; el.style.transform = "rotate(90deg) scale(0.9)"; el.style.zIndex = "999"; }
+            setTimeout(() => { up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/w`] = newW; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/h`] = newH; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/hc`] = targetC; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/hr`] = targetR; window.db.ref().update(up); }, 200);
+        } else { window.showNeonToast("Sem espaço para rotacionar!"); }
+    } else {
+        let el = document.querySelector(`#lista-moveis-soltos .item-tetris[data-key='${k}']`);
+        if(el) { el.style.transition = "transform 0.2s ease-in-out"; el.style.transform = "rotate(90deg) scale(0.9)"; }
+        setTimeout(() => { up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/w`] = newW; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/h`] = newH; window.db.ref().update(up); }, 200);
+    }
+};
+
+window.removerMovel = function(k, ev) { 
+    if(ev) ev.stopPropagation(); let item = window.usersGlobais[window.jogadorAtual]?.mochila?.[k];
+    if(item && item.inHouse) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).update({inHouse: false, hc: null, hr: null}); } 
+    else { if(confirm("Vender/Descartar este móvel permanentemente?")) window.db.ref('tokyoRpg/users/' + window.jogadorAtual + '/mochila/' + k).remove(); }
+};
+
+window.salvarConfigCasa = function() { 
+    if(!window.jogadorAtual) return; 
+    let nome = document.getElementById("casaNomeInp").value; 
+    let bg = document.getElementById("casaBgInp").value; 
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/casaConfig`).update({ nome: nome, bg: bg }); 
+    window.showNeonToast("Fundo da Casa Salvo!"); 
+    setTimeout(window.renderizarCasaTetris, 500);
+};
