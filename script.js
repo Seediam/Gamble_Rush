@@ -475,46 +475,52 @@ window.clicarGrid = function(x,y, isObs) {
     window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up);
 };
 
+// ==========================================================
+// 4. INICIALIZA O GRID DO VTT (COM SISTEMA DE PROPS E PORTAIS)
+// ==========================================================
 window.initTacticalBoard = function() {
     let b = document.getElementById("gridCells"); if(!b) return; b.innerHTML = "";
     let loc = window.locaisMapa[window.currentSubMapKey] || {}; 
-    let obsList = loc.obs || [];
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
     let conf = window.submapasConfig[window.currentSubMapKey] || {cols: 16, rows: 12, shape: 'quadrado'};
     let cols = conf.cols || 16;
     let rows = conf.rows || 12;
     let shape = conf.shape || 'quadrado';
+    let cellsData = conf.cells || {}; // Puxa os props e portais salvos!
     
-    let cellSize = window.VTT_CELL_SIZE || 50; // Tamanho fixo do quadrado
+    let cellSize = window.VTT_CELL_SIZE || 50; 
 
-    // 1. AJUSTA O TAMANHO EXATO DO MAPA INTEIRO
     let wrapper = document.getElementById("vttWorldWrapper");
     if(wrapper) {
         wrapper.style.width = (cols * cellSize) + "px";
         wrapper.style.height = (rows * cellSize) + "px";
     }
 
-    // 2. MONTA O GRID EM PIXELS (E não mais em fração 1fr)
     b.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
     b.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+
+    // Garante que não tenham caixas vermelhas
+    let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = ""; 
 
     for(let y=0; y<rows; y++) {
         for(let x=0; x<cols; x++) {
             let cid = `${x}_${y}`; 
-            let isObs = obsList.includes(cid);
+            
+            // Lê se o mestre salvou alguma coisa neste quadrado
+            let cData = cellsData[cid] || {};
+            
+            // O quadrado é obstáculo se o mestre marcou no banco
+            let isObs = cData.obs || false; 
             let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
             
+            // Lógica de corte (Tetris)
             let isHidden = false;
-            if (shape === 'l_shape') {
-                if (x >= Math.floor(cols/2) && y < Math.floor(rows/2)) isHidden = true;
-            } else if (shape === 'u_shape') {
-                if (x >= Math.floor(cols/4) && x < Math.floor(cols*0.75) && y < Math.floor(rows/2)) isHidden = true;
-            } else if (shape === 'cross') {
-                if ((x < Math.floor(cols/3) || x >= Math.floor(cols*0.66)) && (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66))) isHidden = true;
-            } else if (shape === 'corredor') {
-                if (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66)) isHidden = true;
-            } else if (shape === 'hexagono') {
+            if (shape === 'l_shape') { if (x >= Math.floor(cols/2) && y < Math.floor(rows/2)) isHidden = true; } 
+            else if (shape === 'u_shape') { if (x >= Math.floor(cols/4) && x < Math.floor(cols*0.75) && y < Math.floor(rows/2)) isHidden = true; } 
+            else if (shape === 'cross') { if ((x < Math.floor(cols/3) || x >= Math.floor(cols*0.66)) && (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66))) isHidden = true; } 
+            else if (shape === 'corredor') { if (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66)) isHidden = true; } 
+            else if (shape === 'hexagono') {
                 let hW = cols/2; let hH = rows/2;
                 let dx = Math.abs(x - hW + 0.5); let dy = Math.abs(y - hH + 0.5);
                 if ((dx / hW) + (dy / hH) > 1.3) isHidden = true; 
@@ -525,16 +531,75 @@ window.initTacticalBoard = function() {
             let cell = document.createElement("div"); 
             cell.id = `cell_${x}_${y}`; 
             cell.className = `tactical-cell ${obsClass} ${hideClass}`;
+            cell.style.position = "relative"; // Ajuda a posicionar o texto do portal
             
-            if (!isHidden) { cell.onclick = () => window.clicarGrid(x, y, isObs); }
+            // SE TIVER IMAGEM DE PROP (Mesa, carro, barril)
+            if(cData.img) {
+                cell.style.backgroundImage = `url('${cData.img}')`;
+                cell.style.backgroundSize = "100% 100%";
+                cell.style.backgroundPosition = "center";
+                cell.style.backgroundRepeat = "no-repeat";
+            }
+
+            // SE TIVER UM PORTAL PARA UMA CASA/AP
+            if(cData.portal) {
+                cell.style.boxShadow = "inset 0 0 15px var(--accent-blue)";
+                cell.innerHTML = `<span style="font-size:9px; background:rgba(0,0,0,0.8); color:#0ff; position:absolute; bottom:0; left:0; width:100%; text-align:center; font-weight:bold; white-space:nowrap; overflow:hidden;">🏠 ${cData.portal}</span>`;
+            }
+
+            // O MÁGICO SHIFT+CLICK!
+            if (!isHidden) { 
+                cell.onclick = (e) => {
+                    // Se for o mestre e segurou Shift, abre a janela de edição!
+                    if(window.isMaster && e.shiftKey) {
+                        window.abrirModalMasterCell(cid);
+                    } else {
+                        // Se for clique normal, tenta andar
+                        if(typeof window.clicarGrid === "function") window.clicarGrid(x, y, isObs, cData.portal); 
+                    }
+                }; 
+            }
             b.appendChild(cell);
         }
     }
+};
+
+// ==========================================================
+// FUNÇÕES DA JANELINHA DO MESTRE (SHIFT + CLICK)
+// ==========================================================
+window.abrirModalMasterCell = function(cid) {
+    document.getElementById("mcCid").value = cid;
     
-    // === A SOLUÇÃO ESTÁ AQUI ===
-    // Limpamos os overlays antigos e NUNCA mais desenhamos caixas vermelhas e textos de "Salões"
-    let ro = document.getElementById("roomOverlays"); 
-    if(ro) ro.innerHTML = ""; 
+    // Puxa os dados que já existem para não apagar sem querer
+    let conf = window.submapasConfig[window.currentSubMapKey] || {};
+    let cellData = (conf.cells && conf.cells[cid]) ? conf.cells[cid] : {};
+
+    document.getElementById("mcObs").checked = !!cellData.obs;
+    document.getElementById("mcImg").value = cellData.img || "";
+    document.getElementById("mcPortal").value = cellData.portal || "";
+
+    // Mostra o modal que já está no seu HTML
+    let modal = document.getElementById('masterCellModal');
+    if(modal) modal.style.display = 'flex';
+};
+
+window.salvarCelulaCustom = function() {
+    let cid = document.getElementById("mcCid").value;
+    let isObs = document.getElementById("mcObs").checked;
+    let imgUrl = document.getElementById("mcImg").value.trim();
+    let portalName = document.getElementById("mcPortal").value.trim();
+
+    if(!window.currentSubMapKey || !cid) return;
+
+    // Salva no Firebase e a tela atualiza em milissegundos para todo mundo!
+    window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}`).update({
+        obs: isObs,
+        img: imgUrl,
+        portal: portalName
+    });
+
+    document.getElementById('masterCellModal').style.display = 'none';
+    if(typeof window.showNeonToast === "function") window.showNeonToast("Quadrado atualizado!");
 };
 
 window.updateTacticalBoard = function() {
