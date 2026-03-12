@@ -1,4 +1,5 @@
 // 1. CONFIGURAÇÕES BASE E DEUSES
+window.submapasConfigs = {}; // Armazena o shape e tamanho de cada local
 window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
 window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
 window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.movimentosRestantes = 0; window.connectionRef = null;
@@ -1025,6 +1026,11 @@ window.onload = function() {
             window.usersGlobais = s.val()||{}; 
             window.renderizarFicha(); window.renderizarMochila(); window.drawMapVisuals(); window.drawCasaBoard(); window.desenharListaUsuarios(); window.renderizarPanteao(); window.updateTacticalBoard();
         });
+        window.db.ref('tokyoRpg/submapsConfigs').on('value', s => { 
+    window.submapasConfigs = s.val() || {}; 
+    window.initTacticalBoard(); 
+    window.updateTacticalBoard(); 
+});
         window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; window.drawMapVisuals(); window.desenharListaUsuarios(); });
         window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; window.drawMapVisuals(); });
         window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; window.renderizarLojaUI(); window.renderizarFicha(); window.renderizarMochila(); window.drawCasaBoard(); }); 
