@@ -2316,46 +2316,47 @@ window.extractMentionsFromText = function(text, context){
 };
 // Envia eventos de menção para inbox do alvo (funciona offline)
 window.dispatchMentions = function({ from, contextType, contextId, text }) {
-    if (!window.db || !text) return;
-    
-    // Procura todas as menções que começam com @
-    let matches = text.match(/@([\w_]+)/g);
-    if (!matches) return;
+    try {
+        if (!window.db || !text) return;
+        
+        // Procura todas as menções que começam com @
+        let matches = text.match(/@([\w_]+)/g);
+        if (!matches) return;
 
-    let users = Object.keys(window.usersGlobais || {});
-    let mencionados = new Set();
+        let users = Object.keys(window.usersGlobais || {});
+        let mencionados = new Set();
 
-    matches.forEach(m => {
-        let nomeMencionadoComUnderline = m.substring(1); // Tira o @
-        let nomeMencionadoOriginal = nomeMencionadoComUnderline.replace(/_/g, ' '); // Volta o _ para espaço
+        matches.forEach(m => {
+            let nomeMencionadoComUnderline = m.substring(1); // Tira o @
+            let nomeMencionadoOriginal = nomeMencionadoComUnderline.replace(/_/g, ' '); // Volta o _ para espaço
 
-        // Encontra o usuário na base
-        let usuarioReal = users.find(u => u.toLowerCase() === nomeMencionadoOriginal.toLowerCase());
+            // Encontra o usuário na base
+            let usuarioReal = users.find(u => u.toLowerCase() === nomeMencionadoOriginal.toLowerCase());
 
-        if (usuarioReal && usuarioReal !== from) {
-            mencionados.add(usuarioReal);
-        }
-    });
-
-    // Envia a notificação para cada usuário marcado
-    mencionados.forEach(alvo => {
-        window.db.ref(`tokyoRpg/users/${alvo}/notificacoes`).push({
-            from: from,
-            contextType: contextType,
-            contextId: contextId,
-            texto: text,
-            lida: false,
-            ts: Date.now()
+            if (usuarioReal && usuarioReal !== from) {
+                mencionados.add(usuarioReal);
+            }
         });
-    });
-};
-      // NOVIDADE: Manda notificação oficial para gerar a bolinha
-      let tipoNotif = contextType === "gchat" ? "mention_chat" : "mention_post";
-      window.enviarNotificacao(target, tipoNotif, from, "mencionou você", contextId);
-    
-   catch(e){
-    console.log("dispatchMentions error", e);
-  }
+
+        // Envia a notificação para cada usuário marcado
+        mencionados.forEach(alvo => {
+            window.db.ref(`tokyoRpg/users/${alvo}/notificacoes`).push({
+                from: from,
+                contextType: contextType,
+                contextId: contextId,
+                texto: text,
+                lida: false,
+                ts: Date.now()
+            });
+
+            // NOVIDADE: Manda notificação oficial para gerar a bolinha
+            let tipoNotif = contextType === "gchat" ? "mention_chat" : "mention_post";
+            window.enviarNotificacao(alvo, tipoNotif, from, "mencionou você", contextId);
+        });
+
+    } catch(e) {
+        console.log("dispatchMentions error", e);
+    }
 };
     window._replyDraft = null;
 
