@@ -1106,3 +1106,117 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 .mention-item:hover {
     background: #222;
 }
+
+/* =========================================================
+   WHATSAPP REPLY (G-CHAT) + NOTIFICAÇÕES DE MENÇÃO
+   ========================================================= */
+
+/* Reply preview acima do input do chat */
+.reply-preview{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background: rgba(0,0,0,0.85);
+  border-top: 1px solid rgba(0,229,255,0.35);
+  border-bottom: 1px solid rgba(0,229,255,0.35);
+  padding: 10px 12px;
+  margin: 0 10px;
+  border-radius: 10px;
+}
+.reply-bar{
+  width:4px;
+  height:34px;
+  border-radius:10px;
+  background: var(--accent-blue);
+  box-shadow: 0 0 10px rgba(0,229,255,0.5);
+}
+.reply-texts{ flex:1; min-width:0; }
+.reply-to-name{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--accent-blue);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+.reply-to-text{
+  font-size: 12px;
+  color:#bbb;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.reply-cancel{
+  background: transparent;
+  border:none;
+  color:#aaa;
+  font-size: 16px;
+  cursor:pointer;
+}
+.reply-cancel:hover{ color: var(--accent-red); }
+
+/* Stack de notificação top-right (máx 3) */
+.mention-notify-stack{
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 99999;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  pointer-events:none;
+}
+
+.mention-notify{
+  width: 280px;
+  max-width: calc(100vw - 28px);
+  display:flex;
+  gap: 10px;
+  align-items:center;
+
+  background: rgba(0,0,0,0.88);
+  border: 1px solid rgba(0,229,255,0.5);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 0 25px rgba(0,229,255,0.15);
+
+  transform: translateX(120%);
+  opacity: 0;
+  animation: mentionIn 0.35s cubic-bezier(0.25,1,0.5,1) forwards;
+}
+
+@keyframes mentionIn{
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.mention-notify.out{
+  animation: mentionOut 0.35s ease forwards;
+}
+
+@keyframes mentionOut{
+  to { transform: translateX(120%); opacity: 0; }
+}
+
+.mention-notify img{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,229,255,0.6);
+  object-fit: cover;
+  background:#000;
+}
+
+.mention-notify .mn-texts{ min-width:0; }
+.mention-notify .mn-title{
+  color:#fff;
+  font-weight:900;
+  font-size: 12px;
+  line-height: 1.1;
+}
+.mention-notify .mn-sub{
+  color:#bbb;
+  font-size: 12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width: 210px;
+}
