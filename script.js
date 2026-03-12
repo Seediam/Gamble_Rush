@@ -2353,7 +2353,7 @@ window.dispatchMentions = function({ from, contextType, contextId, text }) {
       let tipoNotif = contextType === "gchat" ? "mention_chat" : "mention_post";
       window.enviarNotificacao(target, tipoNotif, from, "mencionou você", contextId);
     
-  }catch(e){
+   catch(e){
     console.log("dispatchMentions error", e);
   }
 };
