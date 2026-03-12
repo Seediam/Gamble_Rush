@@ -2544,3 +2544,124 @@ window.marcarNotificacoesComoLidas = function(tabId) {
         if (Object.keys(updates).length > 0) notifRef.update(updates);
     });
 };
+// =========================================================
+// CORREÇÃO DEFINITIVA: MENÇÕES, COMENTÁRIOS E NOTIFICAÇÕES
+// =========================================================
+
+// 1. Enviar Comentário com gatilho de menção
+window.enviarComentario = function() {
+    if(!window.currentPostIdForComment || !window.jogadorAtual) return;
+    let inp = document.getElementById("commentInput");
+    let txt = inp.value.trim();
+    if(!txt) return;
+    
+    window.db.ref(`tokyoRpg/posts/${window.currentPostIdForComment}/comentarios`).push({
+        autor: window.jogadorAtual,
+        texto: txt,
+        timestamp: Date.now()
+    }).then(() => {
+        inp.value = ""; 
+        window.closeMentionDropdown();
+
+        // Dispara notificação da menção!
+        if(typeof window.dispatchMentions === "function") {
+            window.dispatchMentions({ 
+                from: window.jogadorAtual, 
+                contextType: "gpost", 
+                contextId: window.currentPostIdForComment, 
+                text: txt 
+            });
+        }
+    });
+};
+
+// 2. Enviar Chat com gatilho de menção
+window.enviarMsgGamble = function() {
+    try {
+        if (!window.db || !window.jogadorAtual) return;
+        const inp = document.getElementById("chatInputMsg");
+        const txt = (inp.value || "").trim(); 
+        if (!txt) return;
+
+        let msgData = { 
+            nome: window.jogadorAtual, 
+            texto: txt, 
+            data: new Date().toLocaleTimeString(), 
+            ts: Date.now() 
+        };
+
+        if (window.mensagemEmResposta) {
+            msgData.replyTo = window.mensagemEmResposta.nome;
+            msgData.replyText = window.mensagemEmResposta.texto;
+        }
+
+        window.db.ref("tokyoRpg/chat").push(msgData).then(() => {
+            // Dispara menções
+            if(typeof window.dispatchMentions === "function") {
+                window.dispatchMentions({ 
+                    from: window.jogadorAtual, 
+                    contextType: "gchat", 
+                    contextId: "", 
+                    text: txt 
+                });
+            }
+        });
+        
+        inp.value = "";
+        if(typeof window.cancelarResposta === "function") window.cancelarResposta();
+    } catch (e) { console.error("Erro ao enviar.", e); }
+};
+
+// 3. Atualizar Badges (Bolinhas) ligando com as IDs do seu HTML
+window.atualizarBadgesHUD = function(chat, post, challenger) {
+    let total = chat + post + challenger;
+
+    let badgeMain = document.getElementById('badge-igamble-main');
+    if (badgeMain) { badgeMain.innerText = total; badgeMain.style.display = total > 0 ? 'flex' : 'none'; }
+
+    let badgeChat = document.getElementById('badge-chat');
+    if (badgeChat) { badgeChat.innerText = chat; badgeChat.style.display = chat > 0 ? 'flex' : 'none'; }
+
+    let badgePosts = document.getElementById('badge-posts');
+    if (badgePosts) { badgePosts.innerText = post; badgePosts.style.display = post > 0 ? 'flex' : 'none'; }
+
+    let badgeEmbates = document.getElementById('badge-embates');
+    if (badgeEmbates) { badgeEmbates.innerText = challenger; badgeEmbates.style.display = challenger > 0 ? 'flex' : 'none'; }
+};
+
+// 4. Escutador de Notificações à prova de falhas
+window.escutarNotificacoes = function() {
+    if (!window.jogadorAtual || !window.db) return;
+    let notifRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/notificacoes`);
+
+    // Conta tudo para as Bolinhas (Badges)
+    notifRef.on('value', snap => {
+        let data = snap.val() || {};
+        let nGchat = 0, nGpost = 0, nGchallenger = 0;
+
+        Object.values(data).forEach(n => {
+            if (!n.lida) {
+                if (n.contextType === "gchat") nGchat++;
+                if (n.contextType === "gpost") nGpost++;
+                if (n.contextType === "embates") nGchallenger++;
+            }
+        });
+        window.atualizarBadgesHUD(nGchat, nGpost, nGchallenger);
+    });
+
+    // Mostra o Popup Animado (Toast) apenas para NOVAS mensagens
+    let readyToNotify = false;
+    notifRef.limitToLast(1).on('child_added', snap => {
+        if (!readyToNotify) return; // Ignora o histórico na hora que o usuário loga
+        let n = snap.val();
+        if (!n || n.lida) return;
+        
+        if(typeof window.mostrarNotificacaoHUD === "function") {
+            window.mostrarNotificacaoHUD(n.from, n.contextType, n.texto);
+        }
+    });
+    
+    // Libera os popups 2 segundos após fazer login
+    setTimeout(() => { readyToNotify = true; }, 2000);
+};
+
