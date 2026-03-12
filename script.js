@@ -550,8 +550,22 @@ window.initTacticalBoard = function() {
 
 window.updateTacticalBoard = function() {
     if(!window.currentSubMapKey) return;
+    
+    // === CÓDIGO NOVO: MOSTRA O PAINEL SE FOR O MESTRE ===
+    let painelMestre = document.getElementById("mestreVTT");
+    if(painelMestre) {
+        if(window.isMaster) {
+            painelMestre.style.display = "flex"; // Mostra os botões!
+        } else {
+            painelMestre.style.display = "none"; // Esconde dos jogadores
+        }
+    }
+    // ====================================================
+
     let grid = window.submapasGlobais[window.currentSubMapKey] || {};
     let layer = document.getElementById("tokensLayer"); if(!layer) return;
+    
+    // ... (resto do código continua igualzinho ao que já estava) ...
     let loc = window.locaisMapa[window.currentSubMapKey] || {}; let obsList = loc.obs || [];
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
