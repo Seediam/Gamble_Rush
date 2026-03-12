@@ -82,17 +82,20 @@
     <!-- BASE DESKTOP (FUNDO QUANDO O CELULAR ESTÁ MINIMIZADO) -->
     <div id="base-desktop">
         
-        <!-- CONTROLES FLUTUANTES GLOBAIS -->
-        <div class="floating-controls">
-            <!-- BOTÃO PARA ABRIR O CELULAR -->
-            <div class="btn-floating" id="btnPhoneToggle" onclick="window.abrirCelularMain()">📱</div>
-            
-            <!-- BOTÃO HOME (Voltar pro Celular quando em um APP) -->
-            <div class="btn-floating" id="btnHomeApp" onclick="window.fecharApp()">⌂</div>
-            
-            <!-- BOTÃO VOLTAR iGAMBLE -->
-            <div class="btn-floating" id="btnBackIgamble" onclick="window.voltarParaMenuIgamble()" style="display:none; border-color:var(--accent-purple); color:var(--accent-purple); box-shadow: 0 0 15px rgba(176,0,255,0.5);">↩</div>
-        </div>
+       <!-- CONTROLES FLUTUANTES GLOBAIS -->
+<div class="floating-controls">
+    <!-- BOTÃO PARA ABRIR O CELULAR -->
+    <div class="btn-floating" id="btnPhoneToggle" onclick="window.abrirCelularMain()">📱</div>
+    
+    <!-- BOTÃO HOME (Voltar pro Celular quando em um APP) -->
+    <div class="btn-floating" id="btnHomeApp" onclick="window.fecharApp()">⌂</div>
+    
+    <!-- NOVO: BOTÃO SAIR DO VTT (PLANETINHA) - Fica invisível até entrar numa sala -->
+    <div class="btn-floating" id="btnSairVTT" onclick="window.fecharSubMapa()" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); font-size:18px;" title="Sair da Sala">🌍</div>
+    
+    <!-- BOTÃO VOLTAR iGAMBLE -->
+    <div class="btn-floating" id="btnBackIgamble" onclick="window.voltarParaMenuIgamble()" style="display:none; border-color:var(--accent-purple); color:var(--accent-purple); box-shadow: 0 0 15px rgba(176,0,255,0.5);">↩</div>
+</div>
 
         <!-- GAVETA LATERAL DE AGENTES -->
         <div class="sidebar minimized" id="sidebarAgents">
@@ -202,22 +205,20 @@
                             </div>
                         </div>
                        <!-- AREA VISUAL MAPA E TABULEIRO -->
-<!-- AREA VISUAL MAPA E TABULEIRO (SOMENTE VTT AGORA) -->
 <div class="map-visual-area">
     
-    <!-- MAPA GLOBAL ANTIGO (DESATIVADO PERMANENTEMENTE) -->
-    <div class="map-canvas" id="mapCanvas" style="display:none !important;"></div>
+    <!-- MAPA GLOBAL DE SELEÇÃO (BLOCOS VERMELHOS) -->
+    <div class="map-canvas" id="mapCanvas"></div>
     
-    <!-- TABULEIRO VTT INTERNO (TELA ÚNICA) -->
-    <div class="submap-canvas" id="subMapCanvas" style="display:flex; width: 100%; height: 100%; flex-direction: column;">
+    <!-- TABULEIRO VTT INTERNO (MESA) -->
+    <div class="submap-canvas" id="subMapCanvas" style="display:none; width: 100%; height: 100%; flex-direction: column;">
         <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.85); padding:10px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-            <div><h2 id="subMapTitle" style="margin:0; font-size:14px;">Mesa Virtual</h2><p id="movRestantes" style="color:#0f0;font-size:11px;margin:0; font-weight:bold;">Passos Livres: 0</p></div>
+            <div><h2 id="subMapTitle" style="margin:0; font-size:14px;">Local</h2><p id="movRestantes" style="color:#0f0;font-size:11px;margin:0; font-weight:bold;">Passos Livres: 0</p></div>
             <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0;"></div>
             <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
                 <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
                 <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim de Turno</button>
                 
-                <!-- PAINEL DO MESTRE -->
                 <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px; flex-wrap:wrap; align-items: center;">
                     <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Iniciativas</button>
                     <input type="text" id="vttBgInp" placeholder="URL Fundo..." style="width:100px; padding:5px; font-size:10px;">
@@ -240,7 +241,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Botão de Sair Planetinha REMOVIDO DAQUI -->
         </div>
 
         <div id="vttFoodActions" class="food-action-bar"></div>
