@@ -3729,3 +3729,98 @@ window.encerrarLigacaoLimpo = function() {
     window.quemTaLigando = null;
     window.showNeonToast("Ligação encerrada.");
 };
+// =========================================================
+// CORREÇÃO DEFINITIVA: GERAÇÃO DE CHIP E ÁUDIO MUDO
+// =========================================================
+
+window.renderizarFicha = function() {
+    if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
+    let u = window.usersGlobais[window.jogadorAtual]; 
+    let r = window.getSafeRpg(u); 
+    let mInteg = window.calcularMaxInteg(u); 
+    let buffs = window.calcularBuffsMoveis(u); 
+    let def = window.calcularDefesa(u);
+    
+    if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual);
+    if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
+    let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
+    if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
+    if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || "");
+    if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
+    
+    window.setElText("lblDef", def); 
+    if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres;
+    window.setElText("lblPts", r.pontosLivres);
+    window.setElText("valFor", r.for + buffs.for); window.setElText("valAgi", r.agi + buffs.agi); window.setElText("valMan", r.man + buffs.man); window.setElText("valVig", r.vig + buffs.vig); window.setElText("valInt", r.int + buffs.int);
+    window.setElText("lblIntegMax", mInteg); window.setElText("lblIntegVal", r.integridade + "%");
+    
+    let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
+    let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
+    
+    // VERIFICADOR BLINDADO: Acha o Celular pelo Nome ou Tipo
+    let temCel = u.numero ? true : false;
+    let temCasa = (u.casa && Object.keys(u.casa).length > 0) ? true : false;
+    
+    if (u.mochila) {
+        Object.values(u.mochila).forEach(i => {
+            let nomeItem = (i.nome || "").toLowerCase();
+            let tipoItem = (i.tipo || "").toLowerCase();
+            
+            // Se tiver 'tecnologia' no tipo OU 'celular'/'telefone' no nome, o jogador ganha o chip!
+            if (tipoItem === 'tecnologia' || nomeItem.includes('celular') || nomeItem.includes('telefone') || nomeItem.includes('gamblenger')) {
+                temCel = true;
+            }
+            if (tipoItem === 'móvel' || tipoItem === 'movel') {
+                temCasa = true;
+            }
+        });
+    }
+    
+    // MÁGICA DO CHIP (GERA NÚMERO NA HORA)
+    if (temCel && !u.numero && window.jogadorAtual !== "MESTRE") {
+        let novoNumero = "9" + Math.floor(1000 + Math.random() * 9000).toString();
+        u.numero = novoNumero; 
+        
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/numero`).set(novoNumero).then(() => {
+            window.showNeonToast(`📱 Celular Ativado! Seu novo número é: ${novoNumero}`);
+            if(document.getElementById("perfilTelefone")) window.setElText("perfilTelefone", novoNumero);
+        });
+    }
+    
+    // Atualiza a interface
+    if(document.getElementById("perfilTelefone")) window.setElText("perfilTelefone", u.numero || "Sem Sinal");
+
+    // LIBERA O CELULAR
+    let iCel = document.getElementById('hb-celular'); 
+    if(iCel) { 
+        if(temCel || window.isMaster) { 
+            iCel.classList.remove('locked'); 
+            iCel.onclick = () => { window.abrirApp('tab-celular', false); window.carregarContatosSMS(); }; 
+        } else { 
+            iCel.classList.add('locked'); 
+            iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre um Celular na Gamblezon."); 
+        } 
+    }
+    
+    // LIBERA A CASA
+    let iCasa = document.getElementById('hb-casa'); 
+    if(iCasa) { 
+        if(temCasa || window.isMaster) { 
+            iCasa.classList.remove('locked'); 
+            iCasa.onclick = () => window.abrirApp('tab-casa', false); 
+        } else { 
+            iCasa.classList.add('locked'); 
+            iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); 
+        } 
+    }
+};
+
+// FORÇAR ÁUDIO A DESMUTAR QUANDO A LIGAÇÃO CONECTA
+// Esse código extra garante que o navegador dos jogadores não mutem a chamada!
+setInterval(() => {
+    let remoteAudio = document.getElementById("remoteAudio");
+    if(remoteAudio && window.callIdAtual) {
+        if(remoteAudio.muted) remoteAudio.muted = false; // Tira do mudo à força
+        if(remoteAudio.volume < 1.0) remoteAudio.volume = 1.0; // Põe volume no 100% à força
+    }
+}, 3000);
