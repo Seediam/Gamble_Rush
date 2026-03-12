@@ -25,21 +25,21 @@ window.deusesPanteao = [
 ];
 
 window.locaisMapa = {
-    "p1": { nome: "Praça Central", x: 50, y: 50, salas:, 
-    "p2": { nome: "Ramen Fantasma", x: 35, y: 65, salas: ,
-    "p3": { nome: "Viela da Fome", x: 15, y: 65, salas: ,
-    "p4": { nome: "Clube Neon", x: 50, y: 80, salas: ,
-    "p5": { nome: "Avenida Ouro", x: 35, y: 35, salas:, 
-    "p6": { nome: "Bar Submundo", x: 15, y: 35, salas: ,
-    "p7": { nome: "Beco Sombrio", x: 15, y: 50, salas:,
-    "p8": { nome: "Esconderijo Alfa", x: 15, y: 80, salas,
-    "p9": { nome: "Alameda das Sombras", x: 65, y: 35, salas:, 
-    "p10":{ nome: "Apts Safehouse", x: 85, y: 35, salas:, 
-    "p11":{ nome: "Covil de Hackers", x: 85, y: 50, salas: ,
-    "p12":{ nome: "Mercado Negro", x: 85, y: 65, salas:, 
-    "p13":{ nome: "QG da Yakuza", x: 65, y: 80, salas: ,
-    "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: ,
-    "p15":{ nome: "Cemitério", x: 35, y: 80, salas:,
+    "p1": { nome: "Praça Central", x: 50, y: 50, salas: }, 
+    "p2": { nome: "Ramen Fantasma", x: 35, y: 65, salas: } ,
+    "p3": { nome: "Viela da Fome", x: 15, y: 65, salas: },
+    "p4": { nome: "Clube Neon", x: 50, y: 80, salas: },
+    "p5": { nome: "Avenida Ouro", x: 35, y: 35, salas:}, 
+    "p6": { nome: "Bar Submundo", x: 15, y: 35, salas: },
+    "p7": { nome: "Beco Sombrio", x: 15, y: 50, salas:},
+    "p8": { nome: "Esconderijo Alfa", x: 15, y: 80, salas: },
+    "p9": { nome: "Alameda das Sombras", x: 65, y: 35, salas:}, 
+    "p10":{ nome: "Apts Safehouse", x: 85, y: 35, salas:}, 
+    "p11":{ nome: "Covil de Hackers", x: 85, y: 50, salas:} ,
+    "p12":{ nome: "Mercado Negro", x: 85, y: 65, salas:}, 
+    "p13":{ nome: "QG da Yakuza", x: 65, y: 80, salas: },
+    "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: },
+    "p15":{ nome: "Cemitério", x: 35, y: 80, salas:},
 };
 window.conexoesMapa = [ {de:"p1", para:"p2"}, {de:"p2", para:"p3"}, {de:"p1", para:"p4"}, {de:"p1", para:"p5"}, {de:"p5", para:"p6"}, {de:"p1", para:"p9"}, {de:"p9", para:"p10"}, {de:"p10", para:"p11"}, {de:"p11", para:"p12"}, {de:"p2", para:"p13"}, {de:"p13", para:"p14"}, {de:"p3", para:"p8"}, {de:"p7", para:"p6"}, {de:"p3", para:"p7"}, {de:"p2", para:"p15"}, {de:"p4", para:"p13"} ];
 window.rotasSecretasGaia = [ {de:"p1", para:"p6"}, {de:"p15", para:"p10"}, {de:"p8", para:"p14"}, {de:"p11", para:"p4"} ];
