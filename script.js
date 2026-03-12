@@ -2352,7 +2352,7 @@ window.dispatchMentions = function({ from, contextType, contextId, text }) {
       // NOVIDADE: Manda notificação oficial para gerar a bolinha
       let tipoNotif = contextType === "gchat" ? "mention_chat" : "mention_post";
       window.enviarNotificacao(target, tipoNotif, from, "mencionou você", contextId);
-    });
+    
   }catch(e){
     console.log("dispatchMentions error", e);
   }
