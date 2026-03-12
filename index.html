@@ -736,7 +736,28 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
         <div id="tokensLayer" class="tokens-layer"></div>
     </div>
 </div>
-	
+	<div class="modal-overlay" id="masterCellModal" style="z-index: 99999;">
+    <div class="modal-content" style="border-color: #00ff00;">
+        <h3 style="color:#00ff00; text-shadow:0 0 10px #00ff00;">🔧 Editar Quadrado</h3>
+        <input type="hidden" id="mcCid">
+        
+        <label style="color:#fff; display:flex; align-items:center; gap:10px; margin: 15px 0; background:#111; padding:10px; border-radius:4px; border:1px solid #333; cursor:pointer;">
+            <input type="checkbox" id="mcObs" style="width:20px; height:20px; box-shadow:none;"> 
+            É Obstáculo/Parede?
+        </label>
+        
+        <div style="text-align:left; font-size:10px; color:#aaa; margin-bottom:5px;">URL Token/Prop (ex: Forgotten Adventures)</div>
+        <input type="text" id="mcImg" placeholder="https://..." style="margin-bottom:15px; font-size:12px;">
+        
+        <div style="text-align:left; font-size:10px; color:var(--accent-blue); margin-bottom:5px;">PORTAL (Teleporte para Casa/AP)</div>
+        <input type="text" id="mcPortal" placeholder="Nome do Dono da Casa" style="margin-bottom:15px; border-color:var(--accent-blue); font-size:12px;">
+        
+        <div style="display:flex; gap:10px;">
+            <button class="action-btn" style="flex:1; border-color:#0f0; color:#0f0;" onclick="window.salvarCelulaCustom()">Salvar</button>
+            <button class="action-btn" style="flex:1; border-color:#f00; color:#f00;" onclick="document.getElementById('masterCellModal').style.display='none'">Cancelar</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
 <!-- ============================================== -->
