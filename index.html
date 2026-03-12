@@ -655,3 +655,32 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
 </html>
 <!-- ============================================== -->
    
+<!-- TELA DE CHAMADA ATIVA (VOICE UI BONITA) -->
+    <div id="activeCallModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(5,5,8,0.98); z-index:9999999; flex-direction:column; justify-content:center; align-items:center;">
+        
+        <h2 id="activeCallTimer" style="color:#00e5ff; font-family:monospace; margin-bottom:40px; font-size:40px; text-shadow:0 0 20px rgba(0,229,255,0.8); letter-spacing: 3px;">00:00</h2>
+        
+        <div style="display:flex; align-items:center; gap:50px; margin-bottom:60px; width:100%; justify-content:center;">
+            
+            <!-- Meu Avatar -->
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <img id="activeCallMyAvatar" src="" style="width:140px; height:140px; border-radius:50%; border:3px solid var(--accent-blue); object-fit:cover; transition: box-shadow 0.05s ease-out; box-shadow: 0 0 10px var(--accent-blue);">
+                <span id="activeCallMyName" style="color:var(--accent-blue); margin-top:15px; font-weight:bold; font-size:20px; text-shadow: 0 0 10px var(--accent-blue);">Você</span>
+            </div>
+            
+            <!-- Ícone Central Animado -->
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="color:#fff; font-size:45px; animation: pulse 1.5s infinite; text-shadow: 0 0 20px #fff;">🎙️</div>
+                <div style="color:#0f0; font-size:12px; font-weight:bold; margin-top:10px; letter-spacing: 2px;">CONEXÃO ESTÁVEL</div>
+            </div>
+            
+            <!-- Avatar do Alvo -->
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <img id="activeCallTargetAvatar" src="" style="width:140px; height:140px; border-radius:50%; border:3px solid var(--accent-red); object-fit:cover; transition: box-shadow 0.05s ease-out; box-shadow: 0 0 10px var(--accent-red);">
+                <span id="activeCallTargetName" style="color:var(--accent-red); margin-top:15px; font-weight:bold; font-size:20px; text-shadow: 0 0 10px var(--accent-red);">Alvo</span>
+            </div>
+            
+        </div>
+        
+        <button onclick="window.encerrarLigacao()" style="background:#ff1a55; color:#fff; padding:15px 50px; border:none; border-radius:30px; font-weight:900; cursor:pointer; font-size:18px; box-shadow:0 0 20px rgba(255,26,85,0.6); transition:0.2s; border: 2px solid #fff;">🔴 ENCERRAR CHAMADA</button>
+    </div>
