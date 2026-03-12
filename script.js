@@ -3826,7 +3826,7 @@ setInterval(() => {
 }, 3000);
 
 // =========================================================
-// SISTEMA DE VOICE CHAT: ANTI-FIREWALL E ANTI-MUDO MOBILE
+// SISTEMA DE VOICE CHAT: ANTI-FIREWALL COM SERVIDOR TURN (RELAY)
 // =========================================================
 
 window.rtcPeer = null;
@@ -3836,13 +3836,28 @@ window._escutaLigacaoAtiva = false;
 window.callStartTime = 0; 
 window.quemTaLigando = null; 
 
-// Aumentamos o número de Antenas (STUN) para furar firewalls e 4G
+// CONFIGURAÇÃO BLINDADA: STUN (P2P) + TURN (SERVIDOR NA NUVEM)
 const rtcServers = { 
     iceServers: [
+        // Plano A: Tenta conexão direta (Rápida e leve)
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' }
+        // Plano B: Se o 4G/Firewall bloquear, usa esse servidor central (Relay)
+        { 
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        { 
+            urls: 'turn:openrelay.metered.ca:443',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        },
+        { 
+            urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+            username: 'openrelayproject',
+            credential: 'openrelayproject'
+        }
     ] 
 };
 
@@ -3882,7 +3897,6 @@ window.iniciarLigacao = async function() {
     window.callStartTime = 0; 
     window.quemTaLigando = alvo;
 
-    // MÁGICA MOBILE: Força o alto-falante a destravar no exato momento do clique
     let remoteAudio = document.getElementById("remoteAudio");
     if(remoteAudio) remoteAudio.play().catch(e => {});
 
@@ -3902,14 +3916,6 @@ window.iniciarLigacao = async function() {
 
     window.rtcPeer = new RTCPeerConnection(rtcServers);
     window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
-
-    // RADAR DE FALHA DE REDE (Avisa se a internet de um deles bloquear o áudio)
-    window.rtcPeer.oniceconnectionstatechange = () => {
-        if(window.rtcPeer && window.rtcPeer.iceConnectionState === "failed") {
-            window.showNeonToast("❌ A rede bloqueou o áudio (Firewall/4G rígido).");
-            window.encerrarLigacao();
-        }
-    };
 
     window.rtcPeer.ontrack = event => {
         if(remoteAudio) {
@@ -3984,7 +3990,6 @@ setInterval(() => {
 window.aceitarLigacao = async function() {
     document.getElementById("callModal").style.display = "none";
 
-    // MÁGICA MOBILE: Força o alto-falante a destravar no exato momento do clique
     let remoteAudio = document.getElementById("remoteAudio");
     if(remoteAudio) remoteAudio.play().catch(e => {});
 
@@ -4004,14 +4009,6 @@ window.aceitarLigacao = async function() {
 
     window.rtcPeer = new RTCPeerConnection(rtcServers);
     window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
-
-    // RADAR DE FALHA DE REDE
-    window.rtcPeer.oniceconnectionstatechange = () => {
-        if(window.rtcPeer && window.rtcPeer.iceConnectionState === "failed") {
-            window.showNeonToast("❌ Sua rede bloqueou a conexão (Firewall/4G).");
-            window.encerrarLigacao();
-        }
-    };
 
     window.rtcPeer.ontrack = event => {
         if(remoteAudio) {
