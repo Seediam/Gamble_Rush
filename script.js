@@ -2399,5 +2399,3 @@ window.startMentionInboxListener = function(){
     window.renderMentionNotify(item);
   });
 };
-    
-};
