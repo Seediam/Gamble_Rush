@@ -1801,7 +1801,6 @@ window.enviarNotificacao = function(alvo, tipo, remetente, texto, linkId = null)
     });
 };
 
-// Escuta notificações não lidas para o usuário atual
 window.iniciarEscutaNotificacoes = function() {
     if (!window.jogadorAtual || !window.db) return;
     
@@ -1822,7 +1821,6 @@ window.iniciarEscutaNotificacoes = function() {
 
                 if (Date.now() - notif.timestamp < 10000 || !window.notificacoesAntigasExibidas) {
                     window.showNeonToast(`🔔 ${notif.remetente} ${notif.texto}`);
-                    // AVISO: Não mudamos pra lida aqui! A bolinha fica até ele clicar no App.
                 }
             }
         });
@@ -1870,11 +1868,6 @@ window.switchIGambleTab = function(tabId, btnEl) {
     if(tabId === 'posts') window.marcarNotificacoesComoLidas('post');
     if(tabId === 'embates') window.marcarNotificacoesComoLidas('embate');
 };
-        window.notificacoesAntigasExibidas = true;
-        
-        // Atualiza a bolinha (badge) no bg2 ou menu
-        window.atualizarBadgeNotificacoes(naoLidas);
-    });
 };
 
 window.atualizarBadgeNotificacoes = function(qtd) {
