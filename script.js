@@ -1258,7 +1258,10 @@ window.iniciarListenersIgamble = function() {
       const iLiked = (p.likers && window.jogadorAtual && p.likers[window.jogadorAtual]) ? "liked" : ""; const iReposted = (p.reposters && window.jogadorAtual && p.reposters[window.jogadorAtual]) ? "reposted" : ""; const numComents = p.comentarios ? Object.keys(p.comentarios).length : 0;
       const delBtn = window.canDeletePost(p) ? `<button class="post-del-btn" onclick="window.excluirPost('${p.id}')">EXCLUIR</button>` : ""; const adTag = p.isAd ? `<span class="post-ad-tag">⭐ PATROCINADO</span>` : "";
 
-      feed.innerHTML += `<div class="post-card" id="post-${p.id}">${hasBg}${hasImg}${hasAudio}<div class="post-overlay"><div class="post-header"><div class="post-header-left"><img src="${p.avatar || "https://api.dicebear.com/9.x/adventurer/svg?seed=Anon"}" class="post-avatar"><div><div class="post-name">${p.autor || "---"} ${adTag}</div><div style="font-size:10px; color:#aaa;">${timeStr}</div></div></div>${delBtn}</div><div class="post-body"><div class="post-caption">${p.texto || ""}</div><div class="post-sidebar"><button class="post-btn-vert ${iLiked}" onclick="window.curtirPost('${p.id}')">❤ <span>${p.likes||0}</span></button><button class="post-btn-vert" onclick="window.abrirComentarios('${p.id}')">💬 <span>${numComents}</span></button><button class="post-btn-vert ${iReposted}" onclick="window.repostarPost('${p.id}')">🔄 <span>${p.reposts||0}</span></button></div></div></div></div>`;
+      // NOVIDADE: Avatar Wrapper com o Botão Follow acoplado
+      let followBtnHtml = typeof window.getFollowButtonHtml === "function" ? window.getFollowButtonHtml(p.autor) : "";
+
+      feed.innerHTML += `<div class="post-card" id="post-${p.id}">${hasBg}${hasImg}${hasAudio}<div class="post-overlay"><div class="post-header"><div class="post-header-left"><div class="avatar-wrapper"><img src="${p.avatar || "https://api.dicebear.com/9.x/adventurer/svg?seed=Anon"}" class="post-avatar">${followBtnHtml}</div><div><div class="post-name">${p.autor || "---"} ${adTag}</div><div style="font-size:10px; color:#aaa;">${timeStr}</div></div></div>${delBtn}</div><div class="post-body"><div class="post-caption">${p.texto || ""}</div><div class="post-sidebar"><button class="post-btn-vert ${iLiked}" onclick="window.curtirPost('${p.id}')">❤ <span>${p.likes||0}</span></button><button class="post-btn-vert" onclick="window.abrirComentarios('${p.id}')">💬 <span>${numComents}</span></button><button class="post-btn-vert ${iReposted}" onclick="window.repostarPost('${p.id}')">🔄 <span>${p.reposts||0}</span></button></div></div></div></div>`;
     });
     try { if (window.postObserver) { document.querySelectorAll(".post-card").forEach(card => { window.postObserver.unobserve(card); window.postObserver.observe(card); }); } } catch(e) {}
   });
@@ -1282,6 +1285,73 @@ window.iniciarListenersIgamble = function() {
       lista.innerHTML += `<div class="embate-card">${statusHtml}<h3 class="neon-red" style="margin-top:15px;">📍 ${e.local || "Arena Desconhecida"}</h3><div class="embate-desc">"${e.desc || ""}"</div><div class="embate-vs-container"><div class="embate-fighter"><img src="${e.img1 || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador1"}" class="embate-fighter-avatar"><span class="embate-fighter-name">${e.f1 || "Lutador 1"}</span></div><div class="embate-vs-text">VS</div><div class="embate-fighter"><img src="${e.img2 || "https://api.dicebear.com/9.x/adventurer/svg?seed=Lutador2"}" class="embate-fighter-avatar" style="border-color:#00e5ff; box-shadow: 0 0 15px rgba(0,229,255,0.2);"><span class="embate-fighter-name" style="color:#00e5ff;">${e.f2 || "Lutador 2"}</span></div></div>${winnerHtml}${masterBtn}</div>`;
     });
   });
+};
+
+// =========================================================
+// MOTOR DE FOLLOW E SEGUIDORES
+// =========================================================
+window.getFollowButtonHtml = function(autorName) {
+    if (!window.jogadorAtual || autorName === window.jogadorAtual || autorName === "MESTRE" || autorName === "SISTEMA") return "";
+    
+    let me = window.usersGlobais[window.jogadorAtual] || {};
+    let target = window.usersGlobais[autorName] || {};
+    
+    let iFollow = me.seguindo && me.seguindo[autorName];
+    let theyFollow = target.seguindo && target.seguindo[window.jogadorAtual];
+    
+    let safeClass = autorName.replace(/[^a-zA-Z0-9]/g, ''); // Limpa nome pra classe
+
+    if (iFollow && theyFollow) {
+        return `<div class="follow-badge-btn friends follow-btn-${safeClass}" onclick="window.toggleFollow('${autorName}', event)">✓✓ Amigos</div>`;
+    } else if (iFollow) {
+        return `<div class="follow-badge-btn following follow-btn-${safeClass}" onclick="window.toggleFollow('${autorName}', event)">✓</div>`;
+    } else {
+        return `<div class="follow-badge-btn follow-btn-${safeClass}" onclick="window.toggleFollow('${autorName}', event)">+</div>`;
+    }
+};
+
+window.toggleFollow = function(alvo, event) {
+    if (event) event.stopPropagation();
+    if (!window.jogadorAtual || alvo === window.jogadorAtual) return;
+    
+    let me = window.usersGlobais[window.jogadorAtual] || {};
+    let target = window.usersGlobais[alvo] || {};
+    
+    let isFollowing = me.seguindo && me.seguindo[alvo];
+    let theyFollow = target.seguindo && target.seguindo[window.jogadorAtual];
+    
+    let updates = {};
+    if (isFollowing) {
+        updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = null;
+        updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = null;
+        window.showNeonToast(`Você deixou de seguir ${alvo}`);
+    } else {
+        updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = true;
+        updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = true;
+        if(typeof window.enviarNotificacao === "function") {
+            window.enviarNotificacao(alvo, 'mention_post', window.jogadorAtual, "começou a seguir você!");
+        }
+        window.showNeonToast(`Você agora segue ${alvo}`);
+    }
+    
+    window.db.ref().update(updates);
+    
+    // Troca o botão na mesma hora sem lagar a tela
+    let safeClass = alvo.replace(/[^a-zA-Z0-9]/g, '');
+    document.querySelectorAll(`.follow-btn-${safeClass}`).forEach(btn => {
+        if (isFollowing) { 
+            btn.className = `follow-badge-btn follow-btn-${safeClass}`;
+            btn.innerHTML = "+";
+        } else { 
+            if(theyFollow) {
+                btn.className = `follow-badge-btn friends follow-btn-${safeClass}`;
+                btn.innerHTML = "✓✓ Amigos";
+            } else {
+                btn.className = `follow-badge-btn following follow-btn-${safeClass}`;
+                btn.innerHTML = "✓";
+            }
+        }
+    });
 };
 
 window.enviarMsgGamble = function() {
