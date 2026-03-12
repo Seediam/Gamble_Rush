@@ -4176,3 +4176,50 @@ window.encerrarLigacaoLimpo = function() {
     window.callStartTime = 0;
     window.quemTaLigando = null;
 };
+
+window.initTacticalBoard = function() {
+    let b = document.getElementById("gridCells"); if(!b) return; 
+    b.innerHTML = "";
+    
+    // Define o tamanho real do "Mundo" para caber os 60x60
+    let worldW = window.VTT_COLS * window.CELL_PX;
+    let worldH = window.VTT_ROWS * window.CELL_PX;
+    
+    let wrapper = document.getElementById("vttWorldWrapper");
+    if(wrapper) {
+        wrapper.style.width = `${worldW}px`;
+        wrapper.style.height = `${worldH}px`;
+    }
+
+    b.style.display = "grid";
+    b.style.gridTemplateColumns = `repeat(${window.VTT_COLS}, 1fr)`;
+    b.style.gridTemplateRows = `repeat(${window.VTT_ROWS}, 1fr)`;
+
+    let loc = window.locaisMapa[window.currentSubMapKey] || {}; 
+    let obsList = loc.obs || [];
+    let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
+
+    let totalCells = window.VTT_COLS * window.VTT_ROWS;
+    for(let i=0; i<totalCells; i++) {
+        let x = i % window.VTT_COLS; 
+        let y = Math.floor(i / window.VTT_COLS); 
+        let cid = `${x}_${y}`; 
+        let isObs = obsList.includes(cid);
+        let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
+        
+        let cell = document.createElement("div"); 
+        cell.id = `cell_${x}_${y}`; 
+        cell.className = `tactical-cell ${obsClass}`;
+        cell.onclick = () => window.clicarGrid(x, y, isObs); 
+        b.appendChild(cell);
+    }
+    
+    // Ajusta as salas visuais para a nova proporção 60x60
+    let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = "";
+    if(loc.salas && ro) {
+        loc.salas.forEach(s => { 
+            ro.innerHTML += `<div class="room-overlay" style="left:${(s.x/window.VTT_COLS)*100}%; top:${(s.y/window.VTT_ROWS)*100}%; width:${(s.w/window.VTT_COLS)*100}%; height:${(s.h/window.VTT_ROWS)*100}%;">${s.n}</div>`; 
+        });
+    }
+};
+
