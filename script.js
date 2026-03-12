@@ -1807,21 +1807,69 @@ window.iniciarEscutaNotificacoes = function() {
     
     window.db.ref(`tokyoRpg/notifications/${window.jogadorAtual}`).on("value", snap => {
         let notificacoes = snap.val() || {};
-        let naoLidas = 0;
+        
+        let countChat = 0;
+        let countPosts = 0;
+        let countEmbate = 0;
         
         Object.keys(notificacoes).forEach(key => {
             let notif = notificacoes[key];
             if (!notif.lida) {
-                naoLidas++;
-                // Mostra popup estilo Instagram se for recente (nos últimos 10 segundos)
-                // Ou se a pessoa acabou de logar (pegou no celular)
+                // Classifica a bolinha pro aplicativo certo
+                if(notif.tipo.includes('chat')) countChat++;
+                else if(notif.tipo.includes('post') || notif.tipo.includes('comment')) countPosts++;
+                else if(notif.tipo.includes('embate')) countEmbate++;
+
                 if (Date.now() - notif.timestamp < 10000 || !window.notificacoesAntigasExibidas) {
-                    window.showNeonToast(`🔔 ${notif.remetente}: ${notif.texto}`);
-                    // Marca como exibida para não spammar toda vez que recarregar
-                    window.db.ref(`tokyoRpg/notifications/${window.jogadorAtual}/${key}`).update({ lida: true });
+                    window.showNeonToast(`🔔 ${notif.remetente} ${notif.texto}`);
+                    // AVISO: Não mudamos pra lida aqui! A bolinha fica até ele clicar no App.
                 }
             }
         });
+        window.notificacoesAntigasExibidas = true;
+        
+        let total = countChat + countPosts + countEmbate;
+        window.atualizarBadgeHTML('badge-igamble-main', total);
+        window.atualizarBadgeHTML('badge-chat', countChat);
+        window.atualizarBadgeHTML('badge-posts', countPosts);
+        window.atualizarBadgeHTML('badge-embates', countEmbate);
+    });
+};
+
+window.atualizarBadgeHTML = function(id, count) {
+    let badge = document.getElementById(id);
+    if (badge) {
+        badge.innerText = count;
+        badge.style.display = count > 0 ? "flex" : "none";
+    }
+};
+
+window.marcarNotificacoesComoLidas = function(tipoFiltro) {
+    if (!window.jogadorAtual || !window.db) return;
+    window.db.ref(`tokyoRpg/notifications/${window.jogadorAtual}`).once("value", snap => {
+        let notificacoes = snap.val() || {};
+        let updates = {};
+        Object.keys(notificacoes).forEach(key => {
+            let notif = notificacoes[key];
+            if (!notif.lida && notif.tipo.includes(tipoFiltro)) {
+                updates[`${key}/lida`] = true; // Marca como visualizado
+            }
+        });
+        if(Object.keys(updates).length > 0) {
+            window.db.ref(`tokyoRpg/notifications/${window.jogadorAtual}`).update(updates);
+        }
+    });
+};
+
+// INTERCEPTAMOS O CLIQUE NA ABA PARA SUMIR COM A BOLINHA
+var funcTrocAbaOriginal = window.switchIGambleTab;
+window.switchIGambleTab = function(tabId, btnEl) {
+    if(funcTrocAbaOriginal) funcTrocAbaOriginal(tabId, btnEl);
+    
+    if(tabId === 'chat') window.marcarNotificacoesComoLidas('chat');
+    if(tabId === 'posts') window.marcarNotificacoesComoLidas('post');
+    if(tabId === 'embates') window.marcarNotificacoesComoLidas('embate');
+};
         window.notificacoesAntigasExibidas = true;
         
         // Atualiza a bolinha (badge) no bg2 ou menu
@@ -2011,31 +2059,23 @@ window.showMentionDropdown = function(inputEl, query) {
 };
 
 window.selectMention = function(nome) {
-    let s = window.mentionState;
-    if (!s.active || !s.inputEl) return;
-    
-    let val = s.inputEl.value;
-    let before = val.substring(0, s.startPos);
-    let after = val.substring(s.inputEl.selectionStart);
-    
-    s.inputEl.value = before + "@" + nome + " " + after;
-    s.inputEl.focus(); // Devolve o foco pro input
-    
-    window.closeMentionDropdown();
-};
+  const s = window._mentionRuntime;
+  if(!s.active || !s.inputEl) return;
 
-window.closeMentionDropdown = function() {
-    window.mentionState.active = false;
-    let drop = document.getElementById("mentionDropdown");
-    if(drop) drop.style.display = "none";
-};
+  const inputEl = s.inputEl;
+  const val = inputEl.value || "";
+  const cursorPos = inputEl.selectionStart || val.length;
 
-// Esconde o dropdown de menção se clicar fora
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.mention-dropdown') && !e.target.closest('input') && !e.target.closest('textarea')) {
-        window.closeMentionDropdown();
-    }
-});
+  const before = val.substring(0, s.startPos);
+  const after = val.substring(cursorPos);
+
+  // MÁGICA AQUI: Troca espaços por _ para o NOME COMPOSTO não quebrar
+  const nomeLimpo = nome.replace(/ /g, "_");
+
+  inputEl.value = before + "@" + nomeLimpo + " " + after;
+  inputEl.focus();
+  window.closeMentionDropdown();
+};
 
 
 // =========================================================
@@ -2242,6 +2282,7 @@ window.closeMentionDropdown = function(){
 // Extrai @NOMES do texto (somente quem existe na lista candidata do contexto)
 window.extractMentionsFromText = function(text, context){
   if(!text) return [];
+  // Agora pega letras, números e UNDERLINE "_"
   const raw = (text.match(/@([A-Za-z0-9_À-ÿ]+)/g) || []).map(x => x.slice(1));
   const candidates = (context === "gchat")
     ? Object.keys(window.usersGlobais || {}).filter(n => n && n !== "MESTRE")
@@ -2249,13 +2290,13 @@ window.extractMentionsFromText = function(text, context){
 
   const set = new Set();
   raw.forEach(n => {
-    // comparação case-insensitive mas gravar com nome correto
-    const match = candidates.find(c => c.toLowerCase() === n.toLowerCase());
+    // Transforma o _ de volta pra espaço pra achar o usuário no banco
+    let nomeBusca = n.replace(/_/g, " ").toLowerCase();
+    const match = candidates.find(c => c.toLowerCase() === nomeBusca);
     if(match) set.add(match);
   });
   return Array.from(set);
 };
-
 // Envia eventos de menção para inbox do alvo (funciona offline)
 window.dispatchMentions = function({ from, contextType, contextId, text }) {
   try{
@@ -2272,6 +2313,10 @@ window.dispatchMentions = function({ from, contextType, contextId, text }) {
         text: (text || "").slice(0, 140),
         ts: Date.now()
       });
+
+      // NOVIDADE: Manda notificação oficial para gerar a bolinha
+      let tipoNotif = contextType === "gchat" ? "mention_chat" : "mention_post";
+      window.enviarNotificacao(target, tipoNotif, from, "mencionou você", contextId);
     });
   }catch(e){
     console.log("dispatchMentions error", e);
