@@ -1,7 +1,4 @@
 // 1. CONFIGURAÇÕES BASE E DEUSES
-window.submapasConfigs = {}; 
-window.submapasCustom = {};
-window.casaSendoVisitada = null; // Variável para o sistema de portais
 window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
 window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
 window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.movimentosRestantes = 0; window.connectionRef = null;
@@ -423,27 +420,19 @@ window.abrirSubMapa = function(k) {
     if(window.isMaster) { window.setElDisplay("mestreVTT", "flex"); }
     window.renderVttFoodActions();
 };
-window.fecharSubMapa = function() {
-    let modal = document.getElementById("subMapModal");
-    if(modal) modal.style.display = "none";
-    
-    // LIMPEZA GERAL DO GRID (Isso resolve o bug do grid não fechar)
-    let gridContainer = document.getElementById("gridCells");
-    if(gridContainer) gridContainer.innerHTML = ""; 
-    let tokensLayer = document.getElementById("tokensLayer");
-    if(tokensLayer) tokensLayer.innerHTML = "";
-    
-    // Desacopla o jogador do mapa atual
-    if (window.currentSubMapKey && window.jogadorAtual) {
-        let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-        let up = {};
-        Object.keys(grid).forEach(k => { if(grid[k] === window.jogadorAtual) up[k] = null; });
-        window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up);
-    }
-    
-    window.currentSubMapKey = ""; 
+window.fecharSubMapa = function() { window.setElDisplay("subMapCanvas", "none"); window.setElDisplay("mapCanvas", "block"); window.currentSubMapKey = ""; window.drawMapVisuals(); };
+window.mudarBgSubMapa = function() { let url = document.getElementById("vttBgInp").value; window.db.ref(`tokyoRpg/submapsBGs/${window.currentSubMapKey}`).set(url); window.showNeonToast("Fundo Salvo!"); };
+
+window.rolarDadoMovimento = function() {
+    if(!window.jogadorAtual) return;
+    if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Não é seu turno!"); return; }
+    let roll = Math.floor(Math.random()*4)+1; let p = window.getPesoStatus(window.usersGlobais[window.jogadorAtual]);
+    window.movimentosRestantes = p.sobrepeso ? Math.max(1, Math.floor(roll/2)) : roll;
+    window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
+    window.db.ref('tokyoRpg/mapDados').push({nome:window.jogadorAtual, texto:`Movimento: <span class="dice-result-box">${roll}</span> -> ${window.movimentosRestantes} passos`});
+    window.mostrarDadoOverlay(window.jogadorAtual, "Movimento", [roll], 4);
+    window.updateTacticalBoard();
 };
-;
 
 window.iniciarIniciativaVTT = function() {
     if(!window.isMaster) return;
@@ -459,65 +448,29 @@ window.passarTurnoVTT = function() {
     window.movimentosRestantes = 0; window.setElText("movRestantes", "Passos Livres: 0");
 };
 
-window.clicarGrid = function(x,y, isObs, event) {
+window.clicarGrid = function(x,y, isObs) {
     if(!window.jogadorAtual) return;
-    let cid = `${x}_${y}`;
-    let customData = window.submapasCustom[window.currentSubMapKey] || {};
-    
-    // MASTER: SHIFT + Click (Menu de Editar Célula)
-    if(window.isMaster && event && event.shiftKey) {
-        let cData = customData[cid] || {};
-        document.getElementById("mcCid").value = cid;
-        document.getElementById("mcObs").checked = cData.isObs || false;
-        document.getElementById("mcImg").value = cData.img || "";
-        document.getElementById("mcPortal").value = cData.portal || "";
-        document.getElementById("masterCellModal").style.display = "flex";
-        return; 
-    }
-
-    let user = window.usersGlobais[window.jogadorAtual] || {}; 
-    let isGaia = (user.deus && typeof user.deus === 'string' && user.deus.includes("Gaia"));
+    let u = window.usersGlobais[window.jogadorAtual]; let isGaia = (u.deus && u.deus.includes("Gaia"));
     if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
     
     let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-    if(grid[cid]) return; 
+    if(grid[`${x}_${y}`]) return; // Ocupado
     
     let px = -1, py = -1; let isAlreadyOnBoard = false;
-    Object.keys(grid).forEach(k => { if(grid[k] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = k.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
+    Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = cid.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
 
     if(!window.isMaster && isAlreadyOnBoard) {
+        // Checa distância Chebyshev
         let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-        if(dist > window.movimentosRestantes) return; 
+        if(dist > window.movimentosRestantes) { return; } // Ignora cliques muito longe silenciosamente
         if(isObs && !isGaia) { window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return; }
         window.movimentosRestantes -= dist; window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
     } else if (isObs && !isGaia && !window.isMaster) {
         window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return;
     }
 
-    let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[cid] = window.jogadorAtual;
-    
-    window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up).then(() => {
-        let stepData = customData[cid];
-        
-        // === SISTEMA DE PORTAL CORRIGIDO ===
-        if(stepData && stepData.portal) {
-            window.showNeonToast(`Entrando no AP de ${stepData.portal}...`);
-            window.casaSendoVisitada = stepData.portal; 
-            
-            // 1º FECHA O MODAL DO MAPA (Isso resolve a tela preta que cobria as abas!)
-            let modalMap = document.getElementById("subMapModal");
-            if(modalMap) modalMap.style.display = "none";
-            
-            // 2º LIMPA O GRID
-            let gridContainer = document.getElementById("gridCells");
-            if(gridContainer) gridContainer.innerHTML = "";
-            window.currentSubMapKey = ""; 
-            
-            // 3º ABRE A ABA DA CASA NORMALMENTE
-            window.abrirApp('tab-casa', false);
-            setTimeout(window.renderizarCasaTetris, 300);
-        }
-    });
+    let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[`${x}_${y}`] = window.jogadorAtual;
+    window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up);
 };
 
 window.initTacticalBoard = function() {
@@ -525,50 +478,15 @@ window.initTacticalBoard = function() {
     let loc = window.locaisMapa[window.currentSubMapKey] || {}; let obsList = loc.obs || [];
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
-    // Lê a configuração dinâmica (Tamanho e Formato). Padrão é 16x12 Quadrado
-    let conf = window.submapasConfigs[window.currentSubMapKey] || { w: 16, h: 12, shape: 'quadrado' };
-    let cols = conf.w; 
-    let rows = conf.h; 
-    let shape = conf.shape;
-
-    b.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    b.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-
-    // Geração Dinâmica X / Y
-    for(let y=0; y<rows; y++) {
-        for(let x=0; x<cols; x++) {
-            let cid = `${x}_${y}`; 
-            
-            // ===============================================
-            // MATEMÁTICA DE RECORTES DE TETRIS (SHAPES)
-            // ===============================================
-            let hidden = false;
-            if(shape === 'l_shape' && x > cols/2 && y < rows/2) hidden = true; // Corta o quadrante Superior Direito
-            if(shape === 'u_shape' && x > cols/3 && x < 2*(cols/3) && y < rows/2) hidden = true; // Corta o miolo de cima
-            if(shape === 'cross' && ((x < cols/3 && y < rows/3) || (x > 2*cols/3 && y < rows/3) || (x < cols/3 && y > 2*rows/3) || (x > 2*cols/3 && y > 2*rows/3))) hidden = true; // Corta as 4 quinas
-            if(shape === 'corredor' && (y < rows/3 || y >= 2*(rows/3))) hidden = true; // Deixa apenas a linha do meio
-            if(shape === 'hexagono' && ((x<=1 && y<=1) || (x>=cols-2 && y<=1) || (x<=1 && y>=rows-2) || (x>=cols-2 && y>=rows-2))) hidden = true; // Arredonda as quinas
-
-            if(hidden) {
-                let cell = document.createElement("div"); 
-                cell.className = "tactical-cell hidden-vtt-cell"; 
-                b.appendChild(cell);
-                continue; // Pula pra próxima, o jogador não pode pisar aqui
-            }
-
-            let isObs = obsList.includes(cid);
-            let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
-            let cell = document.createElement("div"); 
-            cell.id = `cell_${x}_${y}`; 
-            cell.className = `tactical-cell ${obsClass}`;
-            cell.onclick = () => window.clicarGrid(x, y, isObs); 
-            b.appendChild(cell);
-        }
+    for(let i=0; i<192; i++) {
+        let x = i % 16; let y = Math.floor(i / 16); let cid = `${x}_${y}`; let isObs = obsList.includes(cid);
+        let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
+        let cell = document.createElement("div"); cell.id = `cell_${x}_${y}`; cell.className = `tactical-cell ${obsClass}`;
+        cell.onclick = () => window.clicarGrid(x, y, isObs); b.appendChild(cell);
     }
     
-    // Salas Overlays
     let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = "";
-    if(loc.salas && ro) loc.salas.forEach(s => { ro.innerHTML += `<div class="room-overlay" style="left:${(s.x/cols)*100}%; top:${(s.y/rows)*100}%; width:${(s.w/cols)*100}%; height:${(s.h/rows)*100}%;">${s.n}</div>`; });
+    if(loc.salas && ro) loc.salas.forEach(s => { ro.innerHTML += `<div class="room-overlay" style="left:${(s.x/16)*100}%; top:${(s.y/12)*100}%; width:${(s.w/16)*100}%; height:${(s.h/12)*100}%;">${s.n}</div>`; });
 };
 
 window.updateTacticalBoard = function() {
@@ -578,28 +496,22 @@ window.updateTacticalBoard = function() {
     let loc = window.locaisMapa[window.currentSubMapKey] || {}; let obsList = loc.obs || [];
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
-    // Puxa a config do mapa atual
-    let conf = window.submapasConfigs[window.currentSubMapKey] || { w: 16, h: 12 };
-    let cols = conf.w; let rows = conf.h;
-
     let px = -1, py = -1;
     Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
 
-    // Highlight
-    for(let y=0; y<rows; y++) {
-        for(let x=0; x<cols; x++) {
-            let cid = `${x}_${y}`;
-            let cell = document.getElementById(`cell_${x}_${y}`);
-            if(cell) {
-                cell.classList.remove("in-range", "in-range-blocked");
-                let isObs = obsList.includes(cid);
-                let canWalk = !isObs || isGaia || window.isMaster;
-                if(px !== -1 && py !== -1 && window.movimentosRestantes > 0) {
-                    let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-                    if(dist > 0 && dist <= window.movimentosRestantes && !grid[cid]) {
-                        if(canWalk) cell.classList.add("in-range");
-                        else cell.classList.add("in-range-blocked");
-                    }
+    // Highlight in-range cells
+    for(let i=0; i<192; i++) {
+        let x = i % 16; let y = Math.floor(i / 16); let cid = `${x}_${y}`;
+        let cell = document.getElementById(`cell_${x}_${y}`);
+        if(cell) {
+            cell.classList.remove("in-range", "in-range-blocked");
+            let isObs = obsList.includes(cid);
+            let canWalk = !isObs || isGaia || window.isMaster;
+            if(px !== -1 && py !== -1 && window.movimentosRestantes > 0) {
+                let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
+                if(dist > 0 && dist <= window.movimentosRestantes && !grid[cid]) {
+                    if(canWalk) cell.classList.add("in-range");
+                    else cell.classList.add("in-range-blocked");
                 }
             }
         }
@@ -615,30 +527,19 @@ window.updateTacticalBoard = function() {
         let hp = window.usersGlobais[occupier]?.rpg?.hp || 100;
         let isMe = (occupier === window.jogadorAtual);
 
-        // Tokens dinâmicos (Escalam independente se for 5x5 ou 50x50)
         if(tokenEl) {
-            tokenEl.style.left = `${(x / cols) * 100}%`; 
-            tokenEl.style.top = `${(y / rows) * 100}%`;
-            tokenEl.style.width = `${100 / cols}%`;
-            tokenEl.style.height = `${100 / rows}%`;
+            tokenEl.style.left = `${(x / 16) * 100}%`; tokenEl.style.top = `${(y / 12) * 100}%`;
             if (tokenEl.querySelector('.token-hp')) tokenEl.querySelector('.token-hp').innerText = hp;
         } else {
             let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token";
             if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; }
-            tHtml.style.backgroundImage = `url('${avToken}')`; 
-            
-            tHtml.style.left = `${(x / cols) * 100}%`; 
-            tHtml.style.top = `${(y / rows) * 100}%`;
-            tHtml.style.width = `${100 / cols}%`;
-            tHtml.style.height = `${100 / rows}%`;
-            
+            tHtml.style.backgroundImage = `url('${avToken}')`; tHtml.style.left = `${(x / 16) * 100}%`; tHtml.style.top = `${(y / 12) * 100}%`;
             tHtml.innerHTML = `<div class="token-hp">${hp}</div>`; layer.appendChild(tHtml);
         }
     });
 
     Array.from(layer.children).forEach(t => { if(!currentTokens.includes(t.id)) t.remove(); });
     
-    // ... [Mantém o restande de turnos igual estava]
     let tBar = document.getElementById("turnOrderUI"); let btnP = document.getElementById("btnPassTurno");
     if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0) {
         if(tBar) { tBar.style.display="flex"; tBar.innerHTML=""; }
@@ -1124,21 +1025,6 @@ window.onload = function() {
             window.usersGlobais = s.val()||{}; 
             window.renderizarFicha(); window.renderizarMochila(); window.drawMapVisuals(); window.drawCasaBoard(); window.desenharListaUsuarios(); window.renderizarPanteao(); window.updateTacticalBoard();
         });
-        window.db.ref('tokyoRpg/submapsConfigs').on('value', s => { 
-    window.submapasConfigs = s.val() || {}; 
-    window.initTacticalBoard(); 
-    window.updateTacticalBoard(); 
-});
-     // Adicione isto no seu window.onload:
-window.db.ref('tokyoRpg/submapsConfigs').on('value', s => { 
-    window.submapasConfigs = s.val() || {}; 
-    if(window.currentSubMapKey) { window.initTacticalBoard(); window.updateTacticalBoard(); }
-});
-
-window.db.ref('tokyoRpg/submapsCustom').on('value', s => { 
-    window.submapasCustom = s.val() || {}; 
-    if(window.currentSubMapKey) { window.initTacticalBoard(); window.updateTacticalBoard(); }
-});
         window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; window.drawMapVisuals(); window.desenharListaUsuarios(); });
         window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; window.drawMapVisuals(); });
         window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; window.renderizarLojaUI(); window.renderizarFicha(); window.renderizarMochila(); window.drawCasaBoard(); }); 
@@ -1153,20 +1039,7 @@ window.db.ref('tokyoRpg/submapsCustom').on('value', s => {
                 else if (subCanvas) { subCanvas.style.backgroundImage = "none"; subCanvas.style.backgroundColor = "#050505"; }
             }
         });
-        
-window.submapasConfigs = {}; 
-window.submapasCustom = {};
 
-window.db.ref('tokyoRpg/submapsConfigs').on('value', s => { 
-    window.submapasConfigs = s.val() || {}; 
-    window.initTacticalBoard(); 
-    window.updateTacticalBoard(); 
-});
-
-window.db.ref('tokyoRpg/submapsCustom').on('value', s => { 
-    window.submapasCustom = s.val() || {}; 
-    window.initTacticalBoard(); 
-});
         window.db.ref('tokyoRpg/turnosVTT').on('value', s => { let d = s.val()||{}; window.turnosVTTGlobal = d[window.currentSubMapKey]||null; window.updateTacticalBoard(); });
         
         window.db.ref('tokyoRpg/news').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("newsFeed"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).reverse().forEach(n => { b.innerHTML += `<div class="news-item ${n.tipo==='MORTE'?'news-death':''}"><p class="${n.tipo==='MORTE'?'neon-red':'neon-blue'}" style="margin:0;font-size:12px;">${n.data}</p><h3 style="color:#fff;margin:5px 0;">${n.tipo==='MORTE'?'🚨 ÓBITO NO DISTRITO 🚨':'Confronto Concluído'}</h3><p style="color:#ccc;">${n.vencedor} vs ${n.perdedor}. ${n.tipo==='MORTE'?'Perdedor Eliminado.':'Aposta: '+n.aposta+'¥'}</p>${n.descMorte?`<p style="color:#ffaa00;font-size:12px;">Causa: ${n.descMorte}</p>`:''}${n.imgMorte?`<img src="${n.imgMorte}" style="max-width:100%; border-radius:4px; margin-top:10px;">`:''}</div>`; }); }});
@@ -3440,33 +3313,6 @@ window.salvarConfigCasa = function() {
     window.showNeonToast("Planta da Casa Atualizada!"); 
     setTimeout(window.renderizarCasaTetris, 500);
 };
-// === SISTEMA DE SAÍDA DE VISITA ===
-    // Se não for a sua casa, cria um botão flutuante para voltar pro VTT
-    if (donoCasa !== window.jogadorAtual && !window.isMaster) {
-        let btnSair = document.getElementById("btnSairVisitaVTT");
-        if(!btnSair) {
-            btnSair = document.createElement("button");
-            btnSair.id = "btnSairVisitaVTT";
-            btnSair.className = "action-btn neon-red";
-            btnSair.innerHTML = "🚪 Sair do AP e Voltar ao Mapa";
-            btnSair.style.position = "absolute";
-            btnSair.style.bottom = "20px";
-            btnSair.style.right = "20px";
-            btnSair.style.zIndex = "9999";
-            btnSair.onclick = function() {
-                window.casaSendoVisitada = null;
-                btnSair.style.display = "none";
-                window.abrirApp('tab-local', false); // Joga de volta pro Mapa VTT!
-                window.showNeonToast("Você saiu do apartamento.");
-            };
-            document.getElementById("tab-casa").appendChild(btnSair);
-        } else {
-            btnSair.style.display = "block";
-        }
-    } else {
-        let btnSair = document.getElementById("btnSairVisitaVTT");
-        if(btnSair) btnSair.style.display = "none";
-    }
 // =========================================================
 // GAMBLENGER: SISTEMA COMPLETO (AGENDA, CHAT E LIGAÇÕES)
 // =========================================================
@@ -4329,202 +4175,4 @@ window.encerrarLigacaoLimpo = function() {
     window.callIdAtual = null;
     window.callStartTime = 0;
     window.quemTaLigando = null;
-};
-
-window.initTacticalBoard = function() {
-    let b = document.getElementById("gridCells"); if(!b) return; 
-    b.innerHTML = "";
-    
-    let loc = window.locaisMapa[window.currentSubMapKey] || {}; 
-    let baseObsList = loc.obs || [];
-    let conf = window.submapasConfigs[window.currentSubMapKey] || { w: 16, h: 12, shape: 'quadrado' };
-    
-    let cols = parseInt(conf.w) || 16; 
-    let rows = parseInt(conf.h) || 12; 
-    let shape = conf.shape || 'quadrado';
-    let customData = window.submapasCustom[window.currentSubMapKey] || {};
-
-    let user = window.usersGlobais[window.jogadorAtual] || {};
-    let isGaia = (user.deus && typeof user.deus === 'string' && user.deus.includes("Gaia"));
-
-    b.style.display = "grid";
-    b.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    b.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
-
-    for(let y=0; y<rows; y++) {
-        for(let x=0; x<cols; x++) {
-            let cid = `${x}_${y}`;
-            
-            // Recortes de Formato
-            let hidden = false;
-            if(shape === 'l_shape' && x > cols/2 && y < rows/2) hidden = true;
-            if(shape === 'u_shape' && x > cols/3 && x < 2*(cols/3) && y < rows/2) hidden = true;
-            if(shape === 'cross' && ((x < cols/3 && y < rows/3) || (x > 2*cols/3 && y < rows/3) || (x < cols/3 && y > 2*rows/3) || (x > 2*cols/3 && y > 2*rows/3))) hidden = true;
-            if(shape === 'corredor' && (y < rows/3 || y >= 2*(rows/3))) hidden = true;
-            if(shape === 'hexagono' && ((x<=1 && y<=1) || (x>=cols-2 && y<=1) || (x<=1 && y>=rows-2) || (x>=cols-2 && y>=rows-2))) hidden = true;
-
-            let cell = document.createElement("div"); 
-            cell.id = `cell_${x}_${y}`; 
-            
-            if(hidden) {
-                cell.className = "tactical-cell hidden-vtt-cell"; 
-                b.appendChild(cell); 
-                continue;
-            }
-
-            let cellData = customData[cid] || {};
-            let isObs = baseObsList.includes(cid) || cellData.isObs;
-            let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
-            
-            cell.className = `tactical-cell ${obsClass}`;
-            
-            if(cellData.img) { cell.innerHTML += `<img src="${cellData.img}" class="prop-token">`; }
-            if(cellData.portal) { cell.innerHTML += `<div class="portal-tag">🚪 ${cellData.portal}</div>`; }
-
-            cell.onclick = (e) => window.clicarGrid(x, y, isObs, e); 
-            b.appendChild(cell);
-        }
-    }
-};
-
-window.updateTacticalBoard = function() {
-    if(!window.currentSubMapKey) return;
-    let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-    let layer = document.getElementById("tokensLayer"); if(!layer) return;
-    let loc = window.locaisMapa[window.currentSubMapKey] || {}; 
-    let baseObsList = loc.obs || [];
-    let customData = window.submapasCustom[window.currentSubMapKey] || {};
-    
-    let user = window.usersGlobais[window.jogadorAtual] || {};
-    let isGaia = (user.deus && typeof user.deus === 'string' && user.deus.includes("Gaia"));
-
-    let conf = window.submapasConfigs[window.currentSubMapKey] || { w: 16, h: 12 };
-    let cols = parseInt(conf.w) || 16; 
-    let rows = parseInt(conf.h) || 12;
-
-    let px = -1, py = -1;
-    Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
-
-    // Pinta os ranges
-    for(let y=0; y<rows; y++) {
-        for(let x=0; x<cols; x++) {
-            let cid = `${x}_${y}`;
-            let cell = document.getElementById(`cell_${x}_${y}`);
-            if(cell && !cell.classList.contains('hidden-vtt-cell')) {
-                cell.classList.remove("in-range", "in-range-blocked");
-                let cellData = customData[cid] || {};
-                let isObs = baseObsList.includes(cid) || cellData.isObs;
-                let canWalk = !isObs || isGaia || window.isMaster;
-                
-                if(px !== -1 && py !== -1 && window.movimentosRestantes > 0) {
-                    let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-                    if(dist > 0 && dist <= window.movimentosRestantes && !grid[cid]) {
-                        if(canWalk) cell.classList.add("in-range");
-                        else cell.classList.add("in-range-blocked");
-                    }
-                }
-            }
-        }
-    }
-
-    let currentTokens = [];
-    Object.keys(grid).forEach(cid => {
-        let occupier = grid[cid]; if(!occupier) return;
-        let parts = cid.split("_"); let x = parseInt(parts[0]); let y = parseInt(parts[1]);
-        let tokenId = `token_${occupier}`; currentTokens.push(tokenId);
-        let tokenEl = document.getElementById(tokenId);
-        let avToken = window.usersGlobais[occupier]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${occupier}`;
-        let hp = window.usersGlobais[occupier]?.rpg?.hp || 100;
-        let isMe = (occupier === window.jogadorAtual);
-
-        if(tokenEl) {
-            tokenEl.style.left = `${(x / cols) * 100}%`; 
-            tokenEl.style.top = `${(y / rows) * 100}%`;
-            tokenEl.style.width = `${100 / cols}%`;
-            tokenEl.style.height = `${100 / rows}%`;
-            if (tokenEl.querySelector('.token-hp')) tokenEl.querySelector('.token-hp').innerText = hp;
-        } else {
-            let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token";
-            if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; }
-            tHtml.style.backgroundImage = `url('${avToken}')`; 
-            tHtml.style.left = `${(x / cols) * 100}%`; 
-            tHtml.style.top = `${(y / rows) * 100}%`;
-            tHtml.style.width = `${100 / cols}%`;
-            tHtml.style.height = `${100 / rows}%`;
-            tHtml.innerHTML = `<div class="token-hp">${hp}</div>`; layer.appendChild(tHtml);
-        }
-    });
-
-    Array.from(layer.children).forEach(t => { if(!currentTokens.includes(t.id)) t.remove(); });
-    
-    let tBar = document.getElementById("turnOrderUI"); let btnP = document.getElementById("btnPassTurno");
-    if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0) {
-        if(tBar) { tBar.style.display="flex"; tBar.innerHTML=""; }
-        if(btnP) btnP.style.display="inline-block";
-        window.turnosVTTGlobal.ordem.forEach((n,i) => { if(tBar) tBar.innerHTML+=`<img src="${window.usersGlobais[n]?.avatarUrl||'https://api.dicebear.com/9.x/adventurer/svg?seed='+n}" class="turn-avatar ${i===window.turnosVTTGlobal.atual?'active':''}" title="${n}">`; });
-    } else { 
-        if(tBar) tBar.style.display="none"; 
-        if(btnP) btnP.style.display="none"; 
-    }
-};
-
-window.clicarGrid = function(x,y, isObs, event) {
-    if(!window.jogadorAtual) return;
-    let cid = `${x}_${y}`;
-    let customData = window.submapasCustom[window.currentSubMapKey] || {};
-    
-    // MASTER: SHIFT + Click abre editor
-    if(window.isMaster && event && event.shiftKey) {
-        let cData = customData[cid] || {};
-        document.getElementById("mcCid").value = cid;
-        document.getElementById("mcObs").checked = cData.isObs || false;
-        document.getElementById("mcImg").value = cData.img || "";
-        document.getElementById("mcPortal").value = cData.portal || "";
-        document.getElementById("masterCellModal").style.display = "flex";
-        return; 
-    }
-
-    let user = window.usersGlobais[window.jogadorAtual] || {}; 
-    let isGaia = (user.deus && typeof user.deus === 'string' && user.deus.includes("Gaia"));
-    if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
-    
-    let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-    if(grid[cid]) return; 
-    
-    let px = -1, py = -1; let isAlreadyOnBoard = false;
-    Object.keys(grid).forEach(k => { if(grid[k] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = k.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
-
-    if(!window.isMaster && isAlreadyOnBoard) {
-        let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-        if(dist > window.movimentosRestantes) return; 
-        if(isObs && !isGaia) { window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return; }
-        window.movimentosRestantes -= dist; window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
-    } else if (isObs && !isGaia && !window.isMaster) {
-        window.showNeonToast("Obstáculo! Apenas Gaia atravessa."); return;
-    }
-
-    let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[cid] = window.jogadorAtual;
-    
-    window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up).then(() => {
-        let stepData = customData[cid];
-        if(stepData && stepData.portal) {
-            window.showNeonToast(`Entrando no AP de ${stepData.portal}...`);
-            window.casaSendoVisitada = stepData.portal; 
-            window.abrirApp('tab-casa', false);
-            setTimeout(window.renderizarCasaTetris, 300);
-        }
-    });
-};
-
-window.salvarFormatoMapa = function() {
-    if(!window.isMaster || !window.currentSubMapKey) return;
-    let w = parseInt(document.getElementById("vttColsInp").value) || 16;
-    let h = parseInt(document.getElementById("vttRowsInp").value) || 12;
-    let shape = document.getElementById("vttShapeInp").value;
-    
-    window.db.ref(`tokyoRpg/submapsConfigs/${window.currentSubMapKey}`).set({ w: w, h: h, shape: shape }).then(() => {
-        window.showNeonToast("O Grid foi Moldado!");
-        window.initTacticalBoard();
-        window.updateTacticalBoard();
-    });
 };
