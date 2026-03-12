@@ -4006,4 +4006,101 @@ window.aceitarLigacao = async function() {
     window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
 
     // RADAR DE FALHA DE REDE
-    window.rtc
+    window.rtcPeer.oniceconnectionstatechange = () => {
+        if(window.rtcPeer && window.rtcPeer.iceConnectionState === "failed") {
+            window.showNeonToast("❌ Sua rede bloqueou a conexão (Firewall/4G).");
+            window.encerrarLigacao();
+        }
+    };
+
+    window.rtcPeer.ontrack = event => {
+        if(remoteAudio) {
+            remoteAudio.srcObject = event.streams[0];
+            remoteAudio.play().catch(e => console.log(e));
+        }
+    };
+
+    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
+
+    window.rtcPeer.onicecandidate = event => {
+        if(event.candidate) callDoc.child('calleeCandidates').push(event.candidate.toJSON());
+    };
+
+    callDoc.child('offer').once('value', async snap => {
+        let offer = snap.val();
+        if(!offer) return;
+
+        await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(offer));
+
+        callDoc.child('callerCandidates').on('child_added', snapIce => {
+            let candidate = snapIce.val();
+            if(candidate && window.rtcPeer) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
+        });
+
+        const answer = await window.rtcPeer.createAnswer();
+        await window.rtcPeer.setLocalDescription(answer);
+
+        await callDoc.update({
+            answer: { type: answer.type, sdp: answer.sdp },
+            status: "answered"
+        });
+
+        window.callStartTime = Date.now(); 
+    });
+
+    callDoc.child('status').on('value', snap => {
+        if(snap.val() === "ended") window.encerrarLigacaoLimpo();
+    });
+
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
+};
+
+// 4. RECUSAR LIGAÇÃO
+window.recusarLigacao = function() {
+    document.getElementById("callModal").style.display = "none";
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    
+    window.enviarLogChamada("recusada");
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
+    window.encerrarLigacaoLimpo();
+};
+
+// 5. DESLIGAR
+window.encerrarLigacao = function() {
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    
+    if(window.callStartTime > 0) {
+        window.enviarLogChamada("finalizada");
+    } else {
+        window.enviarLogChamada("cancelada");
+    }
+
+    if(window.contatoSmsAtual) window.db.ref(`tokyoRpg/users/${window.contatoSmsAtual}/incomingCall`).remove();
+    window.encerrarLigacaoLimpo();
+};
+
+// 6. LIMPEZA TOTAL DA CHAMADA
+window.encerrarLigacaoLimpo = function() {
+    let modal = document.getElementById("callModal");
+    if(modal) modal.style.display = "none";
+    
+    if(window.rtcPeer) { window.rtcPeer.close(); window.rtcPeer = null; }
+    if(window.localStream) { window.localStream.getTracks().forEach(t => t.stop()); window.localStream = null; }
+
+    let remoteAudio = document.getElementById("remoteAudio");
+    if(remoteAudio) remoteAudio.srcObject = null;
+
+    let callBtn = document.getElementById("btnCallUI");
+    if(callBtn) {
+        callBtn.innerText = "📞 Ligar";
+        callBtn.style.borderColor = "#0f0"; callBtn.style.color = "#0f0";
+        callBtn.onclick = window.iniciarLigacao;
+    }
+    
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`).off();
+    
+    window.callIdAtual = null;
+    window.callStartTime = 0;
+    window.quemTaLigando = null;
+    window.showNeonToast("Ligação encerrada.");
+};
