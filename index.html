@@ -209,14 +209,61 @@
                             </div>
                             
                             <!-- TABULEIRO VTT INTERNO -->
-                            <div class="submap-canvas" id="subMapCanvas">
-                                <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.85); padding:10px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-                                    <div><h2 id="subMapTitle" style="margin:0; font-size:14px;">Local</h2><p id="movRestantes" style="color:#0f0;font-size:11px;margin:0; font-weight:bold;">Passos Livres: 0</p></div>
-                                    <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0;"></div>
-                                    <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
-                                        <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
-                                        <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim de Turno</button>
-                                        
+<div class="submap-canvas" id="subMapCanvas">
+    <!-- BARRA SUPERIOR DO TABULEIRO -->
+    <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.85); padding:10px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+        <div>
+            <h2 id="subMapTitle" style="margin:0; font-size:14px;">Local</h2>
+            <p id="movRestantes" style="color:#0f0;font-size:11px;margin:0; font-weight:bold;">Passos Livres: 0</p>
+        </div>
+        
+        <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0;"></div>
+        
+        <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+            <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
+            <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim de Turno</button>
+            
+            <!-- PAINEL DO MESTRE NO VTT -->
+            <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px; flex-wrap:wrap; align-items: center;">
+                <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Iniciativas</button>
+                <input type="text" id="vttBgInp" placeholder="URL Fundo..." style="width:100px; padding:5px; font-size:10px;">
+                <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Fundo</button>
+
+                <div style="display:flex; gap:5px; align-items:center; border-left:1px solid #555; padding-left:10px; margin-left:5px;">
+                    <span style="font-size:10px; color:#aaa;">Grid:</span>
+                    <input type="number" id="vttColsInp" value="16" title="Colunas" style="width:40px; padding:2px; font-size:10px; text-align:center;">
+                    <span style="font-size:10px; color:#aaa;">x</span>
+                    <input type="number" id="vttRowsInp" value="12" title="Linhas" style="width:40px; padding:2px; font-size:10px; text-align:center;">
+                    
+                    <select id="vttShapeInp" style="padding:2px; font-size:10px; width:100px; background:#000; color:#fff; border:1px solid #333;">
+                        <option value="quadrado">⬛ Quadrado</option>
+                        <option value="l_shape">▛ Formato L</option>
+                        <option value="u_shape">◳ Formato U</option>
+                        <option value="cross">➕ Cruzamento</option>
+                        <option value="corredor">➖ Corredor</option>
+                        <option value="hexagono">⬡ Arena Hex.</option>
+                    </select>
+                    <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 5px;" onclick="window.salvarFormatoMapa()">Moldar</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- O BOTÃO DE SAIR (PLANETINHA) ESTÁ AQUI -->
+        <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue); padding: 5px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px;" onclick="window.fecharSubMapa()">🌍</button>
+    </div>
+
+    <div id="vttFoodActions" class="food-action-bar"></div>
+    
+    <!-- ÁREA DO MAPA ONDE A IMAGEM E O GRID FICAM -->
+    <div class="tactical-board" id="tacticalBoard" style="overflow: hidden; position: relative; scroll-behavior: smooth;">
+        <!-- CORRIGIDO: Adicionado width e height 100% para o Wrapper do Grid não sumir -->
+        <div id="vttWorldWrapper" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+            <div id="roomOverlays"></div>
+            <div id="gridCells" class="grid-cells-container"></div>
+            <div id="tokensLayer" class="tokens-layer"></div>
+        </div>
+    </div>
+</div>
                                         <!-- PAINEL DO MESTRE NO VTT -->
 <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px; flex-wrap:wrap; align-items: center;">
     
