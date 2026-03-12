@@ -1,4 +1,5 @@
 // 1. CONFIGURAÇÕES BASE E DEUSES
+window.VTT_CELL_SIZE = 50; // Tamanho de cada quadrado em pixels (50x50)
 window.submapasConfig = {};
 window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
 window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
@@ -480,17 +481,25 @@ window.initTacticalBoard = function() {
     let obsList = loc.obs || [];
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
-    // 1. Pega configuração de tamanho e formato (ou usa padrão 16x12)
     let conf = window.submapasConfig[window.currentSubMapKey] || {cols: 16, rows: 12, shape: 'quadrado'};
-    let cols = conf.cols;
-    let rows = conf.rows;
-    let shape = conf.shape;
+    let cols = conf.cols || 16;
+    let rows = conf.rows || 12;
+    let shape = conf.shape || 'quadrado';
+    
+    let cellSize = window.VTT_CELL_SIZE || 50; // Puxa os 50 pixels
 
-    // 2. Ajusta o Grid CSS dinamicamente
-    b.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
-    b.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    // 1. AJUSTA O TAMANHO EXATO DO MAPA INTEIRO
+    let wrapper = document.getElementById("vttWorldWrapper");
+    if(wrapper) {
+        // Se são 20 colunas de 50px, a largura será exatos 1000px
+        wrapper.style.width = (cols * cellSize) + "px";
+        wrapper.style.height = (rows * cellSize) + "px";
+    }
 
-    // 3. Monta e corta o grid
+    // 2. MONTA O GRID EM PIXELS (E não mais em fração 1fr)
+    b.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+    b.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+
     for(let y=0; y<rows; y++) {
         for(let x=0; x<cols; x++) {
             let cid = `${x}_${y}`; 
@@ -498,21 +507,15 @@ window.initTacticalBoard = function() {
             let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
             
             let isHidden = false;
-            
-            // FÓRMULAS DE CORTE DE MAPA
             if (shape === 'l_shape') {
                 if (x >= Math.floor(cols/2) && y < Math.floor(rows/2)) isHidden = true;
-            } 
-            else if (shape === 'u_shape') {
+            } else if (shape === 'u_shape') {
                 if (x >= Math.floor(cols/4) && x < Math.floor(cols*0.75) && y < Math.floor(rows/2)) isHidden = true;
-            } 
-            else if (shape === 'cross') {
+            } else if (shape === 'cross') {
                 if ((x < Math.floor(cols/3) || x >= Math.floor(cols*0.66)) && (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66))) isHidden = true;
-            } 
-            else if (shape === 'corredor') {
+            } else if (shape === 'corredor') {
                 if (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66)) isHidden = true;
-            } 
-            else if (shape === 'hexagono') {
+            } else if (shape === 'hexagono') {
                 let hW = cols/2; let hH = rows/2;
                 let dx = Math.abs(x - hW + 0.5); let dy = Math.abs(y - hH + 0.5);
                 if ((dx / hW) + (dy / hH) > 1.3) isHidden = true; 
@@ -524,10 +527,7 @@ window.initTacticalBoard = function() {
             cell.id = `cell_${x}_${y}`; 
             cell.className = `tactical-cell ${obsClass} ${hideClass}`;
             
-            if (!isHidden) {
-                cell.onclick = () => window.clicarGrid(x, y, isObs); 
-            }
-            
+            if (!isHidden) { cell.onclick = () => window.clicarGrid(x, y, isObs); }
             b.appendChild(cell);
         }
     }
@@ -543,24 +543,18 @@ window.initTacticalBoard = function() {
 window.updateTacticalBoard = function() {
     if(!window.currentSubMapKey) return;
     
-    // ======== A MÁGICA DE MOSTRAR OS BOTÕES DO MESTRE ========
     let painelMestre = document.getElementById("mestreVTT");
     if(painelMestre) {
         if(window.isMaster) {
-            painelMestre.style.display = "flex"; // Libera a visão!
-            
-            // Tenta atualizar os inputs com os dados do mapa atual
-            let configAtual = window.submapasConfig[window.currentSubMapKey];
-            if(configAtual) {
-                if(document.getElementById("vttColsInp")) document.getElementById("vttColsInp").value = configAtual.cols;
-                if(document.getElementById("vttRowsInp")) document.getElementById("vttRowsInp").value = configAtual.rows;
-                if(document.getElementById("vttShapeInp")) document.getElementById("vttShapeInp").value = configAtual.shape;
-            }
+            painelMestre.style.display = "flex";
+            let configAtual = window.submapasConfig[window.currentSubMapKey] || {};
+            if(document.getElementById("vttColsInp")) document.getElementById("vttColsInp").value = configAtual.cols || 16;
+            if(document.getElementById("vttRowsInp")) document.getElementById("vttRowsInp").value = configAtual.rows || 12;
+            if(document.getElementById("vttShapeInp")) document.getElementById("vttShapeInp").value = configAtual.shape || 'quadrado';
         } else {
-            painelMestre.style.display = "none"; // Esconde dos jogadores
+            painelMestre.style.display = "none";
         }
     }
-    // ==========================================================
 
     let grid = window.submapasGlobais[window.currentSubMapKey] || {};
     let layer = document.getElementById("tokensLayer"); if(!layer) return;
@@ -568,8 +562,9 @@ window.updateTacticalBoard = function() {
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
     let conf = window.submapasConfig[window.currentSubMapKey] || {cols: 16, rows: 12};
-    let cols = conf.cols;
-    let rows = conf.rows;
+    let cols = conf.cols || 16;
+    let rows = conf.rows || 12;
+    let cellSize = window.VTT_CELL_SIZE || 50;
 
     let px = -1, py = -1;
     Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
@@ -597,7 +592,6 @@ window.updateTacticalBoard = function() {
     Object.keys(grid).forEach(cid => {
         let occupier = grid[cid]; if(!occupier) return;
         let parts = cid.split("_"); let x = parseInt(parts[0]); let y = parseInt(parts[1]);
-        
         if(x >= cols || y >= rows) return; 
 
         let tokenId = `token_${occupier}`; currentTokens.push(tokenId);
@@ -606,26 +600,32 @@ window.updateTacticalBoard = function() {
         let hp = window.usersGlobais[occupier]?.rpg?.hp || 100;
         let isMe = (occupier === window.jogadorAtual);
 
-        let leftPos = `${(x / cols) * 100}%`;
-        let topPos = `${(y / rows) * 100}%`;
-        let tWidth = `${100 / cols}%`;
-        let tHeight = `${100 / rows}%`;
+        // POSICIONA O TOKEN EM PIXELS EXACTOS
+        let leftPos = (x * cellSize) + "px";
+        let topPos = (y * cellSize) + "px";
+        let tWidth = cellSize + "px";
+        let tHeight = cellSize + "px";
 
         if(tokenEl) {
-            tokenEl.style.left = leftPos; 
-            tokenEl.style.top = topPos;
-            tokenEl.style.width = tWidth;
-            tokenEl.style.height = tHeight;
+            tokenEl.style.left = leftPos; tokenEl.style.top = topPos;
+            tokenEl.style.width = tWidth; tokenEl.style.height = tHeight;
             if (tokenEl.querySelector('.token-hp')) tokenEl.querySelector('.token-hp').innerText = hp;
         } else {
             let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token";
             if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; }
             tHtml.style.backgroundImage = `url('${avToken}')`; 
-            tHtml.style.left = leftPos; 
-            tHtml.style.top = topPos;
-            tHtml.style.width = tWidth;
-            tHtml.style.height = tHeight;
+            tHtml.style.left = leftPos; tHtml.style.top = topPos;
+            tHtml.style.width = tWidth; tHtml.style.height = tHeight;
             tHtml.innerHTML = `<div class="token-hp">${hp}</div>`; layer.appendChild(tHtml);
+            tokenEl = tHtml; // Salva referência recém criada
+        }
+
+        // === CÂMERA DO JOGO ===
+        // Se for o token do próprio jogador que se moveu, rola a div até ele!
+        if(isMe && tokenEl) {
+            setTimeout(() => {
+                tokenEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            }, 100);
         }
     });
 
