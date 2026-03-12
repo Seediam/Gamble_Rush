@@ -486,12 +486,11 @@ window.initTacticalBoard = function() {
     let rows = conf.rows || 12;
     let shape = conf.shape || 'quadrado';
     
-    let cellSize = window.VTT_CELL_SIZE || 50; // Puxa os 50 pixels
+    let cellSize = window.VTT_CELL_SIZE || 50; // Tamanho fixo do quadrado
 
     // 1. AJUSTA O TAMANHO EXATO DO MAPA INTEIRO
     let wrapper = document.getElementById("vttWorldWrapper");
     if(wrapper) {
-        // Se são 20 colunas de 50px, a largura será exatos 1000px
         wrapper.style.width = (cols * cellSize) + "px";
         wrapper.style.height = (rows * cellSize) + "px";
     }
@@ -532,12 +531,10 @@ window.initTacticalBoard = function() {
         }
     }
     
-    let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = "";
-    if(loc.salas && ro) {
-        loc.salas.forEach(s => { 
-            ro.innerHTML += `<div class="room-overlay" style="left:${(s.x/cols)*100}%; top:${(s.y/rows)*100}%; width:${(s.w/cols)*100}%; height:${(s.h/rows)*100}%;">${s.n}</div>`; 
-        });
-    }
+    // === A SOLUÇÃO ESTÁ AQUI ===
+    // Limpamos os overlays antigos e NUNCA mais desenhamos caixas vermelhas e textos de "Salões"
+    let ro = document.getElementById("roomOverlays"); 
+    if(ro) ro.innerHTML = ""; 
 };
 
 window.updateTacticalBoard = function() {
