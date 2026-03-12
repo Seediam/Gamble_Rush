@@ -1275,9 +1275,32 @@ window.enviarMsgGamble = function() {
     if (!window.jogadorAtual) { window.showNeonToast("Faça login!"); return; }
     const inp = document.getElementById("chatInputMsg");
     if (!inp) { window.showNeonToast("Input do chat não encontrado."); return; }
-    const txt = (inp.value || "").trim(); if (!txt) return;
-    window.db.ref("tokyoRpg/chat").push({ nome: window.jogadorAtual, texto: txt, imagemUrl: null, data: new Date().toLocaleTimeString(), ts: Date.now() });
+
+    const txt = (inp.value || "").trim(); 
+    if (!txt) return;
+
+    // payload com reply (WhatsApp)
+    const payload = { 
+      nome: window.jogadorAtual, 
+      texto: txt, 
+      imagemUrl: null, 
+      data: new Date().toLocaleTimeString(), 
+      ts: Date.now(),
+      reply: window._replyDraft || null
+    };
+
+    window.db.ref("tokyoRpg/chat").push(payload);
+
+    // dispara inbox de menções (contexto gchat)
+    window.dispatchMentions({ 
+      from: window.jogadorAtual, 
+      contextType: "gchat", 
+      contextId: "", 
+      text: txt 
+    });
+
     inp.value = "";
+    window.cancelReply();
   } catch (e) { window.showNeonToast("Erro ao enviar."); }
 };
 window.prepararEnvioMensagem = function() { return window.enviarMsgGamble(); };
@@ -2091,4 +2114,251 @@ window.enviarComentario = function() {
         window.closeMentionDropdown();
     });
 }; 
+
+    // =========================================================
+// MENÇÕES (@) CONTEXTUAIS + INBOX OFFLINE
+// =========================================================
+window._mentionRuntime = window._mentionRuntime || {
+  active: false,
+  inputEl: null,
+  startPos: 0,
+  query: "",
+  context: "gchat",   // "gchat" | "post:<id>"
+  lastCandidates: []
+};
+
+window.setMentionContext = function(ctx){
+  window._mentionRuntime.context = ctx || "gchat";
+};
+
+// Descobre candidatos conforme contexto
+window.getMentionCandidates = function() {
+  const ctx = window._mentionRuntime.context || "gchat";
+
+  // G-CHAT: todos jogadores
+  if(ctx === "gchat"){
+    return Object.keys(window.usersGlobais || {})
+      .filter(n => n && n !== "MESTRE");
+  }
+
+  // Post: "post:<id>"
+  if(ctx.startsWith("post:")){
+    const postId = ctx.split(":")[1];
+    const p = (window.globalPostsData && window.globalPostsData[postId]) || null;
+    const set = new Set();
+
+    // Você sempre pode se marcar também
+    if(window.jogadorAtual) set.add(window.jogadorAtual);
+
+    if(p && p.autor) set.add(p.autor);
+
+    // comentaristas
+    if(p && p.comentarios){
+      Object.values(p.comentarios).forEach(c => {
+        if(c && c.autor) set.add(c.autor);
+      });
+    }
+
+    // fallback: se não achou nada, deixa pelo menos você
+    return Array.from(set).filter(Boolean);
+  }
+
+  return [];
+};
+
+// Render do dropdown
+window.showMentionDropdown = function(inputEl, query) {
+  const drop = document.getElementById("mentionDropdown");
+  if(!drop) return;
+
+  const rect = inputEl.getBoundingClientRect();
+  drop.style.left = rect.left + "px";
+  drop.style.top = (rect.top - 170) + "px";
+  drop.style.display = "block";
+
+  const candidates = window.getMentionCandidates();
+  const filtered = candidates
+    .filter(n => n.toLowerCase().includes((query||"").toLowerCase()))
+    .slice(0, 8);
+
+  window._mentionRuntime.lastCandidates = filtered;
+
+  if(filtered.length === 0){ drop.style.display = "none"; return; }
+
+  drop.innerHTML = filtered.map(n => {
+    const u = (window.usersGlobais && window.usersGlobais[n]) || {};
+    const av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
+    return `
+      <div class="mention-item" onclick="window.selectMention('${n}')">
+        <img src="${av}" class="mention-avatar">
+        <span>${n}</span>
+      </div>`;
+  }).join("");
+};
+
+window.handleMention = function(e, inputEl) {
+  const val = inputEl.value || "";
+  const cursorPos = inputEl.selectionStart || 0;
+  const beforeCursor = val.substring(0, cursorPos);
+  const atIndex = beforeCursor.lastIndexOf("@");
+
+  if(atIndex !== -1 && (atIndex === 0 || beforeCursor[atIndex-1] === " " || beforeCursor[atIndex-1] === "\n")){
+    const query = beforeCursor.substring(atIndex + 1);
+    if(!query.includes(" ") && !query.includes("\n")){
+      window._mentionRuntime.active = true;
+      window._mentionRuntime.inputEl = inputEl;
+      window._mentionRuntime.startPos = atIndex;
+      window._mentionRuntime.query = query;
+      window.showMentionDropdown(inputEl, query);
+      return;
+    }
+  }
+
+  window.closeMentionDropdown();
+};
+
+window.selectMention = function(nome) {
+  const s = window._mentionRuntime;
+  if(!s.active || !s.inputEl) return;
+
+  const inputEl = s.inputEl;
+  const val = inputEl.value || "";
+  const cursorPos = inputEl.selectionStart || val.length;
+
+  const before = val.substring(0, s.startPos);
+  const after = val.substring(cursorPos);
+
+  inputEl.value = before + "@" + nome + " " + after;
+  inputEl.focus();
+  window.closeMentionDropdown();
+};
+
+window.closeMentionDropdown = function(){
+  window._mentionRuntime.active = false;
+  const drop = document.getElementById("mentionDropdown");
+  if(drop) drop.style.display = "none";
+};
+
+// Extrai @NOMES do texto (somente quem existe na lista candidata do contexto)
+window.extractMentionsFromText = function(text, context){
+  if(!text) return [];
+  const raw = (text.match(/@([A-Za-z0-9_À-ÿ]+)/g) || []).map(x => x.slice(1));
+  const candidates = (context === "gchat")
+    ? Object.keys(window.usersGlobais || {}).filter(n => n && n !== "MESTRE")
+    : window.getMentionCandidates();
+
+  const set = new Set();
+  raw.forEach(n => {
+    // comparação case-insensitive mas gravar com nome correto
+    const match = candidates.find(c => c.toLowerCase() === n.toLowerCase());
+    if(match) set.add(match);
+  });
+  return Array.from(set);
+};
+
+// Envia eventos de menção para inbox do alvo (funciona offline)
+window.dispatchMentions = function({ from, contextType, contextId, text }) {
+  try{
+    if(!window.db || !from) return;
+    const ctx = contextType + (contextId ? (":" + contextId) : "");
+    const mentions = window.extractMentionsFromText(text || "", (contextType === "gchat" ? "gchat" : "post:"+contextId));
+
+    mentions.forEach(target => {
+      if(!target || target === from) return;
+
+      window.db.ref(`tokyoRpg/mentions/${target}/inbox`).push({
+        from,
+        ctx,
+        text: (text || "").slice(0, 140),
+        ts: Date.now()
+      });
+    });
+  }catch(e){
+    console.log("dispatchMentions error", e);
+  }
+};
+    window._replyDraft = null;
+
+window.startReply = function(toName, text, msgKey){
+  window._replyDraft = { toName, text: (text||"").slice(0,160), key: msgKey, ts: Date.now() };
+
+  const box = document.getElementById("replyPreview");
+  if(box) box.style.display = "flex";
+  const n = document.getElementById("replyToName");
+  const t = document.getElementById("replyToText");
+  if(n) n.innerText = "Respondendo: " + (toName || "");
+  if(t) t.innerText = (text || "");
+
+  const inp = document.getElementById("chatInputMsg");
+  if(inp) inp.focus();
+};
+
+window.cancelReply = function(){
+  window._replyDraft = null;
+  const box = document.getElementById("replyPreview");
+  if(box) box.style.display = "none";
+};
+    window._mentionNotifyQueue = [];
+window._mentionNotifyShowing = 0;
+
+window.renderMentionNotify = function(item){
+  const stack = document.getElementById("mentionNotifyStack");
+  if(!stack) return;
+
+  // mantém no máximo 3 na tela
+  while(stack.children.length >= 3){
+    stack.removeChild(stack.firstChild);
+  }
+
+  const from = item.from || "???";
+  const u = (window.usersGlobais && window.usersGlobais[from]) || {};
+  const av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${from}`;
+
+  const div = document.createElement("div");
+  div.className = "mention-notify";
+  div.innerHTML = `
+    <img src="${av}">
+    <div class="mn-texts">
+      <div class="mn-title">@${from} te marcou</div>
+      <div class="mn-sub">${(item.text||"").replace(/\s+/g,' ').trim()}</div>
+    </div>
+  `;
+
+  stack.appendChild(div);
+
+  // some sozinho
+  setTimeout(() => {
+    div.classList.add("out");
+    setTimeout(() => { if(div.parentElement) div.remove(); }, 380);
+  }, 3200);
+};
+
+window.startMentionInboxListener = function(){
+  if(!window.db || !window.jogadorAtual) return;
+
+  const ref = window.db.ref(`tokyoRpg/mentions/${window.jogadorAtual}/inbox`).limitToLast(20);
+
+  // 1) pega backlog uma vez
+  ref.once("value").then(snap => {
+    const data = snap.val() || {};
+    const arr = Object.keys(data).map(k => ({ key:k, ...data[k] }))
+      .sort((a,b) => (a.ts||0)-(b.ts||0));
+
+    // mostra só as 3 últimas do backlog ao entrar
+    arr.slice(-3).forEach(item => window.renderMentionNotify(item));
+  });
+
+  // 2) novos em tempo real
+  ref.on("child_added", snap => {
+    const item = snap.val();
+    if(!item) return;
+
+    // ignora itens muito antigos (pra não duplicar backlog)
+    const age = Date.now() - (item.ts||0);
+    if(age > 15000) return; // 15s pra trás -> considera backlog
+
+    window.renderMentionNotify(item);
+  });
+};
+    
 };
