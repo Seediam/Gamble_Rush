@@ -4328,31 +4328,46 @@ window.salvarFormatoMapa = function() {
     
     window.showNeonToast(`Terreno alterado para ${cols}x${rows} (${shape})!`);
 };
+// 1. DESENHA O MAPA GLOBAL (NÓS VERMELHOS) E ESCONDE O VTT
 window.desenharMapa = function() {
-    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none";
-    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "block";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "none";
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "none";
 
-    // Se o jogador acabou de abrir o app e não está em nenhum mapa, joga ele na Mesa Principal
-    if(!window.currentSubMapKey) {
-        window.abrirSubMapa("Mesa_Principal");
-    } else {
-        // Se ele já estava jogando, apenas recarrega o grid
-        window.initTacticalBoard();
-        window.updateTacticalBoard();
-    }
+    if(!mc) return;
+    mc.innerHTML = "";
+    
+    Object.keys(window.locaisMapa).forEach(key => {
+        let loc = window.locaisMapa[key];
+        let node = document.createElement("div");
+        node.className = "map-node";
+        node.style.left = loc.gx + "%";
+        node.style.top = loc.gy + "%";
+        node.innerHTML = `<div>${loc.nome}</div>`;
+        node.onclick = () => window.abrirSubMapa(key);
+        mc.appendChild(node);
+        
+        if(loc.conexoes) {
+            loc.conexoes.forEach(cKey => {
+                let target = window.locaisMapa[cKey];
+                if(target) window.drawMapLine(mc, loc.gx, loc.gy, target.gx, target.gy);
+            });
+        }
+    });
 };
 
+// 2. ABRE A MESA (VTT), ESCONDE O GLOBAL, E MOSTRA O PLANETA
 window.abrirSubMapa = function(localKey) {
     window.currentSubMapKey = localKey;
+    
     let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none";
     let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "flex";
 
-    // Pega o nome do mapa ou usa o código
     let loc = window.locaisMapa[localKey] || { nome: localKey.replace(/_/g, " ") };
     let titleEl = document.getElementById("subMapTitle");
     if(titleEl) titleEl.innerText = loc.nome;
 
-    // Atualiza a imagem de Fundo diretamente no Wrapper do Grid
     let bgUrl = window.submapasBGs[localKey] || "";
     let wrapper = document.getElementById("vttWorldWrapper");
     if(wrapper) {
@@ -4361,14 +4376,13 @@ window.abrirSubMapa = function(localKey) {
             wrapper.style.backgroundColor = "transparent";
         } else {
             wrapper.style.backgroundImage = "none";
-            wrapper.style.backgroundColor = "#111"; // Fundo cinza escuro caso o mestre não tenha colocado mapa
+            wrapper.style.backgroundColor = "#111"; 
         }
     }
 
     window.initTacticalBoard();
     window.updateTacticalBoard();
 
-    // Garante que o Token do jogador seja criado no banco de dados na posição 0,0 caso ele não exista lá
     if(window.jogadorAtual && window.db) {
         window.db.ref(`tokyoRpg/submapas/${localKey}`).once('value', s => {
             let currentGrid = s.val() || {};
@@ -4378,4 +4392,16 @@ window.abrirSubMapa = function(localKey) {
             }
         });
     }
+};
+
+// 3. SAIR DO VTT (VOLTAR PRO MAPA GLOBAL DE SELEÇÃO)
+window.fecharSubMapa = function() {
+    window.currentSubMapKey = "";
+    
+    // Mostra o mapa Global
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "block";
+    // Esconde a Mesa Virtual
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "none";
+    // Esconde o botão do Planetinha
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "none";
 };
