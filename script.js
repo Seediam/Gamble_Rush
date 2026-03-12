@@ -3824,3 +3824,186 @@ setInterval(() => {
         if(remoteAudio.volume < 1.0) remoteAudio.volume = 1.0; // Põe volume no 100% à força
     }
 }, 3000);
+
+// =========================================================
+// SISTEMA DE VOICE CHAT: ANTI-FIREWALL E ANTI-MUDO MOBILE
+// =========================================================
+
+window.rtcPeer = null;
+window.localStream = null;
+window.callIdAtual = null;
+window._escutaLigacaoAtiva = false;
+window.callStartTime = 0; 
+window.quemTaLigando = null; 
+
+// Aumentamos o número de Antenas (STUN) para furar firewalls e 4G
+const rtcServers = { 
+    iceServers: [
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
+    ] 
+};
+
+// --- FUNÇÃO PARA GERAR O LOG NO CHAT ---
+window.enviarLogChamada = function(tipo) {
+    if(!window.jogadorAtual) return;
+    let alvo = window.contatoSmsAtual || window.quemTaLigando;
+    if(!alvo) return;
+
+    let msg = "";
+    if(tipo === "cancelada") msg = "📞 Chamada perdida/cancelada.";
+    if(tipo === "recusada") msg = "📞 Chamada recusada.";
+    if(tipo === "finalizada") {
+        if(window.callStartTime === 0) return; 
+        let segs = Math.floor((Date.now() - window.callStartTime) / 1000);
+        let m = Math.floor(segs / 60);
+        let s = segs % 60;
+        msg = `📞 Chamada finalizada. Duração: ${m > 0 ? m + 'm ' : ''}${s}s`;
+    }
+
+    let chatId = [window.jogadorAtual, alvo].sort().join("_");
+    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push({
+        de: window.jogadorAtual,
+        para: alvo,
+        msg: msg,
+        data: new Date().toLocaleTimeString().substring(0, 5),
+        ts: Date.now()
+    });
+};
+
+// 1. FAZER A LIGAÇÃO
+window.iniciarLigacao = async function() {
+    if(!window.contatoSmsAtual) return;
+    let alvo = window.contatoSmsAtual;
+    let me = window.jogadorAtual;
+    window.callIdAtual = [me, alvo].sort().join("_");
+    window.callStartTime = 0; 
+    window.quemTaLigando = alvo;
+
+    // MÁGICA MOBILE: Força o alto-falante a destravar no exato momento do clique
+    let remoteAudio = document.getElementById("remoteAudio");
+    if(remoteAudio) remoteAudio.play().catch(e => {});
+
+    let callBtn = document.getElementById("btnCallUI");
+    callBtn.innerText = "🔴 Desligar";
+    callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
+    callBtn.onclick = window.encerrarLigacao;
+
+    window.showNeonToast(`📞 Ligando para ${alvo}...`);
+
+    try {
+        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch(e) {
+        window.showNeonToast("Erro: Permita o microfone no navegador!");
+        window.encerrarLigacaoLimpo(); return;
+    }
+
+    window.rtcPeer = new RTCPeerConnection(rtcServers);
+    window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
+
+    // RADAR DE FALHA DE REDE (Avisa se a internet de um deles bloquear o áudio)
+    window.rtcPeer.oniceconnectionstatechange = () => {
+        if(window.rtcPeer && window.rtcPeer.iceConnectionState === "failed") {
+            window.showNeonToast("❌ A rede bloqueou o áudio (Firewall/4G rígido).");
+            window.encerrarLigacao();
+        }
+    };
+
+    window.rtcPeer.ontrack = event => {
+        if(remoteAudio) {
+            remoteAudio.srcObject = event.streams[0];
+            remoteAudio.play().catch(e => console.log(e));
+        }
+    };
+
+    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
+    await callDoc.remove(); 
+    await callDoc.set({ from: me, to: alvo, status: "calling" });
+
+    window.rtcPeer.onicecandidate = event => {
+        if(event.candidate) callDoc.child('callerCandidates').push(event.candidate.toJSON());
+    };
+
+    const offer = await window.rtcPeer.createOffer();
+    await window.rtcPeer.setLocalDescription(offer);
+    await callDoc.update({ offer: { type: offer.type, sdp: offer.sdp } });
+
+    window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
+
+    callDoc.child('answer').on('value', async snap => {
+        let ans = snap.val();
+        if(ans && window.rtcPeer && !window.rtcPeer.currentRemoteDescription) {
+            await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(ans));
+            window.showNeonToast("✅ Ligação Atendida!");
+            window.callStartTime = Date.now();
+
+            callDoc.child('calleeCandidates').on('child_added', snapIce => {
+                let candidate = snapIce.val();
+                if(candidate && window.rtcPeer) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
+            });
+        }
+    });
+
+    callDoc.child('status').on('value', snap => {
+        if(snap.val() === "ended") window.encerrarLigacaoLimpo();
+    });
+};
+
+// 2. RADAR DE TOQUE DO CELULAR
+setInterval(() => {
+    if(window.jogadorAtual && window.db && !window._escutaLigacaoAtiva) {
+        window._escutaLigacaoAtiva = true;
+        
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).on('value', snap => {
+            let data = snap.val();
+            let modal = document.getElementById("callModal");
+            
+            if(!data) { 
+                if(modal) modal.style.display = "none";
+                return;
+            }
+            if(Date.now() - data.ts > 30000) return; 
+
+            window.callIdAtual = data.callId;
+            window.quemTaLigando = data.from;
+            
+            let u = window.usersGlobais[data.from] || {};
+            let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${data.from}`;
+            let imgEl = document.getElementById("callModalAvatar");
+            if(imgEl) imgEl.src = av;
+            
+            document.getElementById("callModalName").innerText = data.from;
+            if(modal) modal.style.display = "block";
+        });
+    }
+}, 2000);
+
+// 3. ATENDER LIGAÇÃO
+window.aceitarLigacao = async function() {
+    document.getElementById("callModal").style.display = "none";
+
+    // MÁGICA MOBILE: Força o alto-falante a destravar no exato momento do clique
+    let remoteAudio = document.getElementById("remoteAudio");
+    if(remoteAudio) remoteAudio.play().catch(e => {});
+
+    let callBtn = document.getElementById("btnCallUI");
+    if(callBtn) {
+        callBtn.style.display = "block";
+        callBtn.innerText = "🔴 Desligar";
+        callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
+        callBtn.onclick = window.encerrarLigacao;
+    }
+
+    try {
+        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch(e) {
+        window.showNeonToast("Microfone bloqueado! Autorize no navegador."); window.recusarLigacao(); return;
+    }
+
+    window.rtcPeer = new RTCPeerConnection(rtcServers);
+    window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
+
+    // RADAR DE FALHA DE REDE
+    window.rtc
