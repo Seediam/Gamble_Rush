@@ -573,7 +573,13 @@ window.updateTacticalBoard = function() {
 
     let px = -1, py = -1;
     Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
-
+// Dentro de window.updateTacticalBoard, na parte do Loop das Células:
+if(window.ataquePreparado) {
+    let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
+    if(dist > 0 && dist <= window.ataquePreparado.range) {
+        cell.classList.add("in-range-blocked"); // Fica vermelho indicando área de ataque
+    }
+}
     for(let y=0; y<rows; y++) {
         for(let x=0; x<cols; x++) {
             let cid = `${x}_${y}`;
@@ -4673,3 +4679,95 @@ window.passarTurnoVTT = function() {
     window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}/atual`).set((window.turnosVTTGlobal.atual+1)%window.turnosVTTGlobal.ordem.length);
     window.movimentosRestantes = 0; window.setElText("movRestantes", "Passos Livres: 0");
 };
+// --- 1. RENDERIZAR LISTA DE ATAQUES NA HUD ---
+window.renderizarAtaquesHUD = function() {
+    let container = document.getElementById("combatAtaquesList");
+    if(!container) return;
+    container.innerHTML = "";
+    
+    let u = window.usersGlobais[window.jogadorAtual];
+    let r = window.getSafeRpg(u);
+    let buffs = window.calcularBuffsMoveis(u);
+
+    // Ataque Padrão: Soco
+    let danoSoco = `1d4+${r.for + buffs.for}`;
+    container.innerHTML += `<button class="action-btn" style="font-size:10px;" onclick="window.prepararAtaque('Soco', '${danoSoco}', 1, 'linear')">👊 Soco (${danoSoco})</button>`;
+
+    // Armas Equipadas
+    if(u.mochila) {
+        Object.keys(u.mochila).forEach(k => {
+            let i = u.mochila[k];
+            if(i.tipo === 'Arma' && i.eq) {
+                // Se a arma não tiver range/shape no banco, assume padrão
+                let range = i.range || 1;
+                let shape = i.shape || 'linear';
+                container.innerHTML += `<button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); font-size:10px;" 
+                    onclick="window.prepararAtaque('${i.nome}', '${i.poder}', ${range}, '${shape}')">⚔️ ${i.nome} (${i.poder})</button>`;
+            }
+        });
+    }
+};
+
+// --- 2. PREPARAR ATAQUE (HIGHLIGHT NO GRID) ---
+window.ataquePreparado = null;
+window.prepararAtaque = function(nome, dano, range, shape) {
+    window.ataquePreparado = { nome, dano, range, shape };
+    window.showNeonToast(`Ataque ${nome} selecionado! Clique no alvo.`);
+    window.updateTacticalBoard(); // Para desenhar o alcance do ataque
+};
+
+// --- 3. CÁLCULO DE DANO E REAÇÃO ---
+window.ataquePendente = null;
+
+window.processarDanoVTT = function(alvoNome, danoFormula) {
+    // Rola o dano
+    let partes = danoFormula.toLowerCase().split('d');
+    let qtd = parseInt(partes[0]);
+    let faces = parseInt(partes[1].split('+')[0]);
+    let mod = parseInt(partes[1].split('+')[1] || 0);
+    
+    let totalDano = 0;
+    for(let i=0; i<qtd; i++) totalDano += Math.floor(Math.random()*faces)+1;
+    totalDano += mod;
+
+    window.ataquePendente = { alvo: alvoNome, danoBase: totalDano };
+    
+    // Notifica o alvo (Isso dispararia o modal no PC do oponente via Firebase)
+    window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}/pendencia`).set({
+        alvo: alvoNome,
+        atacante: window.jogadorAtual,
+        dano: totalDano,
+        ts: Date.now()
+    });
+};
+
+window.reagir = function(tipo) {
+    let p = window.ataquePendente;
+    let u = window.usersGlobais[window.jogadorAtual];
+    let r = window.getSafeRpg(u);
+    let peso = window.getPesoStatus(u);
+    let danoFinal = p.dano;
+
+    if(tipo === 'esquiva') {
+        let rolagem = Math.floor(Math.random()*20)+1;
+        let bonus = r.agi;
+        if(peso.sobrepeso) bonus -= 2; // Penalidade de peso na esquiva
+        
+        if(rolagem + bonus >= 12) { // CD 12 padrão
+            danoFinal = 0;
+            window.showNeonToast("Esquivou perfeitamente!");
+        } else {
+            window.showNeonToast("Falhou na esquiva!");
+        }
+    } else if(tipo === 'defender') {
+        let defesa = window.calcularDefesa(u);
+        danoFinal = Math.max(0, p.dano - defesa);
+        window.showNeonToast(`Bloqueou ${defesa} de dano!`);
+    }
+
+    // Aplica o dano no Firebase
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`).set(Math.max(0, r.hp - danoFinal));
+    window.setElDisplay("reactionModal", "none");
+    window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}/pendencia`).remove();
+};
+
