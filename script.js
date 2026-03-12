@@ -3570,319 +3570,37 @@ setInterval(() => {
 }, 3000);
 
 // =========================================================
-// SISTEMA DE VOICE CHAT: BLINDAGEM MÁXIMA ANTI-CRASH E ANTI-FIREWALL
+// SISTEMA DE VOICE CHAT: MOTOR SERVIDOR GLOBAL (NÃO-P2P / JITSI API)
 // =========================================================
 
-window.rtcPeer = null;
-window.localStream = null;
+// 1. INJETA O SERVIDOR GLOBAL AUTOMATICAMENTE
+if (typeof window.JitsiMeetExternalAPI === 'undefined') {
+    let script = document.createElement('script');
+    script.src = 'https://meet.jit.si/external_api.js';
+    script.onload = () => console.log("Servidor Global Conectado.");
+    document.head.appendChild(script);
+}
+
+// 2. CRIA O ESPAÇO OCULTO PARA O MOTOR RODAR
+if (!document.getElementById('jitsiContainer')) {
+    let div = document.createElement('div');
+    div.id = 'jitsiContainer';
+    div.style.position = 'absolute';
+    div.style.left = '-9999px'; // Esconde para fora da tela
+    div.style.width = '1px';
+    div.style.height = '1px';
+    div.style.overflow = 'hidden';
+    document.body.appendChild(div);
+}
+
+window.jitsiApi = null;
 window.callIdAtual = null;
 window._escutaLigacaoAtiva = false;
 window.callStartTime = 0; 
 window.quemTaLigando = null; 
-
-// Agora usando window.rtcServers para evitar o erro de "already declared" se colar 2x
-window.rtcServers = { 
-    iceServers: [
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-    ] 
-};
-
-window.enviarLogChamada = function(tipo) {
-    if(!window.jogadorAtual) return;
-    let alvo = window.contatoSmsAtual || window.quemTaLigando;
-    if(!alvo) return;
-
-    let msg = "";
-    if(tipo === "cancelada") msg = "📞 Chamada perdida/cancelada.";
-    if(tipo === "recusada") msg = "📞 Chamada recusada.";
-    if(tipo === "finalizada") {
-        if(window.callStartTime === 0) return; 
-        let segs = Math.floor((Date.now() - window.callStartTime) / 1000);
-        let m = Math.floor(segs / 60);
-        let s = segs % 60;
-        msg = `📞 Chamada finalizada. Duração: ${m > 0 ? m + 'm ' : ''}${s}s`;
-    }
-
-    let chatId = [window.jogadorAtual, alvo].sort().join("_");
-    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push({
-        de: window.jogadorAtual,
-        para: alvo,
-        msg: msg,
-        data: new Date().toLocaleTimeString().substring(0, 5),
-        ts: Date.now()
-    });
-};
-
-// 1. FAZER A LIGAÇÃO
-window.iniciarLigacao = async function() {
-    if(!window.contatoSmsAtual) return;
-    let alvo = window.contatoSmsAtual;
-    let me = window.jogadorAtual;
-    window.callIdAtual = [me, alvo].sort().join("_");
-    window.callStartTime = 0; 
-    window.quemTaLigando = alvo;
-
-    // PROTEÇÃO 1: Evita erro se o botão não estiver na tela
-    let callBtn = document.getElementById("btnCallUI");
-    if(callBtn) {
-        callBtn.innerText = "🔴 Desligar";
-        callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
-        callBtn.onclick = window.encerrarLigacao;
-    }
-
-    // PROTEÇÃO 2: Trava anti-HTTP (Impede Crash Fatal)
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        window.showNeonToast("❌ ERRO: O navegador bloqueou o áudio. Use HTTPS ou Localhost!");
-        window.encerrarLigacaoLimpo();
-        return;
-    }
-
-    window.showNeonToast(`📞 Ligando para ${alvo}...`);
-
-    try {
-        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    } catch(e) {
-        window.showNeonToast("❌ Permita o microfone no navegador!");
-        window.encerrarLigacaoLimpo(); return;
-    }
-
-    window.rtcPeer = new RTCPeerConnection(window.rtcServers);
-    window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
-
-    let remoteAudio = document.getElementById("remoteAudio");
-    window.rtcPeer.ontrack = event => {
-        if(remoteAudio) {
-            remoteAudio.srcObject = event.streams[0];
-            remoteAudio.play().catch(e => console.log(e));
-        }
-    };
-
-    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
-    await callDoc.remove(); 
-    await callDoc.set({ from: me, to: alvo, status: "calling" });
-
-    window.rtcPeer.onicecandidate = event => {
-        if(event.candidate) callDoc.child('callerCandidates').push(event.candidate.toJSON());
-    };
-
-    try {
-        const offer = await window.rtcPeer.createOffer();
-        await window.rtcPeer.setLocalDescription(offer);
-        await callDoc.update({ offer: { type: offer.type, sdp: offer.sdp } });
-    } catch (err) { console.error("Erro Offer:", err); }
-
-    window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
-
-    // PROTEÇÃO 3: Sincronia perfeita para não estourar DOMException
-    callDoc.child('answer').on('value', async snap => {
-        let ans = snap.val();
-        if(ans && window.rtcPeer && window.rtcPeer.signalingState !== "closed" && !window.rtcPeer.currentRemoteDescription) {
-            try {
-                await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(ans));
-                window.showNeonToast("✅ Ligação Atendida!");
-                window.callStartTime = Date.now();
-
-                callDoc.child('calleeCandidates').on('child_added', snapIce => {
-                    let candidate = snapIce.val();
-                    if(candidate && window.rtcPeer && window.rtcPeer.remoteDescription) {
-                        window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e=>{});
-                    }
-                });
-            } catch(e) { console.error("Erro na resposta:", e); }
-        }
-    });
-
-    callDoc.child('status').on('value', snap => {
-        if(snap.val() === "ended") window.encerrarLigacaoLimpo();
-    });
-};
-
-// 2. RADAR DE TOQUE
-setInterval(() => {
-    if(window.jogadorAtual && window.db && !window._escutaLigacaoAtiva) {
-        window._escutaLigacaoAtiva = true;
-        
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).on('value', snap => {
-            let data = snap.val();
-            let modal = document.getElementById("callModal");
-            
-            if(!data) { 
-                if(modal) modal.style.display = "none";
-                return;
-            }
-            if(Date.now() - data.ts > 30000) return; 
-
-            window.callIdAtual = data.callId;
-            window.quemTaLigando = data.from;
-            
-            let u = window.usersGlobais[data.from] || {};
-            let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${data.from}`;
-            let imgEl = document.getElementById("callModalAvatar");
-            if(imgEl) imgEl.src = av;
-            
-            let nameEl = document.getElementById("callModalName");
-            if(nameEl) nameEl.innerText = data.from;
-            
-            if(modal) modal.style.display = "block";
-        });
-    }
-}, 2000);
-
-// 3. ATENDER LIGAÇÃO
-window.aceitarLigacao = async function() {
-    let modal = document.getElementById("callModal");
-    if(modal) modal.style.display = "none";
-
-    let callBtn = document.getElementById("btnCallUI");
-    if(callBtn) {
-        callBtn.style.display = "block";
-        callBtn.innerText = "🔴 Desligar";
-        callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
-        callBtn.onclick = window.encerrarLigacao;
-    }
-
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        window.showNeonToast("❌ ERRO: Navegador bloqueou áudio. Use HTTPS!");
-        window.recusarLigacao(); return;
-    }
-
-    try {
-        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    } catch(e) {
-        window.showNeonToast("❌ Microfone bloqueado! Autorize no navegador.");
-        window.recusarLigacao(); return;
-    }
-
-    window.rtcPeer = new RTCPeerConnection(window.rtcServers);
-    window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
-
-    let remoteAudio = document.getElementById("remoteAudio");
-    window.rtcPeer.ontrack = event => {
-        if(remoteAudio) {
-            remoteAudio.srcObject = event.streams[0];
-            remoteAudio.play().catch(e => console.log(e));
-        }
-    };
-
-    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
-
-    window.rtcPeer.onicecandidate = event => {
-        if(event.candidate) callDoc.child('calleeCandidates').push(event.candidate.toJSON());
-    };
-
-    callDoc.child('offer').once('value', async snap => {
-        let offer = snap.val();
-        if(!offer) return;
-
-        try {
-            await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(offer));
-
-            callDoc.child('callerCandidates').on('child_added', snapIce => {
-                let candidate = snapIce.val();
-                if(candidate && window.rtcPeer && window.rtcPeer.remoteDescription) {
-                    window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e=>{});
-                }
-            });
-
-            const answer = await window.rtcPeer.createAnswer();
-            await window.rtcPeer.setLocalDescription(answer);
-
-            await callDoc.update({
-                answer: { type: answer.type, sdp: answer.sdp },
-                status: "answered"
-            });
-
-            window.callStartTime = Date.now(); 
-        } catch(e) { console.error("Erro ao atender:", e); }
-    });
-
-    callDoc.child('status').on('value', snap => {
-        if(snap.val() === "ended") window.encerrarLigacaoLimpo();
-    });
-
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
-};
-
-// 4. RECUSAR LIGAÇÃO
-window.recusarLigacao = function() {
-    let modal = document.getElementById("callModal");
-    if(modal) modal.style.display = "none";
-
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
-    
-    window.enviarLogChamada("recusada");
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
-    window.encerrarLigacaoLimpo();
-};
-
-// 5. DESLIGAR
-window.encerrarLigacao = function() {
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
-    
-    if(window.callStartTime > 0) {
-        window.enviarLogChamada("finalizada");
-    } else {
-        window.enviarLogChamada("cancelada");
-    }
-
-    if(window.contatoSmsAtual) window.db.ref(`tokyoRpg/users/${window.contatoSmsAtual}/incomingCall`).remove();
-    window.encerrarLigacaoLimpo();
-};
-
-// 6. LIMPEZA TOTAL DA CHAMADA
-window.encerrarLigacaoLimpo = function() {
-    let modal = document.getElementById("callModal");
-    if(modal) modal.style.display = "none";
-    
-    if(window.rtcPeer) { window.rtcPeer.close(); window.rtcPeer = null; }
-    if(window.localStream) { window.localStream.getTracks().forEach(t => t.stop()); window.localStream = null; }
-
-    let remoteAudio = document.getElementById("remoteAudio");
-    if(remoteAudio) remoteAudio.srcObject = null;
-
-    let callBtn = document.getElementById("btnCallUI");
-    if(callBtn) {
-        callBtn.innerText = "📞 Ligar";
-        callBtn.style.borderColor = "#0f0"; callBtn.style.color = "#0f0";
-        callBtn.onclick = window.iniciarLigacao;
-    }
-    
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`).off();
-    
-    window.callIdAtual = null;
-    window.callStartTime = 0;
-    window.quemTaLigando = null;
-};;
-// =========================================================
-// SISTEMA DE VOICE CHAT: INTERFACE VISUAL, NEON E STATUS OCUPADO
-// =========================================================
-
-window.rtcPeer = null;
-window.localStream = null;
-window.callIdAtual = null;
-window._escutaLigacaoAtiva = false;
-window.callStartTime = 0; 
-window.quemTaLigando = null; 
-
-// Efeitos de Áudio
-window.audioContext = null;
-window.audioMeterInterval = null;
 window.callTimerInterval = null;
 
-window.rtcServers = { 
-    iceServers: [
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' }
-    ] 
-};
-
-// --- FUNÇÃO PARA GERAR LOG ---
+// --- FUNÇÃO PARA GERAR LOG DE DURAÇÃO NO CHAT ---
 window.enviarLogChamada = function(tipo) {
     if(!window.jogadorAtual) return;
     let alvo = window.contatoSmsAtual || window.quemTaLigando;
@@ -3901,6 +3619,222 @@ window.enviarLogChamada = function(tipo) {
 
     let chatId = [window.jogadorAtual, alvo].sort().join("_");
     window.db.ref(`tokyoRpg/smsChats/${chatId}`).push({ de: window.jogadorAtual, para: alvo, msg: msg, data: new Date().toLocaleTimeString().substring(0, 5), ts: Date.now() });
+};
+
+// --- ABRE A INTERFACE NEON DA CHAMADA ATIVA ---
+window.abrirTelaChamadaAtiva = function(alvoId) {
+    let modal = document.getElementById("activeCallModal");
+    if(!modal) return;
+
+    let me = window.jogadorAtual;
+    let meuAv = window.usersGlobais[me]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${me}`;
+    let alvoAv = window.usersGlobais[alvoId]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${alvoId}`;
+
+    document.getElementById("activeCallMyAvatar").src = meuAv;
+    document.getElementById("activeCallMyName").innerText = me;
+    document.getElementById("activeCallTargetAvatar").src = alvoAv;
+    document.getElementById("activeCallTargetName").innerText = alvoId;
+    document.getElementById("activeCallTimer").innerText = "00:00";
+
+    modal.style.display = "flex";
+    
+    if(window.callTimerInterval) clearInterval(window.callTimerInterval);
+    window.callTimerInterval = setInterval(() => {
+        let segs = Math.floor((Date.now() - window.callStartTime) / 1000);
+        let m = Math.floor(segs / 60).toString().padStart(2, '0');
+        let s = (segs % 60).toString().padStart(2, '0');
+        document.getElementById("activeCallTimer").innerText = `${m}:${s}`;
+    }, 1000);
+};
+
+// --- MOTOR DE CONEXÃO E DETECTOR DE VOZ ---
+window.startJitsiCall = function(roomName) {
+    if (!window.JitsiMeetExternalAPI) {
+        window.showNeonToast("❌ Servidor carregando, tente novamente..."); return;
+    }
+
+    if(window.jitsiApi) { window.jitsiApi.dispose(); window.jitsiApi = null; }
+
+    const options = {
+        roomName: roomName,
+        width: "100%",
+        height: "100%",
+        parentNode: document.getElementById('jitsiContainer'),
+        configOverwrite: {
+            startWithAudioMuted: false,
+            startWithVideoMuted: true,
+            prejoinPageEnabled: false, // Pula a tela de preparação
+            disableDeepLinking: true,
+        },
+        userInfo: { displayName: window.jogadorAtual }
+    };
+
+    window.jitsiApi = new window.JitsiMeetExternalAPI('meet.jit.si', options);
+
+    // MÁGICA: O Servidor avisa quem está falando para piscar o Neon!
+    window.jitsiApi.on('audioLevelChanged', (data) => {
+        let myAvatar = document.getElementById("activeCallMyAvatar");
+        let targetAvatar = document.getElementById("activeCallTargetAvatar");
+        let vol = data.audioLevel * 100;
+        
+        // 'local' é você, o resto é a outra pessoa
+        if (data.participantId === 'local' || data.participantId === window.jitsiApi._myUserID) {
+            if(myAvatar) {
+                if(vol > 5) myAvatar.style.boxShadow = `0 0 ${20 + vol}px ${5 + (vol/2)}px rgba(0, 229, 255, 0.9)`;
+                else myAvatar.style.boxShadow = `0 0 10px var(--accent-blue)`;
+            }
+        } else {
+            if(targetAvatar) {
+                if(vol > 5) targetAvatar.style.boxShadow = `0 0 ${20 + vol}px ${5 + (vol/2)}px rgba(255, 26, 85, 0.9)`;
+                else targetAvatar.style.boxShadow = `0 0 10px var(--accent-red)`;
+            }
+        }
+    });
+
+    window.abrirTelaChamadaAtiva(window.quemTaLigando);
+};
+
+// 1. FAZER A LIGAÇÃO
+window.iniciarLigacao = async function() {
+    if(!window.contatoSmsAtual) return;
+    let alvo = window.contatoSmsAtual;
+    let me = window.jogadorAtual;
+
+    // TRAVA DE OCUPADO
+    let inCallSnap = await window.db.ref(`tokyoRpg/users/${alvo}/inCall`).once('value');
+    if (inCallSnap.val() === true) {
+        window.showNeonToast(`❌ O Celular de ${alvo} está ocupado!`);
+        return;
+    }
+
+    window.db.ref(`tokyoRpg/users/${me}/inCall`).set(true);
+
+    // Cria uma sala ÚNICA e criptografada no Servidor Global
+    window.callIdAtual = "TokyoRpg_" + [me, alvo].sort().join("_").replace(/[^a-zA-Z0-9]/g, '');
+    window.callStartTime = 0; 
+    window.quemTaLigando = alvo;
+
+    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
+    await callDoc.remove(); 
+    await callDoc.set({ from: me, to: alvo, status: "calling" });
+
+    window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
+    window.showNeonToast(`📞 Ligando para ${alvo}...`);
+
+    let callBtn = document.getElementById("btnCallUI");
+    if(callBtn) {
+        callBtn.innerText = "🔴 Desligar";
+        callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
+        callBtn.onclick = window.encerrarLigacao;
+    }
+
+    // Fica aguardando o Alvo atender
+    callDoc.child('status').on('value', snap => { 
+        let st = snap.val();
+        if(st === "answered" && window.callStartTime === 0) {
+            window.showNeonToast("✅ Ligação Atendida!");
+            window.callStartTime = Date.now();
+            window.startJitsiCall(window.callIdAtual);
+        }
+        if(st === "ended") window.encerrarLigacaoLimpo(); 
+    });
+};
+
+// 2. RADAR DE TOQUE
+setInterval(() => {
+    if(window.jogadorAtual && window.db && !window._escutaLigacaoAtiva) {
+        window._escutaLigacaoAtiva = true;
+        
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).on('value', snap => {
+            let data = snap.val();
+            let modal = document.getElementById("callModal");
+            
+            if(!data) { if(modal) modal.style.display = "none"; return; }
+            if(Date.now() - data.ts > 30000) return; 
+
+            window.callIdAtual = data.callId;
+            window.quemTaLigando = data.from;
+            
+            let u = window.usersGlobais[data.from] || {};
+            let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${data.from}`;
+            
+            let imgEl = document.getElementById("callModalAvatar");
+            if(imgEl) imgEl.src = av;
+            
+            let nameEl = document.getElementById("callModalName");
+            if(nameEl) nameEl.innerText = data.from;
+            
+            // Toca o Ringtone (já temos a função tocarSomNotificacao feita anteriormente)
+            if(typeof window.tocarSomNotificacao === "function") window.tocarSomNotificacao();
+
+            if(modal) modal.style.display = "block";
+        });
+    }
+}, 2000);
+
+// 3. ATENDER LIGAÇÃO
+window.aceitarLigacao = async function() {
+    let modal = document.getElementById("callModal");
+    if(modal) modal.style.display = "none";
+
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(true);
+    window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("answered");
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
+
+    window.callStartTime = Date.now();
+    window.startJitsiCall(window.callIdAtual);
+
+    window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).on('value', snap => { 
+        if(snap.val() === "ended") window.encerrarLigacaoLimpo(); 
+    });
+};
+
+// 4. RECUSAR LIGAÇÃO
+window.recusarLigacao = function() {
+    let modal = document.getElementById("callModal");
+    if(modal) modal.style.display = "none";
+
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    window.enviarLogChamada("recusada");
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
+    window.encerrarLigacaoLimpo();
+};
+
+// 5. DESLIGAR
+window.encerrarLigacao = function() {
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    if(window.callStartTime > 0) window.enviarLogChamada("finalizada"); else window.enviarLogChamada("cancelada");
+    if(window.contatoSmsAtual) window.db.ref(`tokyoRpg/users/${window.contatoSmsAtual}/incomingCall`).remove();
+    window.encerrarLigacaoLimpo();
+};
+
+// 6. LIMPEZA TOTAL
+window.encerrarLigacaoLimpo = function() {
+    document.getElementById("callModal") && (document.getElementById("callModal").style.display = "none");
+    document.getElementById("activeCallModal") && (document.getElementById("activeCallModal").style.display = "none");
+    
+    // Libera a linha para receber novas chamadas
+    if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(false);
+    if(window.callTimerInterval) clearInterval(window.callTimerInterval);
+    
+    // Desliga e Destrói a conexão com o Servidor Global
+    if(window.jitsiApi) {
+        window.jitsiApi.dispose();
+        window.jitsiApi = null;
+    }
+
+    let callBtn = document.getElementById("btnCallUI");
+    if(callBtn) {
+        callBtn.innerText = "📞 Ligar";
+        callBtn.style.borderColor = "#0f0"; callBtn.style.color = "#0f0";
+        callBtn.onclick = window.iniciarLigacao;
+    }
+    
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`).off();
+    
+    window.callIdAtual = null;
+    window.callStartTime = 0;
+    window.quemTaLigando = null;
 };
 
 // --- INTERFACE DE CHAMADA ATIVA ---
@@ -4175,4 +4109,146 @@ window.encerrarLigacaoLimpo = function() {
     window.callIdAtual = null;
     window.callStartTime = 0;
     window.quemTaLigando = null;
+};
+
+// =========================================================
+// SISTEMA DE NOTIFICAÇÕES GLOBAIS: SOM, POPUPS E RINGTONES
+// =========================================================
+
+// 1. Toca o som (Áudio Customizado ou Beep Sintético do Sistema)
+window.tocarSomNotificacao = function() {
+    let u = window.usersGlobais?.[window.jogadorAtual] || {};
+    let url = u.ringtone;
+
+    if (url) {
+        let audio = new Audio(url);
+        audio.volume = 0.8;
+        audio.play().catch(e => console.log("Áudio bloqueado", e));
+    } else {
+        // Gera um Beep Cyberpunk puro pelo navegador (Não depende de links externos)
+        try {
+            let ctx = new (window.AudioContext || window.webkitAudioContext)();
+            let osc = ctx.createOscillator();
+            let gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, ctx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1500, ctx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.2);
+            osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.2);
+        } catch(e) {}
+    }
+};
+
+// 2. Salva a URL do Toque Customizado no Banco
+window.salvarRingtone = function() {
+    if(!window.jogadorAtual) return;
+    let url = document.getElementById("ringtoneUrl").value.trim();
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/ringtone`).set(url).then(() => {
+        window.showNeonToast("🎵 Toque de celular atualizado!");
+        window.tocarSomNotificacao(); // Toca para a pessoa testar se funcionou!
+    });
+};
+
+// 3. Atualizamos a aba de Contatos para puxar o ringtone salvo
+window.carregarContatosSMS = function() {
+    let lista = document.getElementById("listaContatosSMS");
+    if(!lista || !window.usersGlobais || !window.jogadorAtual) return;
+    lista.innerHTML = "";
+    
+    let meusContatos = window.usersGlobais[window.jogadorAtual]?.contatos || {};
+    let contatosArray = Object.keys(meusContatos);
+
+    if(window.isMaster) contatosArray = Object.keys(window.usersGlobais).filter(n => n !== "MESTRE" && n !== window.jogadorAtual);
+
+    if(contatosArray.length === 0) {
+        lista.innerHTML = `<div style="text-align:center; color:#555; font-size:10px; margin-top:20px;">Sua agenda está vazia.<br><br>Adicione o nº de alguém.</div>`;
+    } else {
+        contatosArray.forEach(n => {
+            let u = window.usersGlobais[n];
+            if(!u) return;
+            let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
+            let isSel = (window.contatoSmsAtual === n) ? "background:rgba(0, 229, 255, 0.2); border-left:3px solid var(--accent-blue);" : "background:#111; border-left:3px solid #333;";
+            lista.innerHTML += `
+            <div style="display:flex; align-items:center; gap:10px; padding:10px; cursor:pointer; border-radius:4px; margin-bottom:5px; ${isSel}" onclick="window.abrirChatSMS('${n}')">
+                <img src="${av}" style="width:35px; height:35px; border-radius:50%; object-fit:cover; border:1px solid #555;">
+                <div style="color:#fff; font-weight:bold; font-size:12px; overflow:hidden; text-overflow:ellipsis;">${n}</div>
+            </div>`;
+        });
+    }
+
+    // Puxa o ringtone e joga na caixinha de texto pra pessoa ver o que configurou
+    let me = window.usersGlobais?.[window.jogadorAtual] || {};
+    let inp = document.getElementById("ringtoneUrl");
+    if(inp && me.ringtone !== undefined) inp.value = me.ringtone;
+};
+
+// 4. Atualizamos o envio de SMS para mandar a Notificação Real + Popup pro Alvo
+window.enviarSMS = function() {
+    if(!window.jogadorAtual || !window.contatoSmsAtual) {
+        window.showNeonToast("Selecione um contato na agenda primeiro!");
+        return;
+    }
+    
+    let inputEl = document.getElementById("smsTexto");
+    let txt = inputEl.value.trim();
+    if(!txt) return;
+    
+    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
+    let payload = {
+        de: window.jogadorAtual,
+        para: window.contatoSmsAtual,
+        msg: txt,
+        data: new Date().toLocaleTimeString().substring(0, 5),
+        ts: Date.now()
+    };
+    
+    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push(payload).then(() => {
+        // Dispara a Notificação Oficial! (Faz o balão descer na tela do Alvo com som)
+        if(typeof window.enviarNotificacao === "function") {
+            window.enviarNotificacao(window.contatoSmsAtual, "sms", window.jogadorAtual, "te enviou um novo SMS cifrado!", chatId);
+        }
+    });
+    
+    inputEl.value = ""; 
+    inputEl.focus();    
+};
+
+// 5. Atualizamos o Escutador de Notificações para TOCAR O SOM em tudo
+window.escutarNotificacoes = function() {
+    if (!window.jogadorAtual || !window.db) return;
+    let notifRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/notificacoes`);
+
+    notifRef.on('value', snap => {
+        let data = snap.val() || {};
+        let nGchat = 0, nGpost = 0, nGchallenger = 0;
+
+        Object.values(data).forEach(n => {
+            if (!n.lida) {
+                if (n.contextType === "gchat") nGchat++;
+                if (n.contextType === "gpost") nGpost++;
+                if (n.contextType === "embates") nGchallenger++;
+            }
+        });
+        window.atualizarBadgesHUD(nGchat, nGpost, nGchallenger);
+    });
+
+    let readyToNotify = false;
+    notifRef.limitToLast(1).on('child_added', snap => {
+        if (!readyToNotify) return; 
+        let n = snap.val();
+        if (!n || n.lida) return;
+        
+        // MÁGICA: Toca o som antes do balão descer!
+        window.tocarSomNotificacao();
+        
+        // Desce o balão na tela!
+        if(typeof window.mostrarNotificacaoHUD === "function") {
+            window.mostrarNotificacaoHUD(n.from, n.contextType, n.texto);
+        }
+    });
+    
+    setTimeout(() => { readyToNotify = true; }, 2000);
 };
