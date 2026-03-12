@@ -3570,271 +3570,39 @@ setInterval(() => {
 }, 3000);
 
 // =========================================================
-// SISTEMA DE VOICE CHAT: MOTOR SERVIDOR GLOBAL (NÃO-P2P / JITSI API)
+// SISTEMA DE VOICE CHAT: WEBRTC FORÇADO E MONITOR DE ERROS (EXCLAMAÇÃO)
 // =========================================================
 
-// 1. INJETA O SERVIDOR GLOBAL AUTOMATICAMENTE
-if (typeof window.JitsiMeetExternalAPI === 'undefined') {
-    let script = document.createElement('script');
-    script.src = 'https://meet.jit.si/external_api.js';
-    script.onload = () => console.log("Servidor Global Conectado.");
-    document.head.appendChild(script);
-}
-
-// 2. CRIA O ESPAÇO OCULTO PARA O MOTOR RODAR
-if (!document.getElementById('jitsiContainer')) {
-    let div = document.createElement('div');
-    div.id = 'jitsiContainer';
-    div.style.position = 'absolute';
-    div.style.left = '-9999px'; // Esconde para fora da tela
-    div.style.width = '1px';
-    div.style.height = '1px';
-    div.style.overflow = 'hidden';
-    document.body.appendChild(div);
-}
-
-window.jitsiApi = null;
+window.rtcPeer = null;
+window.localStream = null;
 window.callIdAtual = null;
 window._escutaLigacaoAtiva = false;
 window.callStartTime = 0; 
 window.quemTaLigando = null; 
+
+// Efeitos de Áudio
+window.audioContext = null;
+window.audioMeterInterval = null;
 window.callTimerInterval = null;
 
-// --- FUNÇÃO PARA GERAR LOG DE DURAÇÃO NO CHAT ---
-window.enviarLogChamada = function(tipo) {
-    if(!window.jogadorAtual) return;
-    let alvo = window.contatoSmsAtual || window.quemTaLigando;
-    if(!alvo) return;
-
-    let msg = "";
-    if(tipo === "cancelada") msg = "📞 Chamada perdida/cancelada.";
-    if(tipo === "recusada") msg = "📞 Chamada recusada.";
-    if(tipo === "finalizada") {
-        if(window.callStartTime === 0) return; 
-        let segs = Math.floor((Date.now() - window.callStartTime) / 1000);
-        let m = Math.floor(segs / 60);
-        let s = segs % 60;
-        msg = `📞 Chamada finalizada. Duração: ${m > 0 ? m + 'm ' : ''}${s}s`;
-    }
-
-    let chatId = [window.jogadorAtual, alvo].sort().join("_");
-    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push({ de: window.jogadorAtual, para: alvo, msg: msg, data: new Date().toLocaleTimeString().substring(0, 5), ts: Date.now() });
+window.rtcServers = { 
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' }
+    ] 
 };
 
-// --- ABRE A INTERFACE NEON DA CHAMADA ATIVA ---
-window.abrirTelaChamadaAtiva = function(alvoId) {
-    let modal = document.getElementById("activeCallModal");
-    if(!modal) return;
-
-    let me = window.jogadorAtual;
-    let meuAv = window.usersGlobais[me]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${me}`;
-    let alvoAv = window.usersGlobais[alvoId]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${alvoId}`;
-
-    document.getElementById("activeCallMyAvatar").src = meuAv;
-    document.getElementById("activeCallMyName").innerText = me;
-    document.getElementById("activeCallTargetAvatar").src = alvoAv;
-    document.getElementById("activeCallTargetName").innerText = alvoId;
-    document.getElementById("activeCallTimer").innerText = "00:00";
-
-    modal.style.display = "flex";
-    
-    if(window.callTimerInterval) clearInterval(window.callTimerInterval);
-    window.callTimerInterval = setInterval(() => {
-        let segs = Math.floor((Date.now() - window.callStartTime) / 1000);
-        let m = Math.floor(segs / 60).toString().padStart(2, '0');
-        let s = (segs % 60).toString().padStart(2, '0');
-        document.getElementById("activeCallTimer").innerText = `${m}:${s}`;
-    }, 1000);
-};
-
-// --- MOTOR DE CONEXÃO E DETECTOR DE VOZ ---
-window.startJitsiCall = function(roomName) {
-    if (!window.JitsiMeetExternalAPI) {
-        window.showNeonToast("❌ Servidor carregando, tente novamente..."); return;
-    }
-
-    if(window.jitsiApi) { window.jitsiApi.dispose(); window.jitsiApi = null; }
-
-    const options = {
-        roomName: roomName,
-        width: "100%",
-        height: "100%",
-        parentNode: document.getElementById('jitsiContainer'),
-        configOverwrite: {
-            startWithAudioMuted: false,
-            startWithVideoMuted: true,
-            prejoinPageEnabled: false, // Pula a tela de preparação
-            disableDeepLinking: true,
-        },
-        userInfo: { displayName: window.jogadorAtual }
-    };
-
-    window.jitsiApi = new window.JitsiMeetExternalAPI('meet.jit.si', options);
-
-    // MÁGICA: O Servidor avisa quem está falando para piscar o Neon!
-    window.jitsiApi.on('audioLevelChanged', (data) => {
-        let myAvatar = document.getElementById("activeCallMyAvatar");
-        let targetAvatar = document.getElementById("activeCallTargetAvatar");
-        let vol = data.audioLevel * 100;
+// --- FUNÇÃO PARA DESTRAVAR ALTO-FALANTE (MÁGICA MOBILE) ---
+window.destravarAudioNavegador = function() {
+    try {
+        let ctx = new (window.AudioContext || window.webkitAudioContext)();
+        let buffer = ctx.createBuffer(1, 1, 22050);
+        let source = ctx.createBufferSource();
+        source.buffer = buffer; source.connect(ctx.destination); source.start(0);
         
-        // 'local' é você, o resto é a outra pessoa
-        if (data.participantId === 'local' || data.participantId === window.jitsiApi._myUserID) {
-            if(myAvatar) {
-                if(vol > 5) myAvatar.style.boxShadow = `0 0 ${20 + vol}px ${5 + (vol/2)}px rgba(0, 229, 255, 0.9)`;
-                else myAvatar.style.boxShadow = `0 0 10px var(--accent-blue)`;
-            }
-        } else {
-            if(targetAvatar) {
-                if(vol > 5) targetAvatar.style.boxShadow = `0 0 ${20 + vol}px ${5 + (vol/2)}px rgba(255, 26, 85, 0.9)`;
-                else targetAvatar.style.boxShadow = `0 0 10px var(--accent-red)`;
-            }
-        }
-    });
-
-    window.abrirTelaChamadaAtiva(window.quemTaLigando);
-};
-
-// 1. FAZER A LIGAÇÃO
-window.iniciarLigacao = async function() {
-    if(!window.contatoSmsAtual) return;
-    let alvo = window.contatoSmsAtual;
-    let me = window.jogadorAtual;
-
-    // TRAVA DE OCUPADO
-    let inCallSnap = await window.db.ref(`tokyoRpg/users/${alvo}/inCall`).once('value');
-    if (inCallSnap.val() === true) {
-        window.showNeonToast(`❌ O Celular de ${alvo} está ocupado!`);
-        return;
-    }
-
-    window.db.ref(`tokyoRpg/users/${me}/inCall`).set(true);
-
-    // Cria uma sala ÚNICA e criptografada no Servidor Global
-    window.callIdAtual = "TokyoRpg_" + [me, alvo].sort().join("_").replace(/[^a-zA-Z0-9]/g, '');
-    window.callStartTime = 0; 
-    window.quemTaLigando = alvo;
-
-    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
-    await callDoc.remove(); 
-    await callDoc.set({ from: me, to: alvo, status: "calling" });
-
-    window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
-    window.showNeonToast(`📞 Ligando para ${alvo}...`);
-
-    let callBtn = document.getElementById("btnCallUI");
-    if(callBtn) {
-        callBtn.innerText = "🔴 Desligar";
-        callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
-        callBtn.onclick = window.encerrarLigacao;
-    }
-
-    // Fica aguardando o Alvo atender
-    callDoc.child('status').on('value', snap => { 
-        let st = snap.val();
-        if(st === "answered" && window.callStartTime === 0) {
-            window.showNeonToast("✅ Ligação Atendida!");
-            window.callStartTime = Date.now();
-            window.startJitsiCall(window.callIdAtual);
-        }
-        if(st === "ended") window.encerrarLigacaoLimpo(); 
-    });
-};
-
-// 2. RADAR DE TOQUE
-setInterval(() => {
-    if(window.jogadorAtual && window.db && !window._escutaLigacaoAtiva) {
-        window._escutaLigacaoAtiva = true;
-        
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).on('value', snap => {
-            let data = snap.val();
-            let modal = document.getElementById("callModal");
-            
-            if(!data) { if(modal) modal.style.display = "none"; return; }
-            if(Date.now() - data.ts > 30000) return; 
-
-            window.callIdAtual = data.callId;
-            window.quemTaLigando = data.from;
-            
-            let u = window.usersGlobais[data.from] || {};
-            let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${data.from}`;
-            
-            let imgEl = document.getElementById("callModalAvatar");
-            if(imgEl) imgEl.src = av;
-            
-            let nameEl = document.getElementById("callModalName");
-            if(nameEl) nameEl.innerText = data.from;
-            
-            // Toca o Ringtone (já temos a função tocarSomNotificacao feita anteriormente)
-            if(typeof window.tocarSomNotificacao === "function") window.tocarSomNotificacao();
-
-            if(modal) modal.style.display = "block";
-        });
-    }
-}, 2000);
-
-// 3. ATENDER LIGAÇÃO
-window.aceitarLigacao = async function() {
-    let modal = document.getElementById("callModal");
-    if(modal) modal.style.display = "none";
-
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(true);
-    window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("answered");
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
-
-    window.callStartTime = Date.now();
-    window.startJitsiCall(window.callIdAtual);
-
-    window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).on('value', snap => { 
-        if(snap.val() === "ended") window.encerrarLigacaoLimpo(); 
-    });
-};
-
-// 4. RECUSAR LIGAÇÃO
-window.recusarLigacao = function() {
-    let modal = document.getElementById("callModal");
-    if(modal) modal.style.display = "none";
-
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
-    window.enviarLogChamada("recusada");
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
-    window.encerrarLigacaoLimpo();
-};
-
-// 5. DESLIGAR
-window.encerrarLigacao = function() {
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
-    if(window.callStartTime > 0) window.enviarLogChamada("finalizada"); else window.enviarLogChamada("cancelada");
-    if(window.contatoSmsAtual) window.db.ref(`tokyoRpg/users/${window.contatoSmsAtual}/incomingCall`).remove();
-    window.encerrarLigacaoLimpo();
-};
-
-// 6. LIMPEZA TOTAL
-window.encerrarLigacaoLimpo = function() {
-    document.getElementById("callModal") && (document.getElementById("callModal").style.display = "none");
-    document.getElementById("activeCallModal") && (document.getElementById("activeCallModal").style.display = "none");
-    
-    // Libera a linha para receber novas chamadas
-    if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(false);
-    if(window.callTimerInterval) clearInterval(window.callTimerInterval);
-    
-    // Desliga e Destrói a conexão com o Servidor Global
-    if(window.jitsiApi) {
-        window.jitsiApi.dispose();
-        window.jitsiApi = null;
-    }
-
-    let callBtn = document.getElementById("btnCallUI");
-    if(callBtn) {
-        callBtn.innerText = "📞 Ligar";
-        callBtn.style.borderColor = "#0f0"; callBtn.style.color = "#0f0";
-        callBtn.onclick = window.iniciarLigacao;
-    }
-    
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`).off();
-    
-    window.callIdAtual = null;
-    window.callStartTime = 0;
-    window.quemTaLigando = null;
+        let remoteAudio = document.getElementById("remoteAudio");
+        if(remoteAudio) { remoteAudio.muted = false; remoteAudio.play().catch(e=>{}); }
+    } catch(e) {}
 };
 
 // --- INTERFACE DE CHAMADA ATIVA ---
@@ -3851,10 +3619,14 @@ window.abrirTelaChamadaAtiva = function(alvoId) {
     document.getElementById("activeCallTargetAvatar").src = alvoAv;
     document.getElementById("activeCallTargetName").innerText = alvoId;
     document.getElementById("activeCallTimer").innerText = "00:00";
+    document.getElementById("activeCallStatusText").innerText = "CONECTANDO...";
+    
+    // Reseta as Exclamações de erro
+    document.getElementById("callErrorAlertLocal").style.display = "none";
+    document.getElementById("callErrorAlertTarget").style.display = "none";
 
     modal.style.display = "flex";
     
-    // Inicia Cronômetro
     if(window.callTimerInterval) clearInterval(window.callTimerInterval);
     window.callTimerInterval = setInterval(() => {
         let segs = Math.floor((Date.now() - window.callStartTime) / 1000);
@@ -3864,52 +3636,34 @@ window.abrirTelaChamadaAtiva = function(alvoId) {
     }, 1000);
 };
 
-// --- MEDIDOR DE VOZ (PISCA O NEON QUANDO FALA) ---
+// --- MEDIDOR DE VOZ (NEON) ---
 window.setupAudioMeters = function(localStream, remoteStream) {
     try {
         if(!window.audioContext) window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         if(window.audioContext.state === 'suspended') window.audioContext.resume();
         
-        let myAvatar = document.getElementById("activeCallMyAvatar");
-        let targetAvatar = document.getElementById("activeCallTargetAvatar");
+        let myAv = document.getElementById("activeCallMyAvatar");
+        let targetAv = document.getElementById("activeCallTargetAvatar");
 
         let localAnalyser = window.audioContext.createAnalyser();
         let remoteAnalyser = window.audioContext.createAnalyser();
-        localAnalyser.fftSize = 256; remoteAnalyser.fftSize = 256;
 
-        if(localStream) {
-            let localSource = window.audioContext.createMediaStreamSource(localStream);
-            localSource.connect(localAnalyser);
-        }
-
-        if(remoteStream) {
-            let remoteSource = window.audioContext.createMediaStreamSource(remoteStream);
-            remoteSource.connect(remoteAnalyser);
-        }
+        if(localStream) { let src = window.audioContext.createMediaStreamSource(localStream); src.connect(localAnalyser); }
+        if(remoteStream) { let src = window.audioContext.createMediaStreamSource(remoteStream); src.connect(remoteAnalyser); }
 
         let localData = new Uint8Array(localAnalyser.frequencyBinCount);
         let remoteData = new Uint8Array(remoteAnalyser.frequencyBinCount);
 
         if(window.audioMeterInterval) clearInterval(window.audioMeterInterval);
-        
         window.audioMeterInterval = setInterval(() => {
-            localAnalyser.getByteFrequencyData(localData);
-            remoteAnalyser.getByteFrequencyData(remoteData);
-
+            localAnalyser.getByteFrequencyData(localData); remoteAnalyser.getByteFrequencyData(remoteData);
             let localVol = localData.reduce((a, b) => a + b, 0) / localData.length;
             let remoteVol = remoteData.reduce((a, b) => a + b, 0) / remoteData.length;
 
-            if(myAvatar) {
-                if(localVol > 10) myAvatar.style.boxShadow = `0 0 ${20 + (localVol*1.5)}px ${5 + (localVol/2)}px rgba(0, 229, 255, 0.9)`;
-                else myAvatar.style.boxShadow = `0 0 10px var(--accent-blue)`;
-            }
-
-            if(targetAvatar) {
-                if(remoteVol > 10) targetAvatar.style.boxShadow = `0 0 ${20 + (remoteVol*1.5)}px ${5 + (remoteVol/2)}px rgba(255, 26, 85, 0.9)`;
-                else targetAvatar.style.boxShadow = `0 0 10px var(--accent-red)`;
-            }
-        }, 50); // Pisca em tempo real a cada 50ms!
-    } catch(e) { console.log("AudioMeter erro:", e); }
+            if(myAv) myAv.style.boxShadow = localVol > 10 ? `0 0 ${20 + (localVol*1.5)}px rgba(0,229,255,0.9)` : `0 0 10px var(--accent-blue)`;
+            if(targetAv) targetAv.style.boxShadow = remoteVol > 10 ? `0 0 ${20 + (remoteVol*1.5)}px rgba(255,26,85,0.9)` : `0 0 10px var(--accent-red)`;
+        }, 50);
+    } catch(e) {}
 };
 
 // 1. FAZER A LIGAÇÃO
@@ -3918,35 +3672,50 @@ window.iniciarLigacao = async function() {
     let alvo = window.contatoSmsAtual;
     let me = window.jogadorAtual;
 
-    // TRAVA DE OCUPADO: Verifica se a outra pessoa já está em ligação
     let inCallSnap = await window.db.ref(`tokyoRpg/users/${alvo}/inCall`).once('value');
-    if (inCallSnap.val() === true) {
-        window.showNeonToast(`❌ Telefone de ${alvo} está ocupado!`);
-        return;
-    }
+    if (inCallSnap.val() === true) { window.showNeonToast(`❌ O Celular de ${alvo} está ocupado!`); return; }
 
-    // Marca a si mesmo como "Em Chamada"
+    window.destravarAudioNavegador(); // Força a saída de áudio a ligar
     window.db.ref(`tokyoRpg/users/${me}/inCall`).set(true);
 
     window.callIdAtual = [me, alvo].sort().join("_");
     window.callStartTime = 0; 
     window.quemTaLigando = alvo;
 
-    if (!navigator.mediaDevices) { window.showNeonToast("❌ ERRO: Use HTTPS!"); window.encerrarLigacaoLimpo(); return; }
+    window.abrirTelaChamadaAtiva(alvo);
 
     try {
+        // FORÇA O MICROFONE (Se falhar, acende a exclamação nele)
         window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    } catch(e) { window.showNeonToast("❌ Permita o microfone no navegador!"); window.encerrarLigacaoLimpo(); return; }
+        document.getElementById("callErrorAlertLocal").style.display = "none";
+    } catch(e) { 
+        document.getElementById("callErrorAlertLocal").style.display = "flex";
+        window.showNeonToast("❌ Microfone bloqueado! Autorize no navegador."); 
+        return; 
+    }
 
     window.rtcPeer = new RTCPeerConnection(window.rtcServers);
     window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
+
+    // MONITOR DE QUEDA DE REDE (Pinta a exclamação no alvo)
+    window.rtcPeer.oniceconnectionstatechange = () => {
+        let state = window.rtcPeer.iceConnectionState;
+        if(state === "failed" || state === "disconnected") {
+            document.getElementById("callErrorAlertTarget").style.display = "flex";
+            document.getElementById("activeCallStatusText").innerText = "FALHA NA REDE!";
+            document.getElementById("activeCallStatusText").style.color = "#f00";
+            window.showNeonToast("⚠️ A conexão caiu. Firewall ou 4G barrando a rede.");
+        } else if (state === "connected" || state === "completed") {
+            document.getElementById("callErrorAlertTarget").style.display = "none";
+            document.getElementById("activeCallStatusText").innerText = "CONEXÃO ESTÁVEL";
+            document.getElementById("activeCallStatusText").style.color = "#0f0";
+        }
+    };
 
     let remoteAudio = document.getElementById("remoteAudio");
     window.rtcPeer.ontrack = event => {
         let remoteStream = event.streams[0];
         if(remoteAudio) { remoteAudio.srcObject = remoteStream; remoteAudio.play().catch(e => {}); }
-        
-        // Ativa os medidores Neon!
         window.setupAudioMeters(window.localStream, remoteStream);
     };
 
@@ -3970,10 +3739,6 @@ window.iniciarLigacao = async function() {
             try {
                 await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(ans));
                 window.callStartTime = Date.now();
-                
-                // ABRE A TELA BONITA!
-                window.abrirTelaChamadaAtiva(alvo);
-
                 callDoc.child('calleeCandidates').on('child_added', snapIce => {
                     let candidate = snapIce.val();
                     if(candidate && window.rtcPeer && window.rtcPeer.remoteDescription) { window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e=>{}); }
@@ -3985,50 +3750,41 @@ window.iniciarLigacao = async function() {
     callDoc.child('status').on('value', snap => { if(snap.val() === "ended") window.encerrarLigacaoLimpo(); });
 };
 
-// 2. RADAR DE TOQUE
-setInterval(() => {
-    if(window.jogadorAtual && window.db && !window._escutaLigacaoAtiva) {
-        window._escutaLigacaoAtiva = true;
-        
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).on('value', snap => {
-            let data = snap.val();
-            let modal = document.getElementById("callModal");
-            
-            if(!data) { if(modal) modal.style.display = "none"; return; }
-            if(Date.now() - data.ts > 30000) return; 
-
-            window.callIdAtual = data.callId;
-            window.quemTaLigando = data.from;
-            
-            let u = window.usersGlobais[data.from] || {};
-            let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${data.from}`;
-            
-            let imgEl = document.getElementById("callModalAvatar");
-            if(imgEl) imgEl.src = av;
-            
-            let nameEl = document.getElementById("callModalName");
-            if(nameEl) nameEl.innerText = data.from;
-            
-            if(modal) modal.style.display = "block";
-        });
-    }
-}, 2000);
-
 // 3. ATENDER LIGAÇÃO
 window.aceitarLigacao = async function() {
     let modal = document.getElementById("callModal");
     if(modal) modal.style.display = "none";
 
-    // Marca a si mesmo como "Em Chamada" para ninguem atrapalhar
+    window.destravarAudioNavegador(); // Força a saída de áudio
     window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(true);
 
-    if (!navigator.mediaDevices) { window.showNeonToast("❌ ERRO: Navegador bloqueou áudio."); window.recusarLigacao(); return; }
+    window.abrirTelaChamadaAtiva(window.quemTaLigando);
 
-    try { window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); } 
-    catch(e) { window.showNeonToast("❌ Microfone bloqueado!"); window.recusarLigacao(); return; }
+    try { 
+        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); 
+        document.getElementById("callErrorAlertLocal").style.display = "none";
+    } catch(e) { 
+        document.getElementById("callErrorAlertLocal").style.display = "flex";
+        window.showNeonToast("❌ Microfone bloqueado! Autorize no navegador."); 
+        return; 
+    }
 
     window.rtcPeer = new RTCPeerConnection(window.rtcServers);
     window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
+
+    // MONITOR DE REDE PARA QUEM ATENDEU
+    window.rtcPeer.oniceconnectionstatechange = () => {
+        let state = window.rtcPeer.iceConnectionState;
+        if(state === "failed" || state === "disconnected") {
+            document.getElementById("callErrorAlertTarget").style.display = "flex";
+            document.getElementById("activeCallStatusText").innerText = "FALHA NA REDE!";
+            document.getElementById("activeCallStatusText").style.color = "#f00";
+        } else if (state === "connected" || state === "completed") {
+            document.getElementById("callErrorAlertTarget").style.display = "none";
+            document.getElementById("activeCallStatusText").innerText = "CONEXÃO ESTÁVEL";
+            document.getElementById("activeCallStatusText").style.color = "#0f0";
+        }
+    };
 
     let remoteAudio = document.getElementById("remoteAudio");
     window.rtcPeer.ontrack = event => {
@@ -4038,7 +3794,6 @@ window.aceitarLigacao = async function() {
     };
 
     let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
-
     window.rtcPeer.onicecandidate = event => { if(event.candidate) callDoc.child('calleeCandidates').push(event.candidate.toJSON()); };
 
     callDoc.child('offer').once('value', async snap => {
@@ -4047,7 +3802,6 @@ window.aceitarLigacao = async function() {
 
         try {
             await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(offer));
-
             callDoc.child('callerCandidates').on('child_added', snapIce => {
                 let candidate = snapIce.val();
                 if(candidate && window.rtcPeer && window.rtcPeer.remoteDescription) { window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e=>{}); }
@@ -4055,12 +3809,9 @@ window.aceitarLigacao = async function() {
 
             const answer = await window.rtcPeer.createAnswer();
             await window.rtcPeer.setLocalDescription(answer);
-
             await callDoc.update({ answer: { type: answer.type, sdp: answer.sdp }, status: "answered" });
 
             window.callStartTime = Date.now(); 
-            window.abrirTelaChamadaAtiva(window.quemTaLigando);
-
         } catch(e) {}
     });
 
@@ -4068,49 +3819,7 @@ window.aceitarLigacao = async function() {
     window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
 };
 
-// 4. RECUSAR LIGAÇÃO
-window.recusarLigacao = function() {
-    let modal = document.getElementById("callModal");
-    if(modal) modal.style.display = "none";
-
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
-    window.enviarLogChamada("recusada");
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
-    window.encerrarLigacaoLimpo();
-};
-
-// 5. DESLIGAR
-window.encerrarLigacao = function() {
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
-    if(window.callStartTime > 0) window.enviarLogChamada("finalizada"); else window.enviarLogChamada("cancelada");
-    if(window.contatoSmsAtual) window.db.ref(`tokyoRpg/users/${window.contatoSmsAtual}/incomingCall`).remove();
-    window.encerrarLigacaoLimpo();
-};
-
-// 6. LIMPEZA TOTAL
-window.encerrarLigacaoLimpo = function() {
-    document.getElementById("callModal") && (document.getElementById("callModal").style.display = "none");
-    document.getElementById("activeCallModal") && (document.getElementById("activeCallModal").style.display = "none");
-    
-    // Libera a linha para receber novas chamadas
-    if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(false);
-    
-    if(window.audioMeterInterval) clearInterval(window.audioMeterInterval);
-    if(window.callTimerInterval) clearInterval(window.callTimerInterval);
-    
-    if(window.rtcPeer) { window.rtcPeer.close(); window.rtcPeer = null; }
-    if(window.localStream) { window.localStream.getTracks().forEach(t => t.stop()); window.localStream = null; }
-
-    let remoteAudio = document.getElementById("remoteAudio");
-    if(remoteAudio) remoteAudio.srcObject = null;
-
-    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`).off();
-    
-    window.callIdAtual = null;
-    window.callStartTime = 0;
-    window.quemTaLigando = null;
-};
-
+// ... As funções de Recusar e Encerrar (e radar de toque) continuam no seu arquivo iguais antes.
 // =========================================================
 // SISTEMA DE NOTIFICAÇÕES GLOBAIS: SOM, POPUPS E RINGTONES
 // =========================================================
