@@ -1361,3 +1361,15 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     left: 0; 
     z-index: 2;
 }
+/* CELULAS RECORTADAS PELO MESTRE NO VTT */
+.hidden-vtt-cell {
+    opacity: 0;
+    pointer-events: none; /* Ignora cliques, o personagem não pode pisar */
+    border: none !important;
+}
+
+/* Remover tamanhos fixos dos tokens para que escalem dinamicamente */
+.tactical-token {
+    width: auto;
+    height: auto;
+}
