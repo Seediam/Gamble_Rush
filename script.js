@@ -3317,7 +3317,6 @@ window.salvarConfigCasa = function() {
 // GAMBLENGER: SISTEMA COMPLETO (AGENDA, CHAT E LIGAÇÕES)
 // =========================================================
 
-// Variáveis de controle para não duplicar o chat
 window.contatoSmsAtual = null;
 window._smsListener = null;
 window._lastChatId = null;
@@ -3400,7 +3399,6 @@ window.renderizarSMSLog = function() {
     
     let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
     
-    // MÁGICA: Desliga o ouvinte antigo para o chat não duplicar na tela!
     if(window._smsListener && window._lastChatId) {
         window.db.ref('tokyoRpg/smsChats/' + window._lastChatId).off('value', window._smsListener);
     }
@@ -3411,7 +3409,7 @@ window.renderizarSMSLog = function() {
         let log = document.getElementById("smsLog");
         if(!log) return;
         
-        log.innerHTML = ""; // Limpa a tela antes de escrever as mensagens
+        log.innerHTML = ""; 
         
         let data = snap.val();
         if(!data) {
@@ -3436,7 +3434,6 @@ window.renderizarSMSLog = function() {
             </div>`;
         });
         
-        // Desce a barra de rolagem automaticamente
         setTimeout(() => { log.scrollTop = log.scrollHeight; }, 50);
     });
 };
@@ -3457,24 +3454,22 @@ window.enviarSMS = function() {
         de: window.jogadorAtual,
         para: window.contatoSmsAtual,
         msg: txt,
-        data: new Date().toLocaleTimeString().substring(0, 5), // Ex: "14:30"
+        data: new Date().toLocaleTimeString().substring(0, 5),
         ts: Date.now()
     };
     
     window.db.ref(`tokyoRpg/smsChats/${chatId}`).push(payload).then(() => {
-        // Dispara o Toast HUD pra outra pessoa
         if(typeof window.enviarNotificacaoHUD === "function") {
             window.enviarNotificacaoHUD(window.contatoSmsAtual, window.jogadorAtual, "enviou uma mensagem criptografada.");
         }
     });
     
-    inputEl.value = ""; // Limpa a barra de texto
-    inputEl.focus();    // Mantém o mouse lá pra continuar digitando
+    inputEl.value = ""; 
+    inputEl.focus();    
 };
 
-// 6. Botão de Ligar (Preparando pro Áudio)
+// 6. Botão de Ligar
 window.iniciarLigacao = function() {
     if(!window.contatoSmsAtual) return;
     window.showNeonToast(`📞 Conectando com ${window.contatoSmsAtual}...`);
-    // Na próxima etapa, o código do áudio entra aqui!
-};;
+};
