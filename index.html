@@ -201,38 +201,6 @@
                                 <div id="diceLog" style="flex:1; overflow-y:auto; font-size:11px; padding:5px; background:#000; min-height: 80px; max-height: 120px;"></div>
                             </div>
                         </div>
-<!-- ABA CELULAR (GAMBLENGER - DMs) -->
-<div id="tab-celular" class="tab-content">
-    <h1 style="color: #00ff00; text-align:center;">Gamblenger</h1>
-    <div style="background:#111; border:2px solid #333; border-radius:10px; display:flex; margin: 0 auto; width:100%; max-width:800px; height:65vh; overflow:hidden;">
-        
-        <!-- CONTATOS -->
-        <div style="width: 35%; min-width: 120px; border-right: 1px solid #333; display:flex; flex-direction:column; background:#0a0a0f;">
-            <div style="padding:15px; background:#000; border-bottom:1px solid #333; font-weight:bold; color:#00ff00; text-align:center; font-size:12px;">CONTATOS</div>
-            <div id="listaContatosSMS" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
-                <!-- Preenchido via JS -->
-            </div>
-        </div>
-
-        <!-- CHAT PRIVADO -->
-        <div style="flex:1; display:flex; flex-direction:column; background:#050508; position:relative;">
-            <div id="smsChatHeader" style="padding:15px; background:#000; border-bottom:1px solid #333; font-weight:bold; color:var(--accent-blue); text-align:center;">Selecione um Contato</div>
-            
-            <div id="smsLog" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;">
-                <!-- Mensagens aqui -->
-                <div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">Nenhuma conexão ativa.</div>
-            </div>
-            
-            <div style="padding:10px; background:#000; border-top:1px solid #333; display:flex; gap:10px;">
-                <input type="text" id="smsTexto" placeholder="Mensagem cifrada..." style="flex:1;" onkeydown="if(event.key==='Enter') window.enviarSMS()">
-                <button class="action-btn" style="border-color:#0f0; color:#0f0;" onclick="window.enviarSMS()">Enviar</button>
-                <!-- O botão de ligar vem na PRÓXIMA ETAPA, mas já deixamos o ícone preparado -->
-                <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue);" onclick="window.showNeonToast('Ligações Globais em breve!')" title="Ligar">📞</button>
-            </div>
-        </div>
-        
-    </div>
-</div>
                         <!-- AREA VISUAL MAPA E TABULEIRO -->
                         <div class="map-visual-area">
                             <!-- MAPA GLOBAL -->
@@ -517,13 +485,18 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
               <!-- ABA GAMBLE HOUSE (TETRIS) -->
 <div id="tab-casa" class="tab-content">
     <h1 class="neon-gold" style="text-align:center;">Gamble House</h1>
-    <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
-        <input type="text" id="casaNomeInp" placeholder="Nome do Local" style="flex:1; min-width:150px;">
-        <input type="text" id="casaBgInp" placeholder="URL da Planta Baixa" style="flex:2; min-width:200px;">
-        <button class="action-btn" onclick="window.salvarConfigCasa()" style="margin:0; border-color:var(--accent-gold); color:var(--accent-gold);">Salvar Fundo</button>
+    
+    <!-- Controles de Tamanho e Fundo -->
+    <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; background:#111; padding:10px; border-radius:8px; border:1px dashed var(--accent-gold);">
+        <input type="text" id="casaNomeInp" placeholder="Nome do Local" style="flex:1; min-width:120px;">
+        <input type="text" id="casaBgInp" placeholder="URL Planta Baixa" style="flex:2; min-width:150px;">
+        <input type="number" id="casaW" placeholder="Largura (Ex:10)" style="width: 100px;" title="Colunas do Grid">
+        <input type="number" id="casaH" placeholder="Altura (Ex:10)" style="width: 100px;" title="Linhas do Grid">
+        <button class="action-btn" onclick="window.salvarConfigCasa()" style="margin:0; border-color:var(--accent-gold); color:var(--accent-gold);">Salvar Planta</button>
     </div>
     
-    <p style="text-align:center; font-size:11px; color:#aaa;">Decore sua casa arrastando os móveis.</p>
+    <p style="text-align:center; font-size:11px; color:#aaa;">Decore sua casa arrastando os móveis. O grid ficará transparente sobre sua imagem.</p>
+    
     <div class="tetris-wrapper" style="overflow-x:auto;">
         <div class="tetris-grid" id="grid-casa" style="border-color:var(--accent-gold); box-shadow:0 0 20px rgba(255,170,0,0.2); touch-action: none; position: relative;"></div>
     </div>
@@ -550,7 +523,7 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
             <div id="smsChatHeader" style="padding:15px; background:#000; border-bottom:1px solid #333; font-weight:bold; color:var(--accent-blue); text-align:center;">Selecione um Contato</div>
             
             <div id="smsLog" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;">
-                <div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">Nenhuma conexão ativa.</div>
+                <div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura.</div>
             </div>
             
             <div style="padding:10px; background:#000; border-top:1px solid #333; display:flex; gap:10px;">
