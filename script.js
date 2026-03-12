@@ -3836,7 +3836,8 @@ window._escutaLigacaoAtiva = false;
 window.callStartTime = 0; 
 window.quemTaLigando = null; 
 
-const rtcServers = { 
+// Agora usando window.rtcServers para evitar o erro de "already declared" se colar 2x
+window.rtcServers = { 
     iceServers: [
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
@@ -3905,7 +3906,7 @@ window.iniciarLigacao = async function() {
         window.encerrarLigacaoLimpo(); return;
     }
 
-    window.rtcPeer = new RTCPeerConnection(rtcServers);
+    window.rtcPeer = new RTCPeerConnection(window.rtcServers);
     window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
 
     let remoteAudio = document.getElementById("remoteAudio");
@@ -4012,7 +4013,7 @@ window.aceitarLigacao = async function() {
         window.recusarLigacao(); return;
     }
 
-    window.rtcPeer = new RTCPeerConnection(rtcServers);
+    window.rtcPeer = new RTCPeerConnection(window.rtcServers);
     window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
 
     let remoteAudio = document.getElementById("remoteAudio");
@@ -4111,4 +4112,4 @@ window.encerrarLigacaoLimpo = function() {
     window.callIdAtual = null;
     window.callStartTime = 0;
     window.quemTaLigando = null;
-};
+};;
