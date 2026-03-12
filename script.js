@@ -1001,6 +1001,7 @@ window.logarComSerialFinal = function(s) { if(s === window.MASTER_SERIAL) { wind
 window.logarSucesso = function(n, s) {
     window.jogadorAtual = n; window.serialAtual = s; window.isMaster = (s === window.MASTER_SERIAL); 
     
+    
     if(window.isMaster) { let sel = document.getElementById("embLocal"); if(sel) {sel.innerHTML = "<option value=''>Selecione...</option>"; Object.keys(window.locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${window.locaisMapa[k].nome}</option>`; });} }
     
     window.setElDisplay("loginModal", "none");
@@ -1008,6 +1009,9 @@ window.logarSucesso = function(n, s) {
     window.setElDisplay("gameContainer", "none");
 
     window.renderizarFicha(); window.renderizarMochila(); window.renderizarLojaUI(); window.drawMapVisuals(); window.renderizarPanteao();
+      // --> ADICIONE ESTA LINHA AQUI NO FINAL DA FUNÇÃO:
+    window.escutarNotificacoes(); 
+    
     if(window.db && window.jogadorAtual) { window.db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { window.connectionRef = window.db.ref('tokyoRpg/presence/' + window.jogadorAtual); window.connectionRef.onDisconnect().set(false).then(() => { window.connectionRef.set(true); }); }}); }
 };
 
@@ -1105,12 +1109,21 @@ window.enviarPost = function() {
 
     if(!txt && !imgUrl && !imgFile && !audio) { window.showNeonToast("O post está vazio!"); return; }
 
-    let postarNoBanco = function(n, a, idAutor, finalImg) {
+       let postarNoBanco = function(n, a, idAutor, finalImg) {
         let payload = {
             autor: n, autorId: idAutor, avatar: a, texto: txt, imagem: finalImg || "", audio: audio, timestamp: Date.now(), isAd: (window.isMaster && isAd), likes: 0, reposts: 0, likers: {}, reposters: {}, comentarios: {}
         };
 
-        window.db.ref('tokyoRpg/posts').push(payload).then(() => {
+        let newPostRef = window.db.ref('tokyoRpg/posts').push(); // Cria a ref primeiro
+        newPostRef.set(payload).then(() => {
+            // DISPARAR MENÇÃO DO NOVO POST AQUI
+            window.dispatchMentions({
+                from: idAutor !== "MESTRE" ? window.jogadorAtual : "SISTEMA",
+                contextType: "gpost",
+                contextId: newPostRef.key,
+                text: txt
+            });
+
             if(document.getElementById("postText")) document.getElementById("postText").value = "";
             if(document.getElementById("postImgUrl")) document.getElementById("postImgUrl").value = "";
             if(document.getElementById("postAudioUrl")) document.getElementById("postAudioUrl").value = "";
@@ -1169,6 +1182,8 @@ window.postObserver = window.postObserver || new IntersectionObserver((entries) 
 window.switchIGambleTab = function(tabId, btnEl) {
   document.querySelectorAll(".igamble-tab-btn").forEach(b => b.classList.remove("active"));
   if(btnEl) btnEl.classList.add("active");
+
+      window.marcarNotificacoesComoLidas(tabId);
 
   document.querySelectorAll(".igamble-view").forEach(v => v.classList.remove("active"));
   const target = document.getElementById("igamble-view-" + tabId);
@@ -1687,7 +1702,6 @@ window.carregarComentarios = function(postId) {
 window.enviarComentario = function() {
     if(!window.currentPostIdForComment || !window.jogadorAtual) return;
     let inp = document.getElementById("commentInput");
-    if(!inp) return;
     let txt = inp.value.trim();
     if(!txt) return;
     
@@ -1696,8 +1710,16 @@ window.enviarComentario = function() {
         texto: txt,
         timestamp: Date.now()
     }).then(() => {
-        inp.value = ""; // Limpa a caixa de texto
-        if(typeof window.closeMentionDropdown === 'function') window.closeMentionDropdown();
+        inp.value = ""; 
+        window.closeMentionDropdown();
+
+        // ADICIONE ESTA PARTE PARA DISPARAR A MENÇÃO NO COMENTÁRIO
+        window.dispatchMentions({ 
+            from: window.jogadorAtual, 
+            contextType: "gpost", 
+            contextId: window.currentPostIdForComment, 
+            text: txt 
+        });
     });
 };
 // =========================================================
@@ -1760,22 +1782,15 @@ window.escolherMencao = function(inputId, nomeAlvo) {
     let textoAntes = val.substring(0, pos);
     let textoDepois = val.substring(pos);
 
-    // Troca o @... pelo nome
-    let novoTexto = textoAntes.replace(/(^|\s)@([^ \n]*)$/, `$1@${nomeAlvo} `);
+    // Substitui os espaços por underline no nome pra menção não quebrar
+    let nomeFormatado = nomeAlvo.replace(/\s+/g, '_');
+
+    // Troca o @... pelo nome com underline
+    let novoTexto = textoAntes.replace(/(^|\s)@([^ \n]*)$/, `$1@${nomeFormatado} `);
     inputEl.value = novoTexto + textoDepois;
     inputEl.focus();
 
     window.esconderMenuMencao();
-
-    // DISPARA A NOTIFICAÇÃO PRO BANCO DE DADOS NA HORA!
-    if (window.jogadorAtual) {
-        window.enviarNotificacaoHUD(nomeAlvo, window.jogadorAtual, "Mencionou você!");
-    }
-};
-
-window.esconderMenuMencao = function() {
-    let box = document.getElementById("hudMencaoRapida");
-    if (box) box.style.display = "none";
 };
 
 document.addEventListener("click", function(e) {
@@ -2301,21 +2316,39 @@ window.extractMentionsFromText = function(text, context){
 };
 // Envia eventos de menção para inbox do alvo (funciona offline)
 window.dispatchMentions = function({ from, contextType, contextId, text }) {
-  try{
-    if(!window.db || !from) return;
-    const ctx = contextType + (contextId ? (":" + contextId) : "");
-    const mentions = window.extractMentionsFromText(text || "", (contextType === "gchat" ? "gchat" : "post:"+contextId));
+    if (!window.db || !text) return;
+    
+    // Procura todas as menções que começam com @
+    let matches = text.match(/@([\w_]+)/g);
+    if (!matches) return;
 
-    mentions.forEach(target => {
-      if(!target || target === from) return;
+    let users = Object.keys(window.usersGlobais || {});
+    let mencionados = new Set();
 
-      window.db.ref(`tokyoRpg/mentions/${target}/inbox`).push({
-        from,
-        ctx,
-        text: (text || "").slice(0, 140),
-        ts: Date.now()
-      });
+    matches.forEach(m => {
+        let nomeMencionadoComUnderline = m.substring(1); // Tira o @
+        let nomeMencionadoOriginal = nomeMencionadoComUnderline.replace(/_/g, ' '); // Volta o _ para espaço
 
+        // Encontra o usuário na base
+        let usuarioReal = users.find(u => u.toLowerCase() === nomeMencionadoOriginal.toLowerCase());
+
+        if (usuarioReal && usuarioReal !== from) {
+            mencionados.add(usuarioReal);
+        }
+    });
+
+    // Envia a notificação para cada usuário marcado
+    mencionados.forEach(alvo => {
+        window.db.ref(`tokyoRpg/users/${alvo}/notificacoes`).push({
+            from: from,
+            contextType: contextType,
+            contextId: contextId,
+            texto: text,
+            lida: false,
+            ts: Date.now()
+        });
+    });
+};
       // NOVIDADE: Manda notificação oficial para gerar a bolinha
       let tipoNotif = contextType === "gchat" ? "mention_chat" : "mention_post";
       window.enviarNotificacao(target, tipoNotif, from, "mencionou você", contextId);
@@ -2409,3 +2442,104 @@ window.startMentionInboxListener = function(){
   });
 }; // <- Este fecha a function startMentionInboxListener
 
+window.mostrarNotificacaoHUD = function(from, type, text) {
+    let stack = document.getElementById("mentionNotifyStack");
+    if (!stack) return;
+
+    let u = window.usersGlobais[from] || {};
+    let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${from}`;
+    let appTitle = type === "gchat" ? "G-Chat" : (type === "gpost" ? "G-Post" : "Arena");
+
+    let div = document.createElement("div");
+    div.className = "mention-notify";
+    div.innerHTML = `
+        <img src="${avatar}">
+        <div class="mn-texts">
+            <div class="mn-title">${from} marcou você em ${appTitle}</div>
+            <div class="mn-sub">${text}</div>
+        </div>
+    `;
+    stack.appendChild(div);
+
+    setTimeout(() => { div.classList.add("out"); setTimeout(() => div.remove(), 400); }, 5000);
+};
+
+window.atualizarBadgesHUD = function(chat, post, challenger) {
+    let total = chat + post + challenger;
+
+    // Atualiza badge geral do ícone "iGAMBLE" na home (bg.png)
+    let btnIgamble = document.querySelector('.app-hitbox[title="iGAMBLE"]');
+    if (btnIgamble) {
+        let badge = btnIgamble.querySelector('.igamble-main-badge');
+        if (!badge && total > 0) {
+            badge = document.createElement('div');
+            badge.className = 'igamble-main-badge notification-badge';
+            btnIgamble.appendChild(badge);
+        }
+        if (total > 0) { badge.innerText = total; badge.style.display = 'flex'; }
+        else if (badge) { badge.style.display = 'none'; }
+    }
+
+    // Atualiza sub badges da tela do iGAMBLE (bg2.png)
+    let updateSubBadge = (onclickStr, count) => {
+        let btn = document.querySelector(`.app-hitbox[onclick*="${onclickStr}"]`);
+        if (btn) {
+            let badge = btn.querySelector('.sub-badge');
+            if (!badge && count > 0) {
+                badge = document.createElement('div');
+                badge.className = 'sub-badge notification-badge';
+                btn.appendChild(badge);
+            }
+            if (count > 0) { badge.innerText = count; badge.style.display = 'flex'; }
+            else if (badge) { badge.style.display = 'none'; }
+        }
+    };
+
+    updateSubBadge("abrirIgambleApp('chat')", chat);
+    updateSubBadge("abrirIgambleApp('posts')", post);
+    updateSubBadge("abrirIgambleApp('embates')", challenger);
+};
+
+window.escutarNotificacoes = function() {
+    if (!window.jogadorAtual || !window.db) return;
+    let notifRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/notificacoes`);
+
+    // Conta tudo para as Badges
+    notifRef.on('value', snap => {
+        let data = snap.val() || {};
+        let nGchat = 0, nGpost = 0, nGchallenger = 0;
+
+        Object.values(data).forEach(n => {
+            if (!n.lida) {
+                if (n.contextType === "gchat") nGchat++;
+                if (n.contextType === "gpost") nGpost++;
+                if (n.contextType === "embates") nGchallenger++;
+            }
+        });
+        window.atualizarBadgesHUD(nGchat, nGpost, nGchallenger);
+    });
+
+    // Puxa apenas as Novas para soltar o Popup Animado (Toast)
+    notifRef.limitToLast(1).on('child_added', snap => {
+        let n = snap.val();
+        if (!n || n.lida) return;
+        if (Date.now() - n.ts > 15000) return; // Ignora antigas (15s limite)
+        window.mostrarNotificacaoHUD(n.from, n.contextType, n.texto);
+    });
+};
+
+window.marcarNotificacoesComoLidas = function(tabId) {
+    if (!window.jogadorAtual || !window.db) return;
+    let cType = tabId === "chat" ? "gchat" : (tabId === "posts" ? "gpost" : "embates");
+    let notifRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/notificacoes`);
+
+    notifRef.once('value', snap => {
+        let data = snap.val();
+        if(!data) return;
+        let updates = {};
+        Object.keys(data).forEach(k => {
+            if (data[k].contextType === cType && !data[k].lida) updates[`${k}/lida`] = true;
+        });
+        if (Object.keys(updates).length > 0) notifRef.update(updates);
+    });
+};
