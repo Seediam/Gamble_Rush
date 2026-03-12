@@ -3685,3 +3685,78 @@ window.encerrarLigacaoLimpo = function() {
     window.callIdAtual = null;
     window.showNeonToast("Ligação encerrada.");
 };;
+// =========================================================
+// CORREÇÃO: GERAÇÃO AUTOMÁTICA DE NÚMERO DE CELULAR (CHIP)
+// =========================================================
+
+window.renderizarFicha = function() {
+    if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
+    let u = window.usersGlobais[window.jogadorAtual]; 
+    let r = window.getSafeRpg(u); 
+    let mInteg = window.calcularMaxInteg(u); 
+    let buffs = window.calcularBuffsMoveis(u); 
+    let def = window.calcularDefesa(u);
+    
+    if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual);
+    if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
+    let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
+    if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
+    if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || "");
+    if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
+    
+    window.setElText("lblDef", def); 
+    if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres;
+    window.setElText("lblPts", r.pontosLivres);
+    window.setElText("valFor", r.for + buffs.for); window.setElText("valAgi", r.agi + buffs.agi); window.setElText("valMan", r.man + buffs.man); window.setElText("valVig", r.vig + buffs.vig); window.setElText("valInt", r.int + buffs.int);
+    window.setElText("lblIntegMax", mInteg); window.setElText("lblIntegVal", r.integridade + "%");
+    
+    let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
+    let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
+    
+    // VERIFICA SE O JOGADOR TEM CELULAR E CASA NA MOCHILA
+    let temCel = u.numero || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Tecnologia'));
+    let temCasa = (u.casa && Object.keys(u.casa).length > 0) || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Móvel'));
+    
+    // ==========================================
+    // MÁGICA DO CHIP (GERADOR DE NÚMEROS)
+    // ==========================================
+    if (temCel && !u.numero && window.jogadorAtual !== "MESTRE") {
+        // Gera um número aleatório de 5 dígitos (Ex: 94512)
+        let novoNumero = "9" + Math.floor(1000 + Math.random() * 9000).toString();
+        u.numero = novoNumero; // Salva localmente pra não dar loop
+        
+        // Registra no Firebase
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/numero`).set(novoNumero).then(() => {
+            window.showNeonToast(`📱 Celular Ativado! Seu novo número é: ${novoNumero}`);
+        });
+    }
+    
+    // Atualiza o texto na tela para o jogador ver o próprio número
+    if(document.getElementById("perfilTelefone")) {
+        window.setElText("perfilTelefone", u.numero || "Sem Sinal");
+    }
+
+    // LIBERA O APP GAMBLENGER (HB-CELULAR)
+    let iCel = document.getElementById('hb-celular'); 
+    if(iCel) { 
+        if(temCel || window.isMaster) { 
+            iCel.classList.remove('locked'); 
+            iCel.onclick = () => { window.abrirApp('tab-celular', false); window.carregarContatosSMS(); }; 
+        } else { 
+            iCel.classList.add('locked'); 
+            iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre Tecnologia na Gamblezon."); 
+        } 
+    }
+    
+    // LIBERA O APP GAMBLE HOUSE (HB-CASA)
+    let iCasa = document.getElementById('hb-casa'); 
+    if(iCasa) { 
+        if(temCasa || window.isMaster) { 
+            iCasa.classList.remove('locked'); 
+            iCasa.onclick = () => window.abrirApp('tab-casa', false); 
+        } else { 
+            iCasa.classList.add('locked'); 
+            iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); 
+        } 
+    }
+};
