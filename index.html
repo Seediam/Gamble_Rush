@@ -217,14 +217,29 @@
                                         <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
                                         <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim de Turno</button>
                                         
-                                        <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px;">
-                                            <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Rolar Iniciativas</button>
-                                            <input type="text" id="vttBgInp" placeholder="URL da Imagem Fundo..." style="width:120px; padding:5px; font-size:10px;">
-                                            <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Aplicar Fundo</button>
-                                        </div>
-                                        <button class="action-btn" style="margin-left:auto;" onclick="window.fecharSubMapa()">Sair 🌍</button>
-                                    </div>
-                                </div>
+                                        <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px; flex-wrap:wrap; align-items: center;">
+    <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Iniciativas</button>
+    
+    <input type="text" id="vttBgInp" placeholder="URL Fundo..." style="width:100px; padding:5px; font-size:10px;">
+    <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Fundo</button>
+
+    <div style="display:flex; gap:5px; align-items:center; border-left:1px solid #555; padding-left:10px; margin-left:5px;">
+        <span style="font-size:10px; color:#aaa;">Grid:</span>
+        <input type="number" id="vttColsInp" value="16" title="Largura (Qtd Quadrados)" style="width:40px; padding:2px; font-size:10px; text-align:center;">
+        <span style="font-size:10px; color:#aaa;">x</span>
+        <input type="number" id="vttRowsInp" value="12" title="Altura (Qtd Quadrados)" style="width:40px; padding:2px; font-size:10px; text-align:center;">
+        
+        <select id="vttShapeInp" style="padding:2px; font-size:10px; width:100px;">
+            <option value="quadrado">⬛ Quadrado Cheio</option>
+            <option value="l_shape">▛ Formato L</option>
+            <option value="u_shape">◳ Formato U</option>
+            <option value="cross">➕ Cruzamento</option>
+            <option value="corredor">➖ Corredor</option>
+            <option value="hexagono">⬡ Arena (Bordas Cortadas)</option>
+        </select>
+        <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 5px;" onclick="window.salvarFormatoMapa()">Moldar Terreno</button>
+    </div>
+</div>
                                 
                                 <div id="vttFoodActions" class="food-action-bar"></div>
                                 
