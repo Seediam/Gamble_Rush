@@ -2735,3 +2735,90 @@ window.escutarNotificacoes = function() {
     setTimeout(() => { readyToNotify = true; }, 2000);
 };
 
+// =========================================================
+// CORREÇÃO: MENÇÕES COM NOMES COMPOSTOS (ESPAÇO)
+// =========================================================
+
+// 1. Quando clicar no nome no dropdown, coloca o "_" no lugar do espaço
+window.selectMention = function(nome) {
+    let s = window._mentionRuntime;
+    if (!s || !s.active) s = window.mentionState;
+    if (!s || !s.active || !s.inputEl) return;
+
+    const inputEl = s.inputEl;
+    const val = inputEl.value || "";
+    const cursorPos = inputEl.selectionStart || val.length;
+
+    const before = val.substring(0, s.startPos);
+    const after = val.substring(cursorPos);
+
+    // Substitui espaços por underline para o sistema entender nomes compostos
+    const nomeLimpo = nome.replace(/\s+/g, "_");
+
+    inputEl.value = before + "@" + nomeLimpo + " " + after;
+    inputEl.focus();
+    window.closeMentionDropdown();
+};
+
+// 2. Transforma o "_" de volta em espaço e deixa azulzinho no Chat Principal
+if (window.db) {
+    window.db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
+        try {
+            let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
+            if(d){ Object.keys(d).forEach(k => { 
+                let m = d[k]; let rCount = m.reacoes || {}; let uData = window.usersGlobais[m.nome] || {}; 
+                let curAv = uData.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${m.nome}`; let curTit = uData.tituloChat || m.titulo; 
+                
+                // NOVIDADE: Regex pega o nome com underline e exibe com espaço no chat
+                let textoBonito = (m.texto||"").replace(/@([\w_]+)/g, function(match, nomeMention) {
+                    return `<span style="color:var(--accent-blue); font-weight:bold;">@${nomeMention.replace(/_/g, ' ')}</span>`;
+                });
+
+                let reactHtml = `<button class="react-add" onclick="window.abrirEmojiReacao('${k}', event)">+</button>${rCount['🔥']?`<button class="react-btn">🔥 ${rCount['🔥']}</button>`:''}${rCount['💀']?`<button class="react-btn">💀 ${rCount['💀']}</button>`:''}${rCount['😂']?`<button class="react-btn">😂 ${rCount['😂']}</button>`:''}${rCount['👀']?`<button class="react-btn">👀 ${rCount['👀']}</button>`:''}${rCount['💯']?`<button class="react-btn">💯 ${rCount['💯']}</button>`:''}${rCount['🤡']?`<button class="react-btn">🤡 ${rCount['🤡']}</button>`:''}${rCount['💔']?`<button class="react-btn">💔 ${rCount['💔']}</button>`:''}${rCount['💰']?`<button class="react-btn">💰 ${rCount['💰']}</button>`:''}`;
+                b.innerHTML += `<div class="msg-box"><div class="msg-avatar-container"><span style="font-size:10px; color:#ff2a5f;">${uData.carteira||0}¥</span><img src="${curAv}" class="msg-avatar"></div><div class="msg-content"><div style="display:flex; flex-direction:column; margin-bottom:5px;">${curTit?`<div class="title-tag ${curTit.raridade}" style="display:inline-block; width:fit-content; margin-bottom:2px;">${curTit.txt||curTit}</div>`:''}<strong style="color:var(--accent-blue); font-size:14px;">${m.nome} <span style="color:#555;font-size:10px; margin-left:5px;">${m.data}</span></strong></div><p style="font-size:13px; line-height:1.4; margin-top:2px;">${textoBonito}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}<div style="margin-top:5px; display:flex; flex-wrap:wrap; gap:5px;">${reactHtml}</div></div></div>`; 
+            }); b.scrollTop = b.scrollHeight; }
+        } catch (err) { console.error("Erro ao renderizar chat:", err); }
+    });
+}
+
+// 3. Transforma o "_" de volta em espaço e deixa azulzinho nos Comentários
+window.carregarComentarios = function(postId) {
+    let list = document.getElementById("commentsList");
+    if(!list) return;
+    list.innerHTML = "<div style='text-align:center; color:#aaa; margin-top:20px;'>Carregando...</div>";
+    
+    window.db.ref(`tokyoRpg/posts/${postId}/comentarios`).on('value', snap => {
+        if(window.currentPostIdForComment !== postId) return; 
+        
+        let data = snap.val();
+        if(!data) { list.innerHTML = "<div style='text-align:center; color:#555; margin-top:20px;'>Seja o primeiro a comentar!</div>"; return; }
+        
+        let html = "";
+        let sortedKeys = Object.keys(data).sort((a,b) => data[a].timestamp - data[b].timestamp);
+
+        sortedKeys.forEach(k => {
+            let c = data[k];
+            let u = window.usersGlobais[c.autor] || {};
+            let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${c.autor}`;
+            let nome = u.nome || c.autor;
+            
+            // NOVIDADE: Regex pega o nome com underline e exibe com espaço no comentário
+            let textoBonito = (c.texto||"").replace(/@([\w_]+)/g, function(match, nomeMention) {
+                return `<span style="color:var(--accent-blue); font-weight:bold;">@${nomeMention.replace(/_/g, ' ')}</span>`;
+            });
+
+            html += `
+                <div class="comment-item">
+                    <img src="${avatar}" class="comment-avatar">
+                    <div class="comment-content">
+                        <div class="comment-name">${nome}</div>
+                        <div>${textoBonito}</div>
+                    </div>
+                </div>
+            `;
+        });
+        list.innerHTML = html;
+        setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
+    });
+};
+
