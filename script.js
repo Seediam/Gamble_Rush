@@ -475,38 +475,119 @@ window.clicarGrid = function(x,y, isObs) {
     window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up);
 };
 
-// ==========================================================
-// 4. INICIALIZA O GRID DO VTT (COM SISTEMA DE PROPS E PORTAIS)
-// ==========================================================
+// ===============================================
+// SISTEMA TETRIS (MOCHILA DE PROPS DO MESTRE)
+// ===============================================
+window.dmPropsCache = []; // Guarda as URLs temporariamente
+
+window.adicionarPropDock = function() {
+    let url = prompt("Cole a URL da imagem transparente (PNG) do Prop:");
+    if(!url) return;
+    window.dmPropsCache.push(url);
+    window.renderPropDock();
+};
+
+window.renderPropDock = function() {
+    let list = document.getElementById("dmPropList");
+    if(!list) return;
+    list.innerHTML = "";
+    window.dmPropsCache.forEach((url, index) => {
+        let img = document.createElement("img");
+        img.src = url;
+        img.style.width = "60px";
+        img.style.height = "60px";
+        img.style.objectFit = "contain";
+        img.style.cursor = "grab";
+        img.style.border = "1px solid #333";
+        img.style.borderRadius = "5px";
+        img.style.backgroundColor = "rgba(255,255,255,0.1)";
+        img.draggable = true;
+        
+        // Quando o mestre arrasta o item da mochila
+        img.ondragstart = (e) => { e.dataTransfer.setData("text/plain", url); };
+        
+        // Botão direito na mochila apaga o item da lista
+        img.oncontextmenu = (e) => { 
+            e.preventDefault();
+            window.dmPropsCache.splice(index, 1);
+            window.renderPropDock();
+        }
+        list.appendChild(img);
+    });
+};
+
+// ===============================================
+// CONTROLE DE TELAS DO MAPA
+// ===============================================
+window.desenharMapa = function() {
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "block";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "none";
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "none";
+    if(!mc) return; mc.innerHTML = "";
+    Object.keys(window.locaisMapa).forEach(key => {
+        let loc = window.locaisMapa[key];
+        let node = document.createElement("div");
+        node.className = "map-node";
+        node.style.left = loc.gx + "%"; node.style.top = loc.gy + "%";
+        node.innerHTML = `<div>${loc.nome}</div>`;
+        node.onclick = () => window.abrirSubMapa(key);
+        mc.appendChild(node);
+        if(loc.conexoes) { loc.conexoes.forEach(cKey => { let target = window.locaisMapa[cKey]; if(target) window.drawMapLine(mc, loc.gx, loc.gy, target.gx, target.gy); }); }
+    });
+};
+
+window.abrirSubMapa = function(localKey) {
+    window.currentSubMapKey = localKey;
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "flex";
+
+    let loc = window.locaisMapa[localKey] || { nome: localKey.replace(/_/g, " ") };
+    let titleEl = document.getElementById("subMapTitle"); if(titleEl) titleEl.innerText = loc.nome;
+
+    let bgUrl = window.submapasBGs[localKey] || "";
+    let wrapper = document.getElementById("vttWorldWrapper");
+    if(wrapper) {
+        if(bgUrl) { wrapper.style.backgroundImage = `url('${bgUrl}')`; wrapper.style.backgroundColor = "transparent"; } 
+        else { wrapper.style.backgroundImage = "none"; wrapper.style.backgroundColor = "#111"; }
+    }
+    window.initTacticalBoard();
+    window.updateTacticalBoard();
+
+    if(window.jogadorAtual && window.db) {
+        window.db.ref(`tokyoRpg/submapas/${localKey}`).once('value', s => {
+            let currentGrid = s.val() || {};
+            if(!Object.values(currentGrid).includes(window.jogadorAtual)) window.db.ref(`tokyoRpg/submapas/${localKey}/0_0`).set(window.jogadorAtual);
+        });
+    }
+};
+
+window.fecharSubMapa = function() {
+    window.currentSubMapKey = "";
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "block";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "none";
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "none";
+};
+
+// ===============================================
+// RENDERIZAÇÃO DO GRID E DOS PROPS
+// ===============================================
 window.initTacticalBoard = function() {
     let b = document.getElementById("gridCells"); if(!b) return; b.innerHTML = "";
-    let loc = window.locaisMapa[window.currentSubMapKey] || {}; 
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
-    let conf = window.submapasConfig[window.currentSubMapKey] || {cols: 16, rows: 12, shape: 'quadrado'};
-    let cols = conf.cols || 16;
-    let rows = conf.rows || 12;
-    let shape = conf.shape || 'quadrado';
-    let cellsData = conf.cells || {}; // Puxa os props e portais salvos do Firebase!
-    
+    let conf = window.submapasConfig[window.currentSubMapKey] || {};
+    let cols = conf.cols || 16; let rows = conf.rows || 12; let shape = conf.shape || 'quadrado';
+    let cellsData = conf.cells || {}; 
     let cellSize = window.VTT_CELL_SIZE || 50; 
 
     let wrapper = document.getElementById("vttWorldWrapper");
-    if(wrapper) {
-        wrapper.style.width = (cols * cellSize) + "px";
-        wrapper.style.height = (rows * cellSize) + "px";
-    }
-
-    b.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
-    b.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
-
-    let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = ""; 
+    if(wrapper) { wrapper.style.width = (cols * cellSize) + "px"; wrapper.style.height = (rows * cellSize) + "px"; }
+    b.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`; b.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 
     for(let y=0; y<rows; y++) {
         for(let x=0; x<cols; x++) {
             let cid = `${x}_${y}`; 
-            
-            // Dados personalizados deste quadrado (salvos pelo mestre)
             let cData = cellsData[cid] || {};
             let isObs = cData.obs || false; 
             let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
@@ -516,53 +597,58 @@ window.initTacticalBoard = function() {
             else if (shape === 'u_shape') { if (x >= Math.floor(cols/4) && x < Math.floor(cols*0.75) && y < Math.floor(rows/2)) isHidden = true; } 
             else if (shape === 'cross') { if ((x < Math.floor(cols/3) || x >= Math.floor(cols*0.66)) && (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66))) isHidden = true; } 
             else if (shape === 'corredor') { if (y < Math.floor(rows/3) || y >= Math.floor(rows*0.66)) isHidden = true; } 
-            else if (shape === 'hexagono') {
-                let hW = cols/2; let hH = rows/2;
-                let dx = Math.abs(x - hW + 0.5); let dy = Math.abs(y - hH + 0.5);
-                if ((dx / hW) + (dy / hH) > 1.3) isHidden = true; 
-            }
-
-            let hideClass = isHidden ? "hidden-vtt-cell" : "";
+            else if (shape === 'hexagono') { let hW = cols/2; let hH = rows/2; if ((Math.abs(x - hW + 0.5) / hW) + (Math.abs(y - hH + 0.5) / hH) > 1.3) isHidden = true; }
 
             let cell = document.createElement("div"); 
             cell.id = `cell_${x}_${y}`; 
-            cell.className = `tactical-cell ${obsClass} ${hideClass}`;
-            cell.style.position = "relative"; 
+            cell.className = `tactical-cell ${obsClass} ${isHidden ? "hidden-vtt-cell" : ""}`;
+            cell.style.position = "relative";
             
-            // Renderiza o item/prop se o mestre tiver colocado a URL
-            if(cData.img) {
-                let propImg = document.createElement("img");
-                propImg.src = cData.img;
-                propImg.style.width = "100%";
-                propImg.style.height = "100%";
-                propImg.style.objectFit = "contain"; // Garante que a imagem não fica esticada/deformada
-                propImg.style.position = "absolute";
-                propImg.style.top = "0";
-                propImg.style.left = "0";
-                propImg.style.pointerEvents = "none"; // Para não bloquear o clique no quadrado
-                cell.appendChild(propImg);
-            }
-
-            // Renderiza a indicação do Portal/AP
-            if(cData.portal) {
-                cell.style.boxShadow = "inset 0 0 15px var(--accent-blue)";
-                let portalTag = document.createElement("span");
-                portalTag.innerHTML = `🏠 ${cData.portal}`;
-                portalTag.style.cssText = "font-size:9px; background:rgba(0,0,0,0.8); color:#0ff; position:absolute; bottom:0; left:0; width:100%; text-align:center; font-weight:bold; white-space:nowrap; overflow:hidden; z-index: 5;";
-                cell.appendChild(portalTag);
+            // DESENHA O PROP (Cadeira, Árvore, Carro...)
+            if(cData.prop) {
+                let pImg = document.createElement("img");
+                pImg.src = cData.prop.url;
+                pImg.style.width = "100%"; pImg.style.height = "100%"; pImg.style.objectFit = "contain";
+                pImg.style.transform = `rotate(${cData.prop.rot || 0}deg)`;
+                pImg.style.position = "absolute"; pImg.style.top = "0"; pImg.style.left = "0";
+                pImg.style.zIndex = "2"; pImg.style.pointerEvents = "auto";
+                
+                if (window.isMaster) {
+                    pImg.onclick = (e) => { // Click Esquerdo gira
+                        e.stopPropagation();
+                        window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}/prop/rot`).set((cData.prop.rot || 0) + 90);
+                    };
+                    pImg.oncontextmenu = (e) => { // Click Direito deleta
+                        e.preventDefault(); e.stopPropagation();
+                        window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}/prop`).remove();
+                    };
+                }
+                cell.appendChild(pImg);
             }
 
             if (!isHidden) { 
-                // CLIQUE NORMAL (Mover o Token)
+                if(window.isMaster) {
+                    // RECEBE O DROP DA MOCHILA
+                    cell.ondragover = (e) => e.preventDefault();
+                    cell.ondrop = (e) => {
+                        e.preventDefault();
+                        let draggedUrl = e.dataTransfer.getData("text/plain");
+                        if(draggedUrl) window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}/prop`).set({ url: draggedUrl, rot: 0 });
+                    };
+                    
+                    // Botão direito no quadrado limpo = Cria/Remove Parede Invisível
+                    cell.oncontextmenu = (e) => {
+                        if(e.target === cell) {
+                            e.preventDefault();
+                            window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}/obs`).set(!isObs);
+                            if(typeof window.showNeonToast === "function") window.showNeonToast(!isObs ? "Bloqueado!" : "Caminho Livre!");
+                        }
+                    };
+                }
+                // Clique Normal (Andar)
                 cell.onclick = (e) => {
-                    if(typeof window.clicarGrid === "function") window.clicarGrid(x, y, isObs, cData.portal); 
-                }; 
-
-                // BOTÃO DIREITO DO RATO (Apenas o Mestre pode abrir o menu de Edição)
-                cell.oncontextmenu = (e) => {
-                    if(window.isMaster) {
-                        e.preventDefault(); // Impede que o menu normal do Chrome/Edge abra
-                        window.abrirModalMasterCell(cid);
+                    if(e.target === cell || e.target.tagName !== "IMG") {
+                        if(typeof window.clicarGrid === "function") window.clicarGrid(x, y, isObs, cData.portal); 
                     }
                 };
             }
@@ -571,96 +657,30 @@ window.initTacticalBoard = function() {
     }
 };
 
-// ==========================================================
-// FUNÇÕES DA JANELINHA DO MESTRE (BOTÃO DIREITO DO RATO)
-// ==========================================================
-window.abrirModalMasterCell = function(cid) {
-    document.getElementById("mcCid").value = cid;
-    
-    // Puxa os dados que já existem para os inputs
-    let conf = window.submapasConfig[window.currentSubMapKey] || {};
-    let cellData = (conf.cells && conf.cells[cid]) ? conf.cells[cid] : {};
-
-    document.getElementById("mcObs").checked = !!cellData.obs;
-    document.getElementById("mcImg").value = cellData.img || "";
-    document.getElementById("mcPortal").value = cellData.portal || "";
-
-    // Abre a janela Modal
-    let modal = document.getElementById('masterCellModal');
-    if(modal) modal.style.display = 'flex';
-};
-
-window.salvarCelulaCustom = function() {
-    let cid = document.getElementById("mcCid").value;
-    let isObs = document.getElementById("mcObs").checked;
-    let imgUrl = document.getElementById("mcImg").value.trim();
-    let portalName = document.getElementById("mcPortal").value.trim();
-
-    if(!window.currentSubMapKey || !cid) return;
-
-    // Guarda os dados deste quadrado específico no Firebase
-    window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}`).update({
-        obs: isObs,
-        img: imgUrl,
-        portal: portalName
-    });
-
-    // Fecha a janela
-    document.getElementById('masterCellModal').style.display = 'none';
-    if(typeof window.showNeonToast === "function") window.showNeonToast("Quadrado atualizado!");
-};
-
 window.updateTacticalBoard = function() {
     if(!window.currentSubMapKey) return;
     
-    // Atualiza visão do Mestre
+    // Mostra as ferramentas do Mestre
     let painelMestre = document.getElementById("mestreVTT");
-    if(painelMestre) {
-        if(window.isMaster) {
-            painelMestre.style.display = "flex";
-            let configAtual = window.submapasConfig[window.currentSubMapKey] || {};
-            if(document.getElementById("vttColsInp")) document.getElementById("vttColsInp").value = configAtual.cols || 16;
-            if(document.getElementById("vttRowsInp")) document.getElementById("vttRowsInp").value = configAtual.rows || 12;
-            if(document.getElementById("vttShapeInp")) document.getElementById("vttShapeInp").value = configAtual.shape || 'quadrado';
-        } else {
-            painelMestre.style.display = "none";
-        }
+    let propDock = document.getElementById("dmPropDock");
+    if(window.isMaster) {
+        if(painelMestre) painelMestre.style.display = "flex";
+        if(propDock) { propDock.style.display = "flex"; window.renderPropDock(); }
+        let conf = window.submapasConfig[window.currentSubMapKey] || {};
+        if(document.getElementById("vttColsInp")) document.getElementById("vttColsInp").value = conf.cols || 16;
+        if(document.getElementById("vttRowsInp")) document.getElementById("vttRowsInp").value = conf.rows || 12;
+        if(document.getElementById("vttShapeInp")) document.getElementById("vttShapeInp").value = conf.shape || 'quadrado';
+    } else {
+        if(painelMestre) painelMestre.style.display = "none";
+        if(propDock) propDock.style.display = "none";
     }
 
     let grid = window.submapasGlobais[window.currentSubMapKey] || {};
     let layer = document.getElementById("tokensLayer"); if(!layer) return;
-    let loc = window.locaisMapa[window.currentSubMapKey] || {}; let obsList = loc.obs || [];
-    let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
+    let conf = window.submapasConfig[window.currentSubMapKey] || {};
+    let cols = conf.cols || 16; let rows = conf.rows || 12; let cellSize = window.VTT_CELL_SIZE || 50; 
 
-    let conf = window.submapasConfig[window.currentSubMapKey] || {cols: 16, rows: 12};
-    let cols = conf.cols || 16;
-    let rows = conf.rows || 12;
-    let cellSize = window.VTT_CELL_SIZE || 50; // Tamanho fixo do quadrado
-
-    // Acha a posição X e Y atuais do jogador que está se movendo
-    let px = -1, py = -1;
-    Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
-
-    // Pinta as células de alcance de movimento
-    for(let y=0; y<rows; y++) {
-        for(let x=0; x<cols; x++) {
-            let cid = `${x}_${y}`;
-            let cell = document.getElementById(`cell_${x}_${y}`);
-            if(cell && !cell.classList.contains("hidden-vtt-cell")) {
-                cell.classList.remove("in-range", "in-range-blocked");
-                let isObs = obsList.includes(cid);
-                let canWalk = !isObs || isGaia || window.isMaster;
-                if(px !== -1 && py !== -1 && window.movimentosRestantes > 0) {
-                    let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-                    if(dist > 0 && dist <= window.movimentosRestantes && !grid[cid]) {
-                        if(canWalk) cell.classList.add("in-range");
-                        else cell.classList.add("in-range-blocked");
-                    }
-                }
-            }
-        }
-    }
-
+    // Oculta a área de tokens se as posições mudarem
     let currentTokens = [];
     Object.keys(grid).forEach(cid => {
         let occupier = grid[cid]; if(!occupier) return;
@@ -670,71 +690,40 @@ window.updateTacticalBoard = function() {
         let tokenId = `token_${occupier}`; currentTokens.push(tokenId);
         let tokenEl = document.getElementById(tokenId);
         let avToken = window.usersGlobais[occupier]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${occupier}`;
-        let hp = window.usersGlobais[occupier]?.rpg?.hp || 100;
         let isMe = (occupier === window.jogadorAtual);
 
-        // Define a posição exata em pixels
-        let leftPx = (x * cellSize);
-        let topPx = (y * cellSize);
+        let leftPx = (x * cellSize); let topPx = (y * cellSize);
 
         if(tokenEl) {
-            tokenEl.style.left = leftPx + "px"; 
-            tokenEl.style.top = topPx + "px";
-            tokenEl.style.width = cellSize + "px"; 
-            tokenEl.style.height = cellSize + "px";
-            if (tokenEl.querySelector('.token-hp')) tokenEl.querySelector('.token-hp').innerText = hp;
+            tokenEl.style.left = leftPx + "px"; tokenEl.style.top = topPx + "px";
+            tokenEl.style.width = cellSize + "px"; tokenEl.style.height = cellSize + "px";
         } else {
             let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token";
             if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; }
             tHtml.style.backgroundImage = `url('${avToken}')`; 
-            tHtml.style.left = leftPx + "px"; 
-            tHtml.style.top = topPx + "px";
-            tHtml.style.width = cellSize + "px"; 
-            tHtml.style.height = cellSize + "px";
-            tHtml.innerHTML = `<div class="token-hp">${hp}</div>`; layer.appendChild(tHtml);
-            tokenEl = tHtml; 
+            tHtml.style.left = leftPx + "px"; tHtml.style.top = topPx + "px";
+            tHtml.style.width = cellSize + "px"; tHtml.style.height = cellSize + "px";
+            layer.appendChild(tHtml); tokenEl = tHtml; 
         }
 
-        // === CÂMERA INTELIGENTE (SIDEVIEW DE 3 BLOCOS) ===
+        // Camera Seguidora
         if(isMe && tokenEl) {
             setTimeout(() => {
                 let board = document.getElementById("tacticalBoard");
                 if(board) {
-                    let margin = window.VTT_CELL_SIZE * 3; // Margem de 3 quadrados
-                    
-                    // Posição do Token no tabuleiro
-                    let tokenL = leftPx;
-                    let tokenT = topPx;
-                    let tokenR = tokenL + window.VTT_CELL_SIZE;
-                    let tokenB = tokenT + window.VTT_CELL_SIZE;
-
-                    // O que a tela está mostrando agora
-                    let viewL = board.scrollLeft;
-                    let viewR = viewL + board.clientWidth;
-                    let viewT = board.scrollTop;
-                    let viewB = viewT + board.clientHeight;
-
-                    let targetScrollL = viewL;
-                    let targetScrollT = viewT;
-
-                    // Se encostou na margem Esquerda ou Direita, empurra a tela
-                    if (tokenL < viewL + margin) targetScrollL = tokenL - margin;
-                    else if (tokenR > viewR - margin) targetScrollL = tokenR + margin - board.clientWidth;
-
-                    // Se encostou na margem Cima ou Baixo, empurra a tela
-                    if (tokenT < viewT + margin) targetScrollT = tokenT - margin;
-                    else if (tokenB > viewB - margin) targetScrollT = tokenB + margin - board.clientHeight;
-
-                    // Aplica o movimento na câmera apenas se saiu da zona de conforto
-                    if(targetScrollL !== viewL || targetScrollT !== viewT) {
-                        board.scrollTo({ left: targetScrollL, top: targetScrollT, behavior: 'smooth' });
-                    }
+                    let margin = window.VTT_CELL_SIZE * 3; 
+                    let vL = board.scrollLeft, vR = vL + board.clientWidth, vT = board.scrollTop, vB = vT + board.clientHeight;
+                    let targetL = vL, targetT = vT;
+                    if (leftPx < vL + margin) targetL = leftPx - margin; else if (leftPx + cellSize > vR - margin) targetL = leftPx + cellSize + margin - board.clientWidth;
+                    if (topPx < vT + margin) targetT = topPx - margin; else if (topPx + cellSize > vB - margin) targetT = topPx + cellSize + margin - board.clientHeight;
+                    if(targetL !== vL || targetT !== vT) board.scrollTo({ left: targetL, top: targetT, behavior: 'smooth' });
                 }
             }, 100);
         }
     });
 
     Array.from(layer.children).forEach(t => { if(!currentTokens.includes(t.id)) t.remove(); });
+};
     
     // Atualiza UI de turnos
     let tBar = document.getElementById("turnOrderUI"); let btnP = document.getElementById("btnPassTurno");
