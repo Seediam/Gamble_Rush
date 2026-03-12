@@ -185,7 +185,22 @@
                                     <button class="action-btn" style="padding: 5px; margin:0;" onclick="window.rolarPericiaSelect()">Rolar</button>
                                 </div>
                             </div>
+<div class="combat-actions-container" style="margin-top:15px; border-top:1px solid #333; padding-top:10px;">
+    <span style="color:var(--accent-red); font-size:12px; font-weight:bold; display:block; margin-bottom:5px;">Ações de Combate</span>
+    <div id="combatAtaquesList" style="display:flex; flex-direction:column; gap:5px;">
+        </div>
+</div>
 
+<div id="reactionModal" class="dice-overlay" style="display:none; z-index:10000;">
+    <div class="dice-box-panel" style="border-color:var(--accent-gold);">
+        <h2 id="reactionTitle" style="color:var(--accent-gold);">⚠️ SOB ATAQUE!</h2>
+        <p id="reactionDesc" style="color:#fff;"></p>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+            <button class="action-btn" style="border-color:#0f0; color:#0f0;" onclick="window.reagir('esquiva')">Esquivar (Agi)</button>
+            <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue);" onclick="window.reagir('defender')">Bloquear (AR)</button>
+        </div>
+    </div>
+</div>
                             <div style="display:flex; gap:5px; flex-wrap:wrap; margin-top:10px;">
                                 <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d4')">d4</button>
                                 <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d6')">d6</button>
