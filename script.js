@@ -3559,161 +3559,36 @@ window.renderizarFicha = function() {
     }
 };
 
-// FORÇAR ÁUDIO A DESMUTAR QUANDO A LIGAÇÃO CONECTA
-// Esse código extra garante que o navegador dos jogadores não mutem a chamada!
-setInterval(() => {
-    let remoteAudio = document.getElementById("remoteAudio");
-    if(remoteAudio && window.callIdAtual) {
-        if(remoteAudio.muted) remoteAudio.muted = false; // Tira do mudo à força
-        if(remoteAudio.volume < 1.0) remoteAudio.volume = 1.0; // Põe volume no 100% à força
-    }
-}, 3000);
 
-// =========================================================
-// SISTEMA DE VOICE CHAT: RELAY VIA WEBSOCKET (NÃO-P2P)
-// =========================================================
+// mapa do seu VTT -> canal de voz discord
+const mapToVoiceChannel = {
+  p1: '123456789012345678', // Praça Central
+  p2: '223456789012345678', // Ramen Fantasma
+  p4: '323456789012345678', // Clube Neon
+  p10: '423456789012345678' // Safehouse
+};
 
-// 1. CARREGA A BIBLIOTECA SOCKET.IO
-if (typeof io === 'undefined') {
-    let s = document.createElement('script');
-    s.src = "https://cdn.socket.io/4.7.4/socket.io.min.js";
-    s.onload = () => window.conectarServidorVoz();
-    document.head.appendChild(s);
+async function moverNoDiscord(discordUserId, localId) {
+  const voiceChannelId = mapToVoiceChannel[localId];
+  if (!voiceChannelId) return;
+
+  const resp = await fetch(`${DISCORD_API_URL}/move-user`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': API_KEY
+    },
+    body: JSON.stringify({
+      userId: discordUserId,
+      voiceChannelId
+    })
+  });
+
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    console.error('Falha ao mover no Discord:', resp.status, err);
+  }
 }
-
-window.socketVoz = null;
-window.gravadorMic = null;
-window.callIdAtual = null;
-window.callStartTime = 0;
-window._escutaLigacaoAtiva = false;
-
-// COLOQUE AQUI A URL DO SEU SERVIDOR (Ex: https://seu-app.herokuapp.com)
-window.URL_SERVIDOR_VOZ = "http://localhost:3000"; 
-
-window.conectarServidorVoz = function() {
-    if (window.socketVoz) return;
-    window.socketVoz = io(window.URL_SERVIDOR_VOZ);
-    
-    window.socketVoz.on('connect', () => {
-        console.log("Conectado ao Servidor de Passagem de Voz!");
-    });
-
-    // RECEBER ÁUDIO DO OUTRO JOGADOR
-    window.socketVoz.on('receber_audio', (data) => {
-        if (!window.callIdAtual) return;
-        
-        // Converte o buffer recebido em som e toca
-        const blob = new Blob([data.audio], { type: 'audio/webm;codecs=opus' });
-        const url = window.URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        
-        audio.play().catch(e => console.warn("Erro autoplay áudio", e));
-        
-        // Efeito Neon no Avatar do Alvo
-        let targetAv = document.getElementById("activeCallTargetAvatar");
-        if(targetAv) {
-            targetAv.style.boxShadow = `0 0 30px rgba(255, 26, 85, 0.9)`;
-            setTimeout(() => { if(targetAv) targetAv.style.boxShadow = "0 0 10px var(--accent-red)"; }, 400);
-        }
-
-        audio.onended = () => window.URL.revokeObjectURL(url);
-    });
-};
-
-// 2. INICIAR TRANSMISSÃO (MEU MIC)
-window.iniciarMicrofone = async function() {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        window.gravadorMic = new MediaRecorder(stream);
-        
-        window.gravadorMic.ondataavailable = (e) => {
-            if (e.data.size > 0 && window.socketVoz && window.callIdAtual) {
-                // Envia o pacote de áudio binário pro servidor
-                window.socketVoz.emit('stream_audio', {
-                    callId: window.callIdAtual,
-                    audio: e.data,
-                    sender: window.jogadorAtual
-                });
-                
-                // Efeito Neon no MEU Avatar
-                let myAv = document.getElementById("activeCallMyAvatar");
-                if(myAv) {
-                    myAv.style.boxShadow = `0 0 30px rgba(0, 229, 255, 0.9)`;
-                    setTimeout(() => { if(myAv) myAv.style.boxShadow = "0 0 10px var(--accent-blue)"; }, 400);
-                }
-            }
-        };
-
-        // Envia fatias de áudio a cada 400ms (TCP Balanceado)
-        window.gravadorMic.start(400);
-        document.getElementById("callErrorAlertLocal").style.display = "none";
-        document.getElementById("activeCallStatusText").innerText = "CONEXÃO TCP ESTÁVEL";
-        document.getElementById("activeCallStatusText").style.color = "#0f0";
-
-    } catch (err) {
-        console.error("Erro mic:", err);
-        document.getElementById("callErrorAlertLocal").style.display = "flex";
-        window.showNeonToast("❌ Microfone Bloqueado!");
-    }
-};
-
-// 3. LOGICA DE LIGAÇÃO (ADAPTADA PARA SOCKET)
-window.iniciarLigacao = async function() {
-    if(!window.contatoSmsAtual) return;
-    let alvo = window.contatoSmsAtual;
-    let me = window.jogadorAtual;
-    
-    // Gera ID da sala
-    window.callIdAtual = [me, alvo].sort().join("_");
-    
-    if(window.socketVoz) window.socketVoz.emit('join_call', window.callIdAtual);
-
-    window.db.ref(`tokyoRpg/users/${me}/inCall`).set(true);
-    window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
-
-    window.abrirTelaChamadaAtiva(alvo, true);
-    
-    // Ouve se o alvo atendeu via Firebase
-    window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).on('value', snap => {
-        if(snap.val() === "answered" && window.callStartTime === 0) {
-            window.callStartTime = Date.now();
-            window.iniciarMicrofone();
-        }
-        if(snap.val() === "ended") window.encerrarLigacaoLimpo();
-    });
-};
-
-window.aceitarLigacao = function() {
-    let modal = document.getElementById("callModal");
-    if(modal) modal.style.display = "none";
-
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(true);
-    window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("answered");
-    
-    if(window.socketVoz) window.socketVoz.emit('join_call', window.callIdAtual);
-
-    window.callStartTime = Date.now();
-    window.abrirTelaChamadaAtiva(window.quemTaLigando, false);
-    window.iniciarMicrofone();
-
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
-};
-
-window.encerrarLigacaoLimpo = function() {
-    if(window.gravadorMic) {
-        window.gravadorMic.stop();
-        window.gravadorMic.stream.getTracks().forEach(t => t.stop());
-        window.gravadorMic = null;
-    }
-    
-    if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(false);
-    
-    document.getElementById("activeCallModal").style.display = "none";
-    document.getElementById("callModal").style.display = "none";
-    
-    window.callIdAtual = null;
-    window.callStartTime = 0;
-};
 
 // ... As funções de Recusar e Encerrar (e radar de toque) continuam no seu arquivo iguais antes.
 // =========================================================
