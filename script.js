@@ -4283,6 +4283,7 @@ window.salvarFormatoMapa = function() {
     let rows = parseInt(document.getElementById("vttRowsInp").value) || 12;
     let shape = document.getElementById("vttShapeInp").value || "quadrado";
 
+    // Salva no banco e o evento de "on('value')" que criamos fará o grid se redesenhar em milissegundos
     window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}`).update({
         cols: cols,
         rows: rows,
