@@ -3475,14 +3475,13 @@ window.iniciarLigacao = function() {
 };
 
 // =========================================================
-// SISTEMA DE VOICE CHAT (LIGAÇÃO GLOBAL WEBRTC)
+// SISTEMA DE VOICE CHAT (LIGAÇÃO GLOBAL WEBRTC) - CORRIGIDO
 // =========================================================
 
 window.rtcPeer = null;
 window.localStream = null;
 window.callIdAtual = null;
 
-// Servidores públicos do Google para conectar as redes (STUN)
 const rtcServers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
 
 // 1. FAZER A LIGAÇÃO
@@ -3492,49 +3491,42 @@ window.iniciarLigacao = async function() {
     let me = window.jogadorAtual;
     window.callIdAtual = [me, alvo].sort().join("_");
 
-    // Muda o botão para "Desligar"
     let callBtn = document.getElementById("btnCallUI");
     callBtn.innerText = "🔴 Desligar";
     callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
     callBtn.onclick = window.encerrarLigacao;
 
-    window.showNeonToast(`📞 Conectando com ${alvo}... Permita o Microfone!`);
+    window.showNeonToast(`📞 Ligando para ${alvo}...`);
 
     try {
-        // Pede o microfone
         window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     } catch(e) {
-        window.showNeonToast("Erro: Microfone bloqueado ou não encontrado!");
+        window.showNeonToast("Erro: Permita o microfone no navegador!");
         window.encerrarLigacaoLimpo(); return;
     }
 
-    // Configura a conexão P2P
     window.rtcPeer = new RTCPeerConnection(rtcServers);
     window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
 
-    // Quando receber o áudio do amigo, joga no alto-falante
     window.rtcPeer.ontrack = event => {
         let remoteAudio = document.getElementById("remoteAudio");
         if(remoteAudio) remoteAudio.srcObject = event.streams[0];
     };
 
     let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
-    callDoc.remove(); // Limpa chamadas velhas
+    callDoc.remove(); 
 
-    // Envia pacotes de rota pro Firebase (ICE)
     window.rtcPeer.onicecandidate = event => {
         if(event.candidate) callDoc.child('callerCandidates').push(event.candidate.toJSON());
     };
 
-    // Cria o convite oficial (Offer)
     const offer = await window.rtcPeer.createOffer();
     await window.rtcPeer.setLocalDescription(offer);
     await callDoc.set({ offer: { type: offer.type, sdp: offer.sdp }, from: me, to: alvo, status: "calling" });
 
-    // Toca o celular do alvo!
+    // Toca o celular do alvo no banco de dados
     window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
 
-    // Fica ouvindo o amigo aceitar (Answer)
     callDoc.child('answer').on('value', snap => {
         let ans = snap.val();
         if(ans && !window.rtcPeer.currentRemoteDescription) {
@@ -3543,36 +3535,53 @@ window.iniciarLigacao = async function() {
         }
     });
 
-    // Fica ouvindo as rotas do amigo
     callDoc.child('calleeCandidates').on('child_added', snap => {
         let candidate = snap.val();
         if(candidate) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
     });
 
-    // Fica ouvindo se alguém desligou
     callDoc.child('status').on('value', snap => {
         if(snap.val() === "ended") window.encerrarLigacaoLimpo();
     });
 };
 
-// 2. OUVIR O CELULAR TOCAR (Roda em background)
-window.escutarChamadas = function() {
-    if(!window.jogadorAtual || !window.db) return;
+// 2. OUVIR O CELULAR TOCAR (AGORA É À PROVA DE FALHAS)
+window._escutaLigacaoAtiva = false;
+window.iniciarEscutaChamadas = function() {
+    if(window._escutaLigacaoAtiva) return; // Já está escutando
+    
+    // Se o jogador ainda não logou, tenta de novo em 1 segundo (Loop infinito até achar)
+    if(!window.jogadorAtual || !window.db) {
+        setTimeout(window.iniciarEscutaChamadas, 1000);
+        return;
+    }
+    
+    window._escutaLigacaoAtiva = true;
     window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).on('value', snap => {
         let data = snap.val();
-        if(!data) return;
+        let modal = document.getElementById("callModal");
+        
+        if(!data) { // Se apagaram a chamada, fecha a tela
+            if(modal) modal.style.display = "none";
+            return;
+        }
+        
         if(Date.now() - data.ts > 30000) return; // Se for ligação velha (mais de 30s), ignora
 
         window.callIdAtual = data.callId;
         
-        // Mostra a tela de atender
+        // Mostra a tela de atender na cara da pessoa
         document.getElementById("callModalName").innerText = `📞 Ligação de ${data.from}`;
-        document.getElementById("callModal").style.display = "block";
+        if(modal) {
+            modal.style.display = "block";
+            modal.style.zIndex = "999999"; // Garante que fica por cima de tudo
+        }
+        window.showNeonToast(`Recebendo chamada de ${data.from}...`);
     });
 };
 
-// Auto-Iniciar o ouvinte de ligações 3 segundos após abrir o site
-setTimeout(() => { if(window.jogadorAtual) window.escutarChamadas(); }, 3000);
+// Dá o pontapé inicial na escuta assim que o script carrega
+window.iniciarEscutaChamadas();
 
 // 3. ATENDER LIGAÇÃO
 window.aceitarLigacao = async function() {
@@ -3589,7 +3598,7 @@ window.aceitarLigacao = async function() {
     try {
         window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     } catch(e) {
-        window.showNeonToast("Microfone bloqueado!"); window.recusarLigacao(); return;
+        window.showNeonToast("Microfone bloqueado! Autorize no navegador."); window.recusarLigacao(); return;
     }
 
     window.rtcPeer = new RTCPeerConnection(rtcServers);
@@ -3597,7 +3606,10 @@ window.aceitarLigacao = async function() {
 
     window.rtcPeer.ontrack = event => {
         let remoteAudio = document.getElementById("remoteAudio");
-        if(remoteAudio) remoteAudio.srcObject = event.streams[0];
+        if(remoteAudio) {
+            remoteAudio.srcObject = event.streams[0];
+            remoteAudio.play().catch(e => console.log("Áudio aguardando interação:", e));
+        }
     };
 
     let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
@@ -3606,7 +3618,6 @@ window.aceitarLigacao = async function() {
         if(event.candidate) callDoc.child('calleeCandidates').push(event.candidate.toJSON());
     };
 
-    // Lê o convite (Offer) e responde (Answer)
     callDoc.child('offer').once('value', async snap => {
         let offer = snap.val();
         if(!offer) return;
@@ -3628,7 +3639,7 @@ window.aceitarLigacao = async function() {
         if(snap.val() === "ended") window.encerrarLigacaoLimpo();
     });
 
-    // Apaga a notificação de toque
+    // Apaga a notificação de toque para a tela de chamada sumir
     window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
 };
 
@@ -3642,12 +3653,17 @@ window.recusarLigacao = function() {
 // 5. DESLIGAR
 window.encerrarLigacao = function() {
     if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    
+    // Força a remoção do toque caso estivesse chamando
+    if(window.contatoSmsAtual) window.db.ref(`tokyoRpg/users/${window.contatoSmsAtual}/incomingCall`).remove();
+    
     window.encerrarLigacaoLimpo();
 };
 
 // Limpa tudo (Desliga câmera/mic, reseta botões)
 window.encerrarLigacaoLimpo = function() {
-    document.getElementById("callModal").style.display = "none";
+    let modal = document.getElementById("callModal");
+    if(modal) modal.style.display = "none";
     
     if(window.rtcPeer) { window.rtcPeer.close(); window.rtcPeer = null; }
     if(window.localStream) { window.localStream.getTracks().forEach(t => t.stop()); window.localStream = null; }
