@@ -1356,15 +1356,15 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     background: transparent !important;
 }
 
-/* === REGRAS DO NOVO TABULEIRO VTT === */
+/* === REGRAS DO NOVO TABULEIRO VTT E GRID === */
 #tacticalBoard {
-    overflow: auto !important; /* Faz o mapa ter barra de rolagem! */
+    overflow: auto !important;
     position: relative;
-    background-image: none !important; /* Remove qualquer grid desenhado por CSS no fundo */
+    background-color: transparent !important;
+    background-image: none !important;
 }
 
 #vttWorldWrapper {
-    /* A imagem de fundo (seu mapa) vai preencher esse container exato */
     background-size: 100% 100% !important;
     background-repeat: no-repeat;
     position: absolute;
@@ -1372,32 +1372,23 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     left: 0;
 }
 
-/* === APARÊNCIA DO GRID (PRETO SEMI-TRANSPARENTE) === */
 .tactical-cell {
-    /* Linha do quadrado: preta e bem visível */
     border: 1px solid rgba(0, 0, 0, 0.7) !important; 
-    
-    /* Fundo do quadrado: preto com 40% de transparência (deixa ver o mapa, mas marca o chão) */
     background-color: rgba(0, 0, 0, 0.4) !important; 
     box-sizing: border-box;
-    transition: background-color 0.2s; /* Suaviza ao passar o mouse */
+    transition: background-color 0.2s;
 }
 
-/* Efeito brilho quando o jogador passa o mouse em cima para saber onde vai clicar */
 .tactical-cell:hover {
     background-color: rgba(255, 255, 255, 0.15) !important;
     border: 1px solid #fff !important;
     cursor: pointer;
 }
 
-/* === DESTRUIR CAIXAS VERMELHAS E NOMES DE SALÃO PARA SEMPRE === */
+/* Destrói as caixas vermelhas antigas */
 #roomOverlays, .room-overlay {
     display: none !important;
     visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    width: 0 !important;
-    height: 0 !important;
 }
 
 /* === LIMPANDO O GRID NEON ANTIGO === */
