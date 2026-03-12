@@ -2888,3 +2888,165 @@ window.toggleFollow = function(alvo, event) {
         }
     });
 };
+// =========================================================
+// PATCH: DESBLOQUEIO DE APPS (HB-CELULAR) E SISTEMA DE DM
+// =========================================================
+
+// 1. Correção da Função que lê os itens e libera as abas
+window.renderizarFicha = function() {
+    if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
+    let u = window.usersGlobais[window.jogadorAtual]; 
+    let r = window.getSafeRpg(u); 
+    let mInteg = window.calcularMaxInteg(u); 
+    let buffs = window.calcularBuffsMoveis(u); 
+    let def = window.calcularDefesa(u);
+    
+    if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual);
+    if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
+    let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
+    if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
+    if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || "");
+    if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
+    if(document.getElementById("perfilTelefone")) window.setElText("perfilTelefone", u.numero || "Registrado");
+
+    window.setElText("lblDef", def); 
+    if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres;
+    window.setElText("lblPts", r.pontosLivres);
+    window.setElText("valFor", r.for + buffs.for); window.setElText("valAgi", r.agi + buffs.agi); window.setElText("valMan", r.man + buffs.man); window.setElText("valVig", r.vig + buffs.vig); window.setElText("valInt", r.int + buffs.int);
+    window.setElText("lblIntegMax", mInteg); window.setElText("lblIntegVal", r.integridade + "%");
+    
+    let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
+    let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
+    
+    // VERIFICA SE O JOGADOR TEM CELULAR E CASA NA MOCHILA
+    let temCel = u.numero || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Tecnologia'));
+    let temCasa = (u.casa && Object.keys(u.casa).length > 0) || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Móvel'));
+    
+    // LIBERA O APP GAMBLENGER (HB-CELULAR)
+    let iCel = document.getElementById('hb-celular'); 
+    if(iCel) { 
+        if(temCel || window.isMaster) { 
+            iCel.classList.remove('locked'); 
+            iCel.onclick = () => { window.abrirApp('tab-celular', false); window.carregarContatosSMS(); }; 
+        } else { 
+            iCel.classList.add('locked'); 
+            iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre Tecnologia na Gamblezon."); 
+        } 
+    }
+    
+    // LIBERA O APP GAMBLE HOUSE (HB-CASA)
+    let iCasa = document.getElementById('hb-casa'); 
+    if(iCasa) { 
+        if(temCasa || window.isMaster) { 
+            iCasa.classList.remove('locked'); 
+            iCasa.onclick = () => window.abrirApp('tab-casa', false); 
+        } else { 
+            iCasa.classList.add('locked'); 
+            iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); 
+        } 
+    }
+};
+
+// 2. Sistema de Contatos e Mensagem Privada
+window.contatoSmsAtual = null;
+window._smsListener = null;
+
+window.carregarContatosSMS = function() {
+    let lista = document.getElementById("listaContatosSMS");
+    if(!lista || !window.usersGlobais) return;
+    lista.innerHTML = "";
+    
+    let sortedUsers = Object.keys(window.usersGlobais).filter(n => n !== window.jogadorAtual);
+    
+    sortedUsers.forEach(n => {
+        let u = window.usersGlobais[n];
+        // Verifica se a outra pessoa também tem celular para aparecer na lista
+        let temCel = window.isMaster || n === "MESTRE" || u.numero || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Tecnologia'));
+        
+        if(temCel) {
+            let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
+            let isSel = (window.contatoSmsAtual === n) ? "background:rgba(0, 229, 255, 0.2); border-left:3px solid var(--accent-blue);" : "background:#111; border-left:3px solid #333;";
+            lista.innerHTML += `
+            <div style="display:flex; align-items:center; gap:10px; padding:10px; cursor:pointer; border-radius:4px; margin-bottom:5px; ${isSel}" onclick="window.abrirChatSMS('${n}')">
+                <img src="${av}" style="width:35px; height:35px; border-radius:50%; object-fit:cover; border:1px solid #555;">
+                <div style="color:#fff; font-weight:bold; font-size:12px; overflow:hidden; text-overflow:ellipsis;">${n}</div>
+            </div>`;
+        }
+    });
+};
+
+window.abrirChatSMS = function(contato) {
+    window.contatoSmsAtual = contato;
+    let header = document.getElementById("smsChatHeader");
+    if(header) header.innerText = "Criptografado: " + contato;
+    window.carregarContatosSMS(); // Atualiza a seleção visual
+    window.renderizarSMSLog();
+};
+
+window.renderizarSMSLog = function() {
+    if(!window.jogadorAtual || !window.contatoSmsAtual) return;
+    
+    // Cria uma ID única pro chat mesclando os dois nomes em ordem alfabética
+    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
+    
+    if(window._smsListener) window.db.ref('tokyoRpg/smsChats/' + window._lastChatId).off('value', window._smsListener);
+    window._lastChatId = chatId;
+    
+    window._smsListener = window.db.ref('tokyoRpg/smsChats/' + chatId).on('value', snap => {
+        let log = document.getElementById("smsLog");
+        if(!log) return;
+        log.innerHTML = "";
+        let data = snap.val();
+        
+        if(!data) {
+            log.innerHTML = `<div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura. Envie a primeira mensagem.</div>`;
+            return;
+        }
+        
+        Object.keys(data).forEach(k => {
+            let m = data[k];
+            let isMe = (m.de === window.jogadorAtual);
+            let align = isMe ? "flex-end" : "flex-start";
+            let bg = isMe ? "var(--accent-blue)" : "#222";
+            let color = isMe ? "#000" : "#fff";
+            let radius = isMe ? "12px 12px 0 12px" : "12px 12px 12px 0";
+            
+            log.innerHTML += `
+            <div style="display:flex; flex-direction:column; align-items:${align}; margin-bottom:10px;">
+                <div style="background:${bg}; color:${color}; padding:10px; border-radius:${radius}; max-width:80%; font-size:13px; font-family:monospace; font-weight:bold; word-wrap:break-word;">
+                    ${m.msg}
+                </div>
+                <div style="font-size:10px; color:#666; margin-top:3px;">${m.data}</div>
+            </div>`;
+        });
+        // Desce o chat pro final
+        setTimeout(() => { log.scrollTop = log.scrollHeight; }, 50);
+    });
+};
+
+window.enviarSMS = function() {
+    if(!window.jogadorAtual || !window.contatoSmsAtual) {
+        window.showNeonToast("Selecione um contato na lista!");
+        return;
+    }
+    let txt = document.getElementById("smsTexto").value.trim();
+    if(!txt) return;
+    
+    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
+    let payload = {
+        de: window.jogadorAtual,
+        para: window.contatoSmsAtual,
+        msg: txt,
+        data: new Date().toLocaleTimeString(),
+        ts: Date.now()
+    };
+    
+    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push(payload).then(() => {
+        // Dispara uma notificação em HUD avisando a pessoa se ela estiver fora do app
+        if(typeof window.enviarNotificacaoHUD === "function") {
+            window.enviarNotificacaoHUD(window.contatoSmsAtual, window.jogadorAtual, "enviou uma DM no Gamblenger.");
+        }
+    });
+    
+    document.getElementById("smsTexto").value = "";
+};
