@@ -3314,9 +3314,15 @@ window.salvarConfigCasa = function() {
     setTimeout(window.renderizarCasaTetris, 500);
 };
 // =========================================================
-// GAMBLENGER: SISTEMA DE CONTATOS (AGENDA) E LIGAÇÕES
+// GAMBLENGER: SISTEMA COMPLETO (AGENDA, CHAT E LIGAÇÕES)
 // =========================================================
 
+// Variáveis de controle para não duplicar o chat
+window.contatoSmsAtual = null;
+window._smsListener = null;
+window._lastChatId = null;
+
+// 1. Adicionar Contato pelo Número
 window.adicionarContato = function() {
     if(!window.jogadorAtual) return;
     let num = document.getElementById("novoContatoNum").value.trim();
@@ -3324,32 +3330,27 @@ window.adicionarContato = function() {
 
     let me = window.usersGlobais[window.jogadorAtual];
     
-    // Se o jogador não tem número no perfil, não pode adicionar
     if(!me.numero && !window.isMaster) { 
-        window.showNeonToast("Você precisa registrar seu próprio Número no perfil primeiro!"); 
+        window.showNeonToast("Registre seu próprio Número no perfil primeiro!"); 
         return; 
     }
     if(num === me.numero) { window.showNeonToast("Este é o seu próprio número!"); return; }
 
-    // Procura na base de dados quem tem esse número
     let alvo = null;
     Object.keys(window.usersGlobais).forEach(k => {
         if(window.usersGlobais[k].numero === num) alvo = k;
     });
 
-    if(!alvo) {
-        window.showNeonToast("Número inexistente ou fora de área.");
-        return;
-    }
+    if(!alvo) { window.showNeonToast("Número inexistente ou fora de área."); return; }
 
-    // Adiciona na agenda do Firebase
     window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/contatos/${alvo}`).set(true).then(() => {
-        window.showNeonToast(`Contato [${alvo}] salvo na agenda!`);
+        window.showNeonToast(`Contato [${alvo}] salvo!`);
         document.getElementById("novoContatoNum").value = "";
         window.carregarContatosSMS();
     });
 };
 
+// 2. Carregar a Lista de Contatos na Esquerda
 window.carregarContatosSMS = function() {
     let lista = document.getElementById("listaContatosSMS");
     if(!lista || !window.usersGlobais || !window.jogadorAtual) return;
@@ -3358,20 +3359,18 @@ window.carregarContatosSMS = function() {
     let meusContatos = window.usersGlobais[window.jogadorAtual]?.contatos || {};
     let contatosArray = Object.keys(meusContatos);
 
-    // O Mestre é onipotente, vê todo mundo para testar e espionar
     if(window.isMaster) {
         contatosArray = Object.keys(window.usersGlobais).filter(n => n !== "MESTRE" && n !== window.jogadorAtual);
     }
 
     if(contatosArray.length === 0) {
-        lista.innerHTML = `<div style="text-align:center; color:#555; font-size:10px; margin-top:20px;">Sua agenda está vazia.<br><br>Peça o número do RP de alguém e digite acima.</div>`;
+        lista.innerHTML = `<div style="text-align:center; color:#555; font-size:10px; margin-top:20px;">Sua agenda está vazia.<br><br>Adicione o nº de alguém.</div>`;
         return;
     }
 
     contatosArray.forEach(n => {
         let u = window.usersGlobais[n];
         if(!u) return;
-        
         let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
         let isSel = (window.contatoSmsAtual === n) ? "background:rgba(0, 229, 255, 0.2); border-left:3px solid var(--accent-blue);" : "background:#111; border-left:3px solid #333;";
         lista.innerHTML += `
@@ -3382,22 +3381,100 @@ window.carregarContatosSMS = function() {
     });
 };
 
+// 3. Abrir o Chat ao Clicar na Pessoa
 window.abrirChatSMS = function(contato) {
     window.contatoSmsAtual = contato;
-    
     let headerName = document.getElementById("smsChatName");
     let callBtn = document.getElementById("btnCallUI");
     
-    if(headerName) headerName.innerText = "Chat Criptografado: " + contato;
-    if(callBtn) callBtn.style.display = "block"; // Mostra o botão LIGAR!
+    if(headerName) headerName.innerText = "Criptografado: " + contato;
+    if(callBtn) callBtn.style.display = "block"; 
     
-    window.carregarContatosSMS(); // Re-pinta a seleção azul na esquerda
-    window.renderizarSMSLog(); // Puxa o histórico do Firebase
+    window.carregarContatosSMS(); 
+    window.renderizarSMSLog(); 
 };
 
-// Preparação para a próxima etapa: LIGAÇÃO DE VOZ
+// 4. Puxar o Histórico de Mensagens sem Duplicar
+window.renderizarSMSLog = function() {
+    if(!window.jogadorAtual || !window.contatoSmsAtual) return;
+    
+    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
+    
+    // MÁGICA: Desliga o ouvinte antigo para o chat não duplicar na tela!
+    if(window._smsListener && window._lastChatId) {
+        window.db.ref('tokyoRpg/smsChats/' + window._lastChatId).off('value', window._smsListener);
+    }
+    
+    window._lastChatId = chatId;
+    
+    window._smsListener = window.db.ref('tokyoRpg/smsChats/' + chatId).on('value', snap => {
+        let log = document.getElementById("smsLog");
+        if(!log) return;
+        
+        log.innerHTML = ""; // Limpa a tela antes de escrever as mensagens
+        
+        let data = snap.val();
+        if(!data) {
+            log.innerHTML = `<div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura. Envie a primeira mensagem.</div>`;
+            return;
+        }
+        
+        Object.keys(data).forEach(k => {
+            let m = data[k];
+            let isMe = (m.de === window.jogadorAtual);
+            let align = isMe ? "flex-end" : "flex-start";
+            let bg = isMe ? "var(--accent-blue)" : "#222";
+            let color = isMe ? "#000" : "#fff";
+            let radius = isMe ? "12px 12px 0 12px" : "12px 12px 12px 0";
+            
+            log.innerHTML += `
+            <div style="display:flex; flex-direction:column; align-items:${align}; margin-bottom:10px; width:100%;">
+                <div style="background:${bg}; color:${color}; padding:10px; border-radius:${radius}; max-width:80%; font-size:13px; font-family:monospace; font-weight:bold; word-wrap:break-word;">
+                    ${m.msg}
+                </div>
+                <div style="font-size:10px; color:#666; margin-top:3px;">${m.data || ""}</div>
+            </div>`;
+        });
+        
+        // Desce a barra de rolagem automaticamente
+        setTimeout(() => { log.scrollTop = log.scrollHeight; }, 50);
+    });
+};
+
+// 5. Enviar Mensagem (Enter ou Botão)
+window.enviarSMS = function() {
+    if(!window.jogadorAtual || !window.contatoSmsAtual) {
+        window.showNeonToast("Selecione um contato na agenda primeiro!");
+        return;
+    }
+    
+    let inputEl = document.getElementById("smsTexto");
+    let txt = inputEl.value.trim();
+    if(!txt) return;
+    
+    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
+    let payload = {
+        de: window.jogadorAtual,
+        para: window.contatoSmsAtual,
+        msg: txt,
+        data: new Date().toLocaleTimeString().substring(0, 5), // Ex: "14:30"
+        ts: Date.now()
+    };
+    
+    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push(payload).then(() => {
+        // Dispara o Toast HUD pra outra pessoa
+        if(typeof window.enviarNotificacaoHUD === "function") {
+            window.enviarNotificacaoHUD(window.contatoSmsAtual, window.jogadorAtual, "enviou uma mensagem criptografada.");
+        }
+    });
+    
+    inputEl.value = ""; // Limpa a barra de texto
+    inputEl.focus();    // Mantém o mouse lá pra continuar digitando
+};
+
+// 6. Botão de Ligar (Preparando pro Áudio)
 window.iniciarLigacao = function() {
     if(!window.contatoSmsAtual) return;
-    window.showNeonToast(`📞 Iniciando chamada com ${window.contatoSmsAtual}...`);
-    // Aqui nós vamos conectar o servidor de áudio no nosso próximo passo!
-};
+    window.showNeonToast(`📞 Conectando com ${window.contatoSmsAtual}...`);
+    // Na próxima etapa, o código do áudio entra aqui!
+};;
