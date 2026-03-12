@@ -3322,3 +3322,96 @@ window.salvarConfigCasa = function() {
     window.showNeonToast("Fundo da Casa Salvo!"); 
     setTimeout(window.renderizarCasaTetris, 500);
 };
+
+// =========================================================
+// CORREÇÃO: GAMBLE HOUSE DINÂMICA (TAMANHOS E TRANSPARÊNCIA)
+// =========================================================
+
+window.drawCasaBoard = function() { window.renderizarCasaTetris(); };
+
+window.renderizarCasaTetris = function() {
+    let g = document.getElementById("grid-casa");
+    let l = document.getElementById("lista-moveis-soltos");
+    if(!g || !l) return;
+    
+    // 1. Pega as configurações ou usa padrão 10x10
+    let cData = window.usersGlobais[window.jogadorAtual]?.casaConfig || {};
+    window.CASA_COLS = parseInt(cData.w) || 10;
+    window.CASA_ROWS = parseInt(cData.h) || 10;
+    
+    // Atualiza os inputs na tela para o jogador ver
+    if(document.getElementById("casaNomeInp")) document.getElementById("casaNomeInp").value = cData.nome || "";
+    if(document.getElementById("casaBgInp")) document.getElementById("casaBgInp").value = cData.bg || "";
+    if(document.getElementById("casaW")) document.getElementById("casaW").value = window.CASA_COLS;
+    if(document.getElementById("casaH")) document.getElementById("casaH").value = window.CASA_ROWS;
+    
+    g.style.gridTemplateColumns = `repeat(${window.CASA_COLS}, 45px)`; 
+    g.style.gridTemplateRows = `repeat(${window.CASA_ROWS}, 45px)`;
+    g.innerHTML = ""; l.innerHTML = ""; 
+    window.casaMatrix = Array(window.CASA_ROWS).fill(null).map(()=>Array(window.CASA_COLS).fill(0));
+    
+    for(let i = 0; i < (window.CASA_COLS * window.CASA_ROWS); i++) {
+        g.innerHTML += `<div class="grid-cell"></div>`;
+    }
+
+    if(cData && cData.bg) { 
+        g.style.backgroundImage = `url('${cData.bg}')`; 
+    } else { 
+        g.style.backgroundImage = "none"; 
+    }
+
+    let itens = window.usersGlobais[window.jogadorAtual]?.mochila || {};
+    
+    Object.keys(itens).forEach(k => {
+        let i = itens[k];
+        if (i.tipo !== 'Móvel') return; 
+        
+        let w = parseInt(i.w) || 1; let h = parseInt(i.h) || 1;
+        let el = document.createElement('div'); el.className = `item-tetris Móvel`; 
+        el.setAttribute('data-key', k); el.setAttribute('data-w', w); el.setAttribute('data-h', h);
+        el.style.width = `${(w * window.CELL_SIZE) + ((w-1) * window.GRID_GAP)}px`; 
+        el.style.height = `${(h * window.CELL_SIZE) + ((h-1) * window.GRID_GAP)}px`;
+        
+        let btnRotate = `<button class="btn-rotate-item" title="Rotacionar" onpointerdown="window.girarItemCasa('${k}', ${w}, ${h}, ${i.inHouse}, event)">↻</button>`;
+        let btnText = i.inHouse ? '▼' : '✖'; 
+        let btnTitle = i.inHouse ? 'Guardar no Depósito' : 'Vender/Descartar'; 
+        let btnClass = i.inHouse ? 'btn-excluir-item' : 'btn-excluir-item discard';
+        
+        el.innerHTML = `${btnRotate}<span>${window.iconesMercado[i.tipo]||''} ${i.nome}</span><button class="${btnClass}" title="${btnTitle}" onpointerdown="window.removerMovel('${k}', event)">${btnText}</button>`;
+
+        // Se estiver na casa e couber nas dimensões atuais do grid
+        if(i.inHouse === true && i.hc !== undefined && i.hr !== undefined && parseInt(i.hc) < window.CASA_COLS && parseInt(i.hr) < window.CASA_ROWS) {
+            let ic = parseInt(i.hc); let ir = parseInt(i.hr);
+            el.style.left = `${ic * window.REAL_CELL_SIZE}px`; el.style.top = `${ir * window.REAL_CELL_SIZE}px`;
+            el.setAttribute('data-c', ic); el.setAttribute('data-r', ir);
+            for(let row=ir; row<ir+h; row++) {
+                for(let col=ic; col<ic+w; col++) {
+                    if (row < window.CASA_ROWS && col < window.CASA_COLS) window.casaMatrix[row][col] = 1; 
+                }
+            }
+            g.appendChild(el);
+        } else {
+            // Se o item tava na casa mas o jogador diminuiu o tamanho do Grid, manda de volta pro depósito para não bugar
+            if(i.inHouse === true) {
+                 window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).update({inHouse: false, hc: null, hr: null});
+            }
+            el.style.position = 'relative'; el.style.left = 'auto'; el.style.top = 'auto';
+            l.appendChild(el);
+        }
+        el.addEventListener('pointerdown', window.iniciarArrasteCasa);
+    });
+};
+
+window.salvarConfigCasa = function() { 
+    if(!window.jogadorAtual) return; 
+    let nome = document.getElementById("casaNomeInp").value; 
+    let bg = document.getElementById("casaBgInp").value; 
+    let w = parseInt(document.getElementById("casaW").value) || 10;
+    let h = parseInt(document.getElementById("casaH").value) || 10;
+
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/casaConfig`).update({ 
+        nome: nome, bg: bg, w: w, h: h 
+    }); 
+    window.showNeonToast("Planta da Casa Atualizada!"); 
+    setTimeout(window.renderizarCasaTetris, 500);
+};
