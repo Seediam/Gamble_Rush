@@ -2396,6 +2396,7 @@ window.startMentionInboxListener = function(){
   });
 
   // 2) novos em tempo real
+  // 2) novos em tempo real
   ref.on("child_added", snap => {
     const item = snap.val();
     if(!item) return;
@@ -2406,4 +2407,5 @@ window.startMentionInboxListener = function(){
 
     window.renderMentionNotify(item);
   });
-};
+}; // <- Este fecha a function startMentionInboxListener
+
