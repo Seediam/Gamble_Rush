@@ -3473,3 +3473,196 @@ window.iniciarLigacao = function() {
     if(!window.contatoSmsAtual) return;
     window.showNeonToast(`📞 Conectando com ${window.contatoSmsAtual}...`);
 };
+
+// =========================================================
+// SISTEMA DE VOICE CHAT (LIGAÇÃO GLOBAL WEBRTC)
+// =========================================================
+
+window.rtcPeer = null;
+window.localStream = null;
+window.callIdAtual = null;
+
+// Servidores públicos do Google para conectar as redes (STUN)
+const rtcServers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
+
+// 1. FAZER A LIGAÇÃO
+window.iniciarLigacao = async function() {
+    if(!window.contatoSmsAtual) return;
+    let alvo = window.contatoSmsAtual;
+    let me = window.jogadorAtual;
+    window.callIdAtual = [me, alvo].sort().join("_");
+
+    // Muda o botão para "Desligar"
+    let callBtn = document.getElementById("btnCallUI");
+    callBtn.innerText = "🔴 Desligar";
+    callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
+    callBtn.onclick = window.encerrarLigacao;
+
+    window.showNeonToast(`📞 Conectando com ${alvo}... Permita o Microfone!`);
+
+    try {
+        // Pede o microfone
+        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch(e) {
+        window.showNeonToast("Erro: Microfone bloqueado ou não encontrado!");
+        window.encerrarLigacaoLimpo(); return;
+    }
+
+    // Configura a conexão P2P
+    window.rtcPeer = new RTCPeerConnection(rtcServers);
+    window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
+
+    // Quando receber o áudio do amigo, joga no alto-falante
+    window.rtcPeer.ontrack = event => {
+        let remoteAudio = document.getElementById("remoteAudio");
+        if(remoteAudio) remoteAudio.srcObject = event.streams[0];
+    };
+
+    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
+    callDoc.remove(); // Limpa chamadas velhas
+
+    // Envia pacotes de rota pro Firebase (ICE)
+    window.rtcPeer.onicecandidate = event => {
+        if(event.candidate) callDoc.child('callerCandidates').push(event.candidate.toJSON());
+    };
+
+    // Cria o convite oficial (Offer)
+    const offer = await window.rtcPeer.createOffer();
+    await window.rtcPeer.setLocalDescription(offer);
+    await callDoc.set({ offer: { type: offer.type, sdp: offer.sdp }, from: me, to: alvo, status: "calling" });
+
+    // Toca o celular do alvo!
+    window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
+
+    // Fica ouvindo o amigo aceitar (Answer)
+    callDoc.child('answer').on('value', snap => {
+        let ans = snap.val();
+        if(ans && !window.rtcPeer.currentRemoteDescription) {
+            window.rtcPeer.setRemoteDescription(new RTCSessionDescription(ans));
+            window.showNeonToast("✅ Ligação Atendida!");
+        }
+    });
+
+    // Fica ouvindo as rotas do amigo
+    callDoc.child('calleeCandidates').on('child_added', snap => {
+        let candidate = snap.val();
+        if(candidate) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
+    });
+
+    // Fica ouvindo se alguém desligou
+    callDoc.child('status').on('value', snap => {
+        if(snap.val() === "ended") window.encerrarLigacaoLimpo();
+    });
+};
+
+// 2. OUVIR O CELULAR TOCAR (Roda em background)
+window.escutarChamadas = function() {
+    if(!window.jogadorAtual || !window.db) return;
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).on('value', snap => {
+        let data = snap.val();
+        if(!data) return;
+        if(Date.now() - data.ts > 30000) return; // Se for ligação velha (mais de 30s), ignora
+
+        window.callIdAtual = data.callId;
+        
+        // Mostra a tela de atender
+        document.getElementById("callModalName").innerText = `📞 Ligação de ${data.from}`;
+        document.getElementById("callModal").style.display = "block";
+    });
+};
+
+// Auto-Iniciar o ouvinte de ligações 3 segundos após abrir o site
+setTimeout(() => { if(window.jogadorAtual) window.escutarChamadas(); }, 3000);
+
+// 3. ATENDER LIGAÇÃO
+window.aceitarLigacao = async function() {
+    document.getElementById("callModal").style.display = "none";
+
+    let callBtn = document.getElementById("btnCallUI");
+    if(callBtn) {
+        callBtn.style.display = "block";
+        callBtn.innerText = "🔴 Desligar";
+        callBtn.style.borderColor = "#f00"; callBtn.style.color = "#f00";
+        callBtn.onclick = window.encerrarLigacao;
+    }
+
+    try {
+        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch(e) {
+        window.showNeonToast("Microfone bloqueado!"); window.recusarLigacao(); return;
+    }
+
+    window.rtcPeer = new RTCPeerConnection(rtcServers);
+    window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
+
+    window.rtcPeer.ontrack = event => {
+        let remoteAudio = document.getElementById("remoteAudio");
+        if(remoteAudio) remoteAudio.srcObject = event.streams[0];
+    };
+
+    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
+
+    window.rtcPeer.onicecandidate = event => {
+        if(event.candidate) callDoc.child('calleeCandidates').push(event.candidate.toJSON());
+    };
+
+    // Lê o convite (Offer) e responde (Answer)
+    callDoc.child('offer').once('value', async snap => {
+        let offer = snap.val();
+        if(!offer) return;
+
+        await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await window.rtcPeer.createAnswer();
+        await window.rtcPeer.setLocalDescription(answer);
+
+        await callDoc.child('answer').set({ type: answer.type, sdp: answer.sdp });
+        await callDoc.child('status').set("answered");
+    });
+
+    callDoc.child('callerCandidates').on('child_added', snap => {
+        let candidate = snap.val();
+        if(candidate) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
+    });
+
+    callDoc.child('status').on('value', snap => {
+        if(snap.val() === "ended") window.encerrarLigacaoLimpo();
+    });
+
+    // Apaga a notificação de toque
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
+};
+
+// 4. RECUSAR LIGAÇÃO
+window.recusarLigacao = function() {
+    document.getElementById("callModal").style.display = "none";
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
+};
+
+// 5. DESLIGAR
+window.encerrarLigacao = function() {
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    window.encerrarLigacaoLimpo();
+};
+
+// Limpa tudo (Desliga câmera/mic, reseta botões)
+window.encerrarLigacaoLimpo = function() {
+    document.getElementById("callModal").style.display = "none";
+    
+    if(window.rtcPeer) { window.rtcPeer.close(); window.rtcPeer = null; }
+    if(window.localStream) { window.localStream.getTracks().forEach(t => t.stop()); window.localStream = null; }
+
+    let remoteAudio = document.getElementById("remoteAudio");
+    if(remoteAudio) remoteAudio.srcObject = null;
+
+    let callBtn = document.getElementById("btnCallUI");
+    if(callBtn) {
+        callBtn.innerText = "📞 Ligar";
+        callBtn.style.borderColor = "#0f0"; callBtn.style.color = "#0f0";
+        callBtn.onclick = window.iniciarLigacao;
+    }
+    
+    if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`).off();
+    window.callIdAtual = null;
+    window.showNeonToast("Ligação encerrada.");
+};
