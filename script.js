@@ -25,21 +25,21 @@ window.deusesPanteao = [
 ];
 
 window.locaisMapa = {
-    "p1": { nome: "Praça Central", x: 50, y: 50, salas: [{n:"Fonte", x:6, y:4, w:4, h:4}, {n:"Jardim", x:2, y:2, w:12, h:8}], obs:["7_5","8_6","4_3","11_9"] },
-    "p2": { nome: "Ramen Fantasma", x: 35, y: 65, salas: [{n:"Salão (L)", x:2, y:2, w:4, h:8}, {n:"Salão 2", x:6, y:6, w:6, h:4}], obs:["3_3","4_3","7_7","10_8"] },
-    "p3": { nome: "Viela da Fome", x: 15, y: 65, salas: [{n:"Rua Alta", x:2, y:2, w:12, h:3}, {n:"Beco Sul", x:6, y:5, w:4, h:6}], obs:["3_3","11_3","7_6","8_9"]},
-    "p4": { nome: "Clube Neon", x: 50, y: 80, salas: [{n:"Pista Esq", x:2, y:2, w:3, h:8}, {n:"Bar", x:5, y:5, w:6, h:3}, {n:"Pista Dir", x:11, y:2, w:3, h:8}], obs:["2_3","13_3","5_6","6_6","10_6","2_8","13_8"]},
-    "p5": { nome: "Avenida Ouro", x: 35, y: 35, salas: [{n:"Cruzamento", x:2, y:4, w:12, h:4}], obs:["4_4","4_7","11_4","11_7"] },
-    "p6": { nome: "Bar Submundo", x: 15, y: 35, salas: [{n:"Mesas", x:2, y:2, w:5, h:8}, {n:"Balcão", x:7, y:2, w:7, h:4}], obs:["3_4","4_4","5_4","8_3","9_3","12_3","3_8"] },
-    "p7": { nome: "Beco Sombrio", x: 15, y: 50, salas: [{n:"Beco", x:6, y:1, w:4, h:10}], obs:["6_2","9_4","6_7","9_8"] },
-    "p8": { nome: "Esconderijo Alfa", x: 15, y: 80, salas: [{n:"Entrada", x:4, y:8, w:8, h:3}, {n:"Sala", x:6, y:2, w:4, h:6}], obs:["5_9","10_9","7_4","8_4"] },
-    "p9": { nome: "Alameda das Sombras", x: 65, y: 35, salas: [{n:"Rua", x:2, y:4, w:12, h:4}], obs:["3_5","7_5","12_6"] },
-    "p10":{ nome: "Apts Safehouse", x: 85, y: 35, salas: [{n:"Quarto 1", x:2, y:2, w:4, h:4}, {n:"Corredor", x:6, y:2, w:4, h:8}, {n:"Quarto 2", x:10, y:6, w:4, h:4}], obs:["3_3","12_7","7_4","8_7"] },
-    "p11":{ nome: "Covil de Hackers", x: 85, y: 50, salas: [{n:"Servidores", x:2, y:2, w:12, h:8}], obs:["3_3","4_3","3_4","4_4","11_8","12_8","11_7","12_7","7_5","8_6"] },
-    "p12":{ nome: "Mercado Negro", x: 85, y: 65, salas: [{n:"Cruz", x:6, y:1, w:4, h:10}, {n:"Centro", x:2, y:4, w:12, h:4}], obs:["7_2","8_2","3_6","12_6","7_10","8_10"] },
-    "p13":{ nome: "QG da Yakuza", x: 65, y: 80, salas: [{n:"Dojo", x:2, y:2, w:12, h:8}], obs:["4_4","11_4","4_9","11_9","7_6","8_6"] },
-    "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: [{n:"Hexágono (Simulado)", x:4, y:2, w:8, h:8}, {n:"Borda", x:2, y:4, w:2, h:4}, {n:"Borda", x:12, y:4, w:2, h:4}], obs:["5_3","10_3","5_8","10_8","3_5","13_5","7_5","8_5"] },
-    "p15":{ nome: "Cemitério", x: 35, y: 80, salas: [{n:"Túmulos", x:2, y:2, w:12, h:8}], obs:["4_3","4_4","7_5","7_6","10_8","10_9","12_3","12_4","3_8"]}
+    "p1": { nome: "Praça Central", x: 50, y: 50, salas:, 
+    "p2": { nome: "Ramen Fantasma", x: 35, y: 65, salas: ,
+    "p3": { nome: "Viela da Fome", x: 15, y: 65, salas: ,
+    "p4": { nome: "Clube Neon", x: 50, y: 80, salas: ,
+    "p5": { nome: "Avenida Ouro", x: 35, y: 35, salas:, 
+    "p6": { nome: "Bar Submundo", x: 15, y: 35, salas: ,
+    "p7": { nome: "Beco Sombrio", x: 15, y: 50, salas:,
+    "p8": { nome: "Esconderijo Alfa", x: 15, y: 80, salas,
+    "p9": { nome: "Alameda das Sombras", x: 65, y: 35, salas:, 
+    "p10":{ nome: "Apts Safehouse", x: 85, y: 35, salas:, 
+    "p11":{ nome: "Covil de Hackers", x: 85, y: 50, salas: ,
+    "p12":{ nome: "Mercado Negro", x: 85, y: 65, salas:, 
+    "p13":{ nome: "QG da Yakuza", x: 65, y: 80, salas: ,
+    "p14":{ nome: "Parque Sombrio", x: 85, y: 80, salas: ,
+    "p15":{ nome: "Cemitério", x: 35, y: 80, salas:,
 };
 window.conexoesMapa = [ {de:"p1", para:"p2"}, {de:"p2", para:"p3"}, {de:"p1", para:"p4"}, {de:"p1", para:"p5"}, {de:"p5", para:"p6"}, {de:"p1", para:"p9"}, {de:"p9", para:"p10"}, {de:"p10", para:"p11"}, {de:"p11", para:"p12"}, {de:"p2", para:"p13"}, {de:"p13", para:"p14"}, {de:"p3", para:"p8"}, {de:"p7", para:"p6"}, {de:"p3", para:"p7"}, {de:"p2", para:"p15"}, {de:"p4", para:"p13"} ];
 window.rotasSecretasGaia = [ {de:"p1", para:"p6"}, {de:"p15", para:"p10"}, {de:"p8", para:"p14"}, {de:"p11", para:"p4"} ];
