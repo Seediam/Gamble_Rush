@@ -3570,253 +3570,149 @@ setInterval(() => {
 }, 3000);
 
 // =========================================================
-// SISTEMA DE VOICE CHAT: WEBRTC FORÇADO E MONITOR DE ERROS (EXCLAMAÇÃO)
+// SISTEMA DE VOICE CHAT: RELAY VIA WEBSOCKET (NÃO-P2P)
 // =========================================================
 
-window.rtcPeer = null;
-window.localStream = null;
+// 1. CARREGA A BIBLIOTECA SOCKET.IO
+if (typeof io === 'undefined') {
+    let s = document.createElement('script');
+    s.src = "https://cdn.socket.io/4.7.4/socket.io.min.js";
+    s.onload = () => window.conectarServidorVoz();
+    document.head.appendChild(s);
+}
+
+window.socketVoz = null;
+window.gravadorMic = null;
 window.callIdAtual = null;
+window.callStartTime = 0;
 window._escutaLigacaoAtiva = false;
-window.callStartTime = 0; 
-window.quemTaLigando = null; 
 
-// Efeitos de Áudio
-window.audioContext = null;
-window.audioMeterInterval = null;
-window.callTimerInterval = null;
+// COLOQUE AQUI A URL DO SEU SERVIDOR (Ex: https://seu-app.herokuapp.com)
+window.URL_SERVIDOR_VOZ = "http://localhost:3000"; 
 
-window.rtcServers = { 
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun.cloudflare.com:3478' }
-    ] 
-};
-
-// --- FUNÇÃO PARA DESTRAVAR ALTO-FALANTE (MÁGICA MOBILE) ---
-window.destravarAudioNavegador = function() {
-    try {
-        let ctx = new (window.AudioContext || window.webkitAudioContext)();
-        let buffer = ctx.createBuffer(1, 1, 22050);
-        let source = ctx.createBufferSource();
-        source.buffer = buffer; source.connect(ctx.destination); source.start(0);
-        
-        let remoteAudio = document.getElementById("remoteAudio");
-        if(remoteAudio) { remoteAudio.muted = false; remoteAudio.play().catch(e=>{}); }
-    } catch(e) {}
-};
-
-// --- INTERFACE DE CHAMADA ATIVA ---
-window.abrirTelaChamadaAtiva = function(alvoId) {
-    let modal = document.getElementById("activeCallModal");
-    if(!modal) return;
-
-    let me = window.jogadorAtual;
-    let meuAv = window.usersGlobais[me]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${me}`;
-    let alvoAv = window.usersGlobais[alvoId]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${alvoId}`;
-
-    document.getElementById("activeCallMyAvatar").src = meuAv;
-    document.getElementById("activeCallMyName").innerText = me;
-    document.getElementById("activeCallTargetAvatar").src = alvoAv;
-    document.getElementById("activeCallTargetName").innerText = alvoId;
-    document.getElementById("activeCallTimer").innerText = "00:00";
-    document.getElementById("activeCallStatusText").innerText = "CONECTANDO...";
+window.conectarServidorVoz = function() {
+    if (window.socketVoz) return;
+    window.socketVoz = io(window.URL_SERVIDOR_VOZ);
     
-    // Reseta as Exclamações de erro
-    document.getElementById("callErrorAlertLocal").style.display = "none";
-    document.getElementById("callErrorAlertTarget").style.display = "none";
+    window.socketVoz.on('connect', () => {
+        console.log("Conectado ao Servidor de Passagem de Voz!");
+    });
 
-    modal.style.display = "flex";
-    
-    if(window.callTimerInterval) clearInterval(window.callTimerInterval);
-    window.callTimerInterval = setInterval(() => {
-        let segs = Math.floor((Date.now() - window.callStartTime) / 1000);
-        let m = Math.floor(segs / 60).toString().padStart(2, '0');
-        let s = (segs % 60).toString().padStart(2, '0');
-        document.getElementById("activeCallTimer").innerText = `${m}:${s}`;
-    }, 1000);
-};
-
-// --- MEDIDOR DE VOZ (NEON) ---
-window.setupAudioMeters = function(localStream, remoteStream) {
-    try {
-        if(!window.audioContext) window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        if(window.audioContext.state === 'suspended') window.audioContext.resume();
+    // RECEBER ÁUDIO DO OUTRO JOGADOR
+    window.socketVoz.on('receber_audio', (data) => {
+        if (!window.callIdAtual) return;
         
-        let myAv = document.getElementById("activeCallMyAvatar");
+        // Converte o buffer recebido em som e toca
+        const blob = new Blob([data.audio], { type: 'audio/webm;codecs=opus' });
+        const url = window.URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        
+        audio.play().catch(e => console.warn("Erro autoplay áudio", e));
+        
+        // Efeito Neon no Avatar do Alvo
         let targetAv = document.getElementById("activeCallTargetAvatar");
+        if(targetAv) {
+            targetAv.style.boxShadow = `0 0 30px rgba(255, 26, 85, 0.9)`;
+            setTimeout(() => { if(targetAv) targetAv.style.boxShadow = "0 0 10px var(--accent-red)"; }, 400);
+        }
 
-        let localAnalyser = window.audioContext.createAnalyser();
-        let remoteAnalyser = window.audioContext.createAnalyser();
-
-        if(localStream) { let src = window.audioContext.createMediaStreamSource(localStream); src.connect(localAnalyser); }
-        if(remoteStream) { let src = window.audioContext.createMediaStreamSource(remoteStream); src.connect(remoteAnalyser); }
-
-        let localData = new Uint8Array(localAnalyser.frequencyBinCount);
-        let remoteData = new Uint8Array(remoteAnalyser.frequencyBinCount);
-
-        if(window.audioMeterInterval) clearInterval(window.audioMeterInterval);
-        window.audioMeterInterval = setInterval(() => {
-            localAnalyser.getByteFrequencyData(localData); remoteAnalyser.getByteFrequencyData(remoteData);
-            let localVol = localData.reduce((a, b) => a + b, 0) / localData.length;
-            let remoteVol = remoteData.reduce((a, b) => a + b, 0) / remoteData.length;
-
-            if(myAv) myAv.style.boxShadow = localVol > 10 ? `0 0 ${20 + (localVol*1.5)}px rgba(0,229,255,0.9)` : `0 0 10px var(--accent-blue)`;
-            if(targetAv) targetAv.style.boxShadow = remoteVol > 10 ? `0 0 ${20 + (remoteVol*1.5)}px rgba(255,26,85,0.9)` : `0 0 10px var(--accent-red)`;
-        }, 50);
-    } catch(e) {}
+        audio.onended = () => window.URL.revokeObjectURL(url);
+    });
 };
 
-// 1. FAZER A LIGAÇÃO
+// 2. INICIAR TRANSMISSÃO (MEU MIC)
+window.iniciarMicrofone = async function() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        window.gravadorMic = new MediaRecorder(stream);
+        
+        window.gravadorMic.ondataavailable = (e) => {
+            if (e.data.size > 0 && window.socketVoz && window.callIdAtual) {
+                // Envia o pacote de áudio binário pro servidor
+                window.socketVoz.emit('stream_audio', {
+                    callId: window.callIdAtual,
+                    audio: e.data,
+                    sender: window.jogadorAtual
+                });
+                
+                // Efeito Neon no MEU Avatar
+                let myAv = document.getElementById("activeCallMyAvatar");
+                if(myAv) {
+                    myAv.style.boxShadow = `0 0 30px rgba(0, 229, 255, 0.9)`;
+                    setTimeout(() => { if(myAv) myAv.style.boxShadow = "0 0 10px var(--accent-blue)"; }, 400);
+                }
+            }
+        };
+
+        // Envia fatias de áudio a cada 400ms (TCP Balanceado)
+        window.gravadorMic.start(400);
+        document.getElementById("callErrorAlertLocal").style.display = "none";
+        document.getElementById("activeCallStatusText").innerText = "CONEXÃO TCP ESTÁVEL";
+        document.getElementById("activeCallStatusText").style.color = "#0f0";
+
+    } catch (err) {
+        console.error("Erro mic:", err);
+        document.getElementById("callErrorAlertLocal").style.display = "flex";
+        window.showNeonToast("❌ Microfone Bloqueado!");
+    }
+};
+
+// 3. LOGICA DE LIGAÇÃO (ADAPTADA PARA SOCKET)
 window.iniciarLigacao = async function() {
     if(!window.contatoSmsAtual) return;
     let alvo = window.contatoSmsAtual;
     let me = window.jogadorAtual;
-
-    let inCallSnap = await window.db.ref(`tokyoRpg/users/${alvo}/inCall`).once('value');
-    if (inCallSnap.val() === true) { window.showNeonToast(`❌ O Celular de ${alvo} está ocupado!`); return; }
-
-    window.destravarAudioNavegador(); // Força a saída de áudio a ligar
-    window.db.ref(`tokyoRpg/users/${me}/inCall`).set(true);
-
+    
+    // Gera ID da sala
     window.callIdAtual = [me, alvo].sort().join("_");
-    window.callStartTime = 0; 
-    window.quemTaLigando = alvo;
+    
+    if(window.socketVoz) window.socketVoz.emit('join_call', window.callIdAtual);
 
-    window.abrirTelaChamadaAtiva(alvo);
-
-    try {
-        // FORÇA O MICROFONE (Se falhar, acende a exclamação nele)
-        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        document.getElementById("callErrorAlertLocal").style.display = "none";
-    } catch(e) { 
-        document.getElementById("callErrorAlertLocal").style.display = "flex";
-        window.showNeonToast("❌ Microfone bloqueado! Autorize no navegador."); 
-        return; 
-    }
-
-    window.rtcPeer = new RTCPeerConnection(window.rtcServers);
-    window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
-
-    // MONITOR DE QUEDA DE REDE (Pinta a exclamação no alvo)
-    window.rtcPeer.oniceconnectionstatechange = () => {
-        let state = window.rtcPeer.iceConnectionState;
-        if(state === "failed" || state === "disconnected") {
-            document.getElementById("callErrorAlertTarget").style.display = "flex";
-            document.getElementById("activeCallStatusText").innerText = "FALHA NA REDE!";
-            document.getElementById("activeCallStatusText").style.color = "#f00";
-            window.showNeonToast("⚠️ A conexão caiu. Firewall ou 4G barrando a rede.");
-        } else if (state === "connected" || state === "completed") {
-            document.getElementById("callErrorAlertTarget").style.display = "none";
-            document.getElementById("activeCallStatusText").innerText = "CONEXÃO ESTÁVEL";
-            document.getElementById("activeCallStatusText").style.color = "#0f0";
-        }
-    };
-
-    let remoteAudio = document.getElementById("remoteAudio");
-    window.rtcPeer.ontrack = event => {
-        let remoteStream = event.streams[0];
-        if(remoteAudio) { remoteAudio.srcObject = remoteStream; remoteAudio.play().catch(e => {}); }
-        window.setupAudioMeters(window.localStream, remoteStream);
-    };
-
-    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
-    await callDoc.remove(); 
-    await callDoc.set({ from: me, to: alvo, status: "calling" });
-
-    window.rtcPeer.onicecandidate = event => { if(event.candidate) callDoc.child('callerCandidates').push(event.candidate.toJSON()); };
-
-    try {
-        const offer = await window.rtcPeer.createOffer();
-        await window.rtcPeer.setLocalDescription(offer);
-        await callDoc.update({ offer: { type: offer.type, sdp: offer.sdp } });
-    } catch (err) {}
-
+    window.db.ref(`tokyoRpg/users/${me}/inCall`).set(true);
     window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
 
-    callDoc.child('answer').on('value', async snap => {
-        let ans = snap.val();
-        if(ans && window.rtcPeer && window.rtcPeer.signalingState !== "closed" && !window.rtcPeer.currentRemoteDescription) {
-            try {
-                await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(ans));
-                window.callStartTime = Date.now();
-                callDoc.child('calleeCandidates').on('child_added', snapIce => {
-                    let candidate = snapIce.val();
-                    if(candidate && window.rtcPeer && window.rtcPeer.remoteDescription) { window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e=>{}); }
-                });
-            } catch(e) {}
+    window.abrirTelaChamadaAtiva(alvo, true);
+    
+    // Ouve se o alvo atendeu via Firebase
+    window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).on('value', snap => {
+        if(snap.val() === "answered" && window.callStartTime === 0) {
+            window.callStartTime = Date.now();
+            window.iniciarMicrofone();
         }
+        if(snap.val() === "ended") window.encerrarLigacaoLimpo();
     });
-
-    callDoc.child('status').on('value', snap => { if(snap.val() === "ended") window.encerrarLigacaoLimpo(); });
 };
 
-// 3. ATENDER LIGAÇÃO
-window.aceitarLigacao = async function() {
+window.aceitarLigacao = function() {
     let modal = document.getElementById("callModal");
     if(modal) modal.style.display = "none";
 
-    window.destravarAudioNavegador(); // Força a saída de áudio
     window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(true);
+    window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("answered");
+    
+    if(window.socketVoz) window.socketVoz.emit('join_call', window.callIdAtual);
 
-    window.abrirTelaChamadaAtiva(window.quemTaLigando);
+    window.callStartTime = Date.now();
+    window.abrirTelaChamadaAtiva(window.quemTaLigando, false);
+    window.iniciarMicrofone();
 
-    try { 
-        window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); 
-        document.getElementById("callErrorAlertLocal").style.display = "none";
-    } catch(e) { 
-        document.getElementById("callErrorAlertLocal").style.display = "flex";
-        window.showNeonToast("❌ Microfone bloqueado! Autorize no navegador."); 
-        return; 
-    }
-
-    window.rtcPeer = new RTCPeerConnection(window.rtcServers);
-    window.localStream.getTracks().forEach(track => window.rtcPeer.addTrack(track, window.localStream));
-
-    // MONITOR DE REDE PARA QUEM ATENDEU
-    window.rtcPeer.oniceconnectionstatechange = () => {
-        let state = window.rtcPeer.iceConnectionState;
-        if(state === "failed" || state === "disconnected") {
-            document.getElementById("callErrorAlertTarget").style.display = "flex";
-            document.getElementById("activeCallStatusText").innerText = "FALHA NA REDE!";
-            document.getElementById("activeCallStatusText").style.color = "#f00";
-        } else if (state === "connected" || state === "completed") {
-            document.getElementById("callErrorAlertTarget").style.display = "none";
-            document.getElementById("activeCallStatusText").innerText = "CONEXÃO ESTÁVEL";
-            document.getElementById("activeCallStatusText").style.color = "#0f0";
-        }
-    };
-
-    let remoteAudio = document.getElementById("remoteAudio");
-    window.rtcPeer.ontrack = event => {
-        let remoteStream = event.streams[0];
-        if(remoteAudio) { remoteAudio.srcObject = remoteStream; remoteAudio.play().catch(e => {}); }
-        window.setupAudioMeters(window.localStream, remoteStream);
-    };
-
-    let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
-    window.rtcPeer.onicecandidate = event => { if(event.candidate) callDoc.child('calleeCandidates').push(event.candidate.toJSON()); };
-
-    callDoc.child('offer').once('value', async snap => {
-        let offer = snap.val();
-        if(!offer) return;
-
-        try {
-            await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(offer));
-            callDoc.child('callerCandidates').on('child_added', snapIce => {
-                let candidate = snapIce.val();
-                if(candidate && window.rtcPeer && window.rtcPeer.remoteDescription) { window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate)).catch(e=>{}); }
-            });
-
-            const answer = await window.rtcPeer.createAnswer();
-            await window.rtcPeer.setLocalDescription(answer);
-            await callDoc.update({ answer: { type: answer.type, sdp: answer.sdp }, status: "answered" });
-
-            window.callStartTime = Date.now(); 
-        } catch(e) {}
-    });
-
-    callDoc.child('status').on('value', snap => { if(snap.val() === "ended") window.encerrarLigacaoLimpo(); });
     window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
+};
+
+window.encerrarLigacaoLimpo = function() {
+    if(window.gravadorMic) {
+        window.gravadorMic.stop();
+        window.gravadorMic.stream.getTracks().forEach(t => t.stop());
+        window.gravadorMic = null;
+    }
+    
+    if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/inCall`).set(false);
+    
+    document.getElementById("activeCallModal").style.display = "none";
+    document.getElementById("callModal").style.display = "none";
+    
+    window.callIdAtual = null;
+    window.callStartTime = 0;
 };
 
 // ... As funções de Recusar e Encerrar (e radar de toque) continuam no seu arquivo iguais antes.
