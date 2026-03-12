@@ -505,45 +505,51 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
                 </div>
 
                 <!-- ABA CELULAR (GAMBLENGER - DMs E LIGAÇÕES) -->
-                <div id="tab-celular" class="tab-content">
-                    <h1 style="color: #00ff00; text-align:center;">Gamblenger</h1>
-                    <div style="background:#111; border:2px solid #333; border-radius:10px; display:flex; margin: 0 auto; width:100%; max-width:800px; height:65vh; overflow:hidden;">
-                        
-                        <!-- CONTATOS -->
-                        <div style="width: 35%; min-width: 120px; border-right: 1px solid #333; display:flex; flex-direction:column; background:#0a0a0f;">
-                            <div style="padding:15px; background:#000; font-weight:bold; color:#00ff00; text-align:center; font-size:12px;">AGENDA</div>
-                            
-                            <!-- ADICIONAR POR NÚMERO -->
-                            <div class="contact-add-bar">
-                                <input type="text" id="novoContatoNum" placeholder="Adicionar Nº...">
-                                <button onclick="window.adicionarContato()">+</button>
-                            </div>
+<div id="tab-celular" class="tab-content">
+    <h1 style="color: #00ff00; text-align:center;">Gamblenger</h1>
+    <div style="background:#111; border:2px solid #333; border-radius:10px; display:flex; margin: 0 auto; width:100%; max-width:800px; height:65vh; overflow:hidden;">
+        
+        <!-- CONTATOS E CONFIGS -->
+        <div style="width: 35%; min-width: 150px; border-right: 1px solid #333; display:flex; flex-direction:column; background:#0a0a0f;">
+            <div style="padding:15px; background:#000; font-weight:bold; color:#00ff00; text-align:center; font-size:12px;">AGENDA</div>
+            
+            <div class="contact-add-bar">
+                <input type="text" id="novoContatoNum" placeholder="Adicionar Nº...">
+                <button onclick="window.adicionarContato()">+</button>
+            </div>
 
-                            <div id="listaContatosSMS" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
-                                <!-- Preenchido via JS -->
-                            </div>
-                        </div>
+            <div id="listaContatosSMS" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
+                <!-- Preenchido via JS -->
+            </div>
 
-                        <!-- CHAT PRIVADO -->
-                        <div style="flex:1; display:flex; flex-direction:column; background:#050508; position:relative;">
-                            <div id="smsChatHeader" style="padding:15px; background:#000; border-bottom:1px solid #333; font-weight:bold; color:var(--accent-blue); display:flex; justify-content:space-between; align-items:center;">
-                                <span id="smsChatName">Selecione um Contato</span>
-                                <!-- BOTÃO DE LIGAR -->
-                                <button id="btnCallUI" class="action-btn" style="display:none; border-color:#0f0; color:#0f0; padding:4px 10px;" onclick="window.iniciarLigacao()">📞 Ligar</button>
-                            </div>
-                            
-                            <div id="smsLog" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;">
-                                <div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura.</div>
-                            </div>
-                            
-                            <div style="padding:10px; background:#000; border-top:1px solid #333; display:flex; gap:10px;">
-                                <input type="text" id="smsTexto" placeholder="Mensagem cifrada..." style="flex:1;" onkeydown="if(event.key==='Enter') window.enviarSMS()">
-                                <button class="action-btn" style="border-color:#0f0; color:#0f0;" onclick="window.enviarSMS()">Enviar</button>
-                            </div>
-                        </div>
-                    </div>
+            <!-- CAMPO DO TOQUE DE MENSAGEM (NOVIDADE) -->
+            <div style="padding:10px; background:#000; border-top:1px solid #333; display:flex; flex-direction:column; gap:5px;">
+                <div style="font-size:10px; color:#aaa; font-weight:bold;">TEMA/TOQUE (URL Áudio)</div>
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="ringtoneUrl" placeholder="Vazio = Padrão" style="flex:1; font-size:10px; padding:5px; border-radius:4px; border:1px solid var(--accent-blue); background:#111; color:#fff; outline:none;">
+                    <button onclick="window.salvarRingtone()" style="background:var(--accent-blue); color:#000; border:none; border-radius:4px; font-weight:bold; cursor:pointer; padding:0 10px; font-size:10px;">Salvar</button>
                 </div>
+            </div>
+        </div>
 
+        <!-- CHAT PRIVADO -->
+        <div style="flex:1; display:flex; flex-direction:column; background:#050508; position:relative;">
+            <div id="smsChatHeader" style="padding:15px; background:#000; border-bottom:1px solid #333; font-weight:bold; color:var(--accent-blue); display:flex; justify-content:space-between; align-items:center;">
+                <span id="smsChatName">Selecione um Contato</span>
+                <button id="btnCallUI" class="action-btn" style="display:none; border-color:#0f0; color:#0f0; padding:4px 10px; margin:0;" onclick="window.iniciarLigacao()">📞 Ligar</button>
+            </div>
+            
+            <div id="smsLog" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;">
+                <div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura.</div>
+            </div>
+            
+            <div style="padding:10px; background:#000; border-top:1px solid #333; display:flex; gap:10px;">
+                <input type="text" id="smsTexto" placeholder="Mensagem cifrada..." style="flex:1;" onkeydown="if(event.key==='Enter') window.enviarSMS()">
+                <button class="action-btn" style="border-color:#0f0; color:#0f0; margin:0;" onclick="window.enviarSMS()">Enviar</button>
+            </div>
+        </div>
+    </div>
+</div>
     
     <!-- ============================================== -->
     <!-- DROPDOWN DE MENÇÕES (@) -->
