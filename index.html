@@ -110,7 +110,9 @@
                 <div class="phone-apps-grid" id="phoneMainScreen">
                     <button class="app-hitbox" onclick="window.abrirApp('tab-loja')" title="Gamblezon"></button>
                     <button class="app-hitbox" onclick="window.abrirApp('tab-mapa')" title="Gamble Maps"></button>
-                    <button class="app-hitbox" onclick="window.abrirIgambleMenu()" title="iGAMBLE"></button>
+                   <button class="app-hitbox" style="position:relative;" onclick="window.abrirIgambleMenu()" title="iGAMBLE">
+    <span id="badge-igamble-main" class="notification-badge" style="display:none;">0</span>
+</button>
                     <button class="app-hitbox" onclick="window.abrirApp('tab-personagem')" title="My Gamble"></button>
                     <button class="app-hitbox locked" onclick="window.abrirApp('none', true, 'NuGamble está Fora do Ar!')" title="NuGamble"></button>
                     <button class="app-hitbox" onclick="window.abrirApp('tab-panteao')" title="Patronos"></button>
@@ -121,11 +123,18 @@
                 <!-- SUB-MENU iGAMBLE (bg2.png) -->
                 <div id="phoneIgambleScreen" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%;">
                     <!-- G-Chat -->
-                    <button class="app-hitbox" style="position:absolute; top:33%; left:12%; width:35%; height:16%;" onclick="window.abrirIgambleApp('chat')"></button>
-                    <!-- G-Post -->
-                    <button class="app-hitbox" style="position:absolute; top:33%; left:53%; width:35%; height:16%;" onclick="window.abrirIgambleApp('posts')"></button>
-                    <!-- G-Challenger -->
-                    <button class="app-hitbox" style="position:absolute; top:52%; left:12%; width:35%; height:16%;" onclick="window.abrirIgambleApp('embates')"></button>
+                <!-- G-Chat -->
+<button class="app-hitbox" style="position:absolute; top:33%; left:12%; width:35%; height:16%;" onclick="window.abrirIgambleApp('chat')">
+    <span id="badge-chat" class="notification-badge" style="display:none;">0</span>
+</button>
+<!-- G-Post -->
+<button class="app-hitbox" style="position:absolute; top:33%; left:53%; width:35%; height:16%;" onclick="window.abrirIgambleApp('posts')">
+    <span id="badge-posts" class="notification-badge" style="display:none;">0</span>
+</button>
+<!-- G-Challenger -->
+<button class="app-hitbox" style="position:absolute; top:52%; left:12%; width:35%; height:16%;" onclick="window.abrirIgambleApp('embates')">
+    <span id="badge-embates" class="notification-badge" style="display:none;">0</span>
+</button>
                     
                     <!-- Botão Back -->
                     <button class="app-hitbox" style="position:absolute; bottom:10%; left:12%; width:28%; height:8%;" onclick="window.voltarPhoneMain()"></button>
