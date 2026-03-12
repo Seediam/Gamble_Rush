@@ -1322,3 +1322,17 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     box-shadow: 0 0 5px rgba(176, 0, 255, 0.5);
 }
 
+/* =========================================================
+   GAMBLE HOUSE - TRANSPARÊNCIA E TETRIS
+   ========================================================= */
+#grid-casa {
+    background-color: transparent !important;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+#grid-casa .grid-cell {
+    background: rgba(0, 0, 0, 0.5) !important; /* Deixa o fundo visível */
+    border: 1px dashed rgba(255, 170, 0, 0.3) !important; /* Borda dourada suave */
+}
+
