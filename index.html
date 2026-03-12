@@ -217,29 +217,14 @@
                                         <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
                                         <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim de Turno</button>
                                         
-                                        <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px; flex-wrap:wrap; align-items: center;">
-    <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Iniciativas</button>
-    
-    <input type="text" id="vttBgInp" placeholder="URL Fundo..." style="width:100px; padding:5px; font-size:10px;">
-    <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Fundo</button>
-
-    <div style="display:flex; gap:5px; align-items:center; border-left:1px solid #555; padding-left:10px; margin-left:5px;">
-        <span style="font-size:10px; color:#aaa;">Grid:</span>
-        <input type="number" id="vttColsInp" value="16" title="Largura (Qtd Quadrados)" style="width:40px; padding:2px; font-size:10px; text-align:center;">
-        <span style="font-size:10px; color:#aaa;">x</span>
-        <input type="number" id="vttRowsInp" value="12" title="Altura (Qtd Quadrados)" style="width:40px; padding:2px; font-size:10px; text-align:center;">
-        
-        <select id="vttShapeInp" style="padding:2px; font-size:10px; width:100px;">
-            <option value="quadrado">⬛ Quadrado Cheio</option>
-            <option value="l_shape">▛ Formato L</option>
-            <option value="u_shape">◳ Formato U</option>
-            <option value="cross">➕ Cruzamento</option>
-            <option value="corredor">➖ Corredor</option>
-            <option value="hexagono">⬡ Arena (Bordas Cortadas)</option>
-        </select>
-        <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 5px;" onclick="window.salvarFormatoMapa()">Moldar Terreno</button>
-    </div>
-</div>
+                                        <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px;">
+                                            <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Rolar Iniciativas</button>
+                                            <input type="text" id="vttBgInp" placeholder="URL da Imagem Fundo..." style="width:120px; padding:5px; font-size:10px;">
+                                            <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Aplicar Fundo</button>
+                                        </div>
+                                        <button class="action-btn" style="margin-left:auto;" onclick="window.fecharSubMapa()">Sair 🌍</button>
+                                    </div>
+                                </div>
                                 
                                 <div id="vttFoodActions" class="food-action-bar"></div>
                                 
@@ -729,60 +714,7 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
    
 	
 	</div>
-	<div class="tactical-board" id="tacticalBoard" style="overflow: hidden; position: relative; scroll-behavior: smooth;">
-    <div id="vttWorldWrapper" style="position: absolute; top: 0; left: 0;">
-        <div id="roomOverlays"></div>
-        <div id="gridCells" class="grid-cells-container"></div>
-        <div id="tokensLayer" class="tokens-layer"></div>
-    </div>
-</div>
-	<div class="modal-overlay" id="masterCellModal" style="z-index: 99999;">
-    <div class="modal-content" style="border-color: #00ff00;">
-        <h3 style="color:#00ff00; text-shadow:0 0 10px #00ff00;">🔧 Editar Quadrado</h3>
-        <input type="hidden" id="mcCid">
-        
-        <label style="color:#fff; display:flex; align-items:center; gap:10px; margin: 15px 0; background:#111; padding:10px; border-radius:4px; border:1px solid #333; cursor:pointer;">
-            <input type="checkbox" id="mcObs" style="width:20px; height:20px; box-shadow:none;"> 
-            É Obstáculo/Parede?
-        </label>
-        
-        <div style="text-align:left; font-size:10px; color:#aaa; margin-bottom:5px;">URL Token/Prop (ex: Forgotten Adventures)</div>
-        <input type="text" id="mcImg" placeholder="https://..." style="margin-bottom:15px; font-size:12px;">
-        
-        <div style="text-align:left; font-size:10px; color:var(--accent-blue); margin-bottom:5px;">PORTAL (Teleporte para Casa/AP)</div>
-        <input type="text" id="mcPortal" placeholder="Nome do Dono da Casa" style="margin-bottom:15px; border-color:var(--accent-blue); font-size:12px;">
-        
-        <div style="display:flex; gap:10px;">
-            <button class="action-btn" style="flex:1; border-color:#0f0; color:#0f0;" onclick="window.salvarCelulaCustom()">Salvar</button>
-            <button class="action-btn" style="flex:1; border-color:#f00; color:#f00;" onclick="document.getElementById('masterCellModal').style.display='none'">Cancelar</button>
-        </div>
-    </div>
-</div>
-			<div class="modal-overlay" id="masterCellModal" style="z-index: 99999;">
-    <div class="modal-content" style="border-color: #00ff00;">
-        <h3 style="color:#00ff00; text-shadow:0 0 10px #00ff00; margin-bottom: 10px;">🔧 Editar Quadrado</h3>
-        <input type="hidden" id="mcCid">
-        
-        <label style="color:#fff; display:flex; align-items:center; gap:10px; margin: 15px 0; background:#111; padding:10px; border-radius:4px; border:1px solid #333; cursor:pointer;">
-            <input type="checkbox" id="mcObs" style="width:20px; height:20px; box-shadow:none;"> 
-            É Parede/Obstáculo?
-        </label>
-        
-        <div style="text-align:left; font-size:10px; color:#aaa; margin-bottom:5px;">URL Prop (Mesa, Baú, Carro...)</div>
-        <input type="text" id="mcImg" placeholder="https://..." style="margin-bottom:15px; font-size:12px;">
-        
-        <div style="text-align:left; font-size:10px; color:var(--accent-blue); margin-bottom:5px;">PORTAL (Teleporte para Casa/AP)</div>
-        <input type="text" id="mcPortal" placeholder="Nome do Dono do AP" style="margin-bottom:15px; border-color:var(--accent-blue); font-size:12px;">
-        
-        <div style="display:flex; gap:10px;">
-            <button class="action-btn" style="flex:1; border-color:#0f0; color:#0f0;" onclick="window.salvarCelulaCustom()">Salvar</button>
-            <button class="action-btn" style="flex:1; border-color:#f00; color:#f00;" onclick="document.getElementById('masterCellModal').style.display='none'">Cancelar</button>
-        </div>
-    </div>
-</div>
-			
 </body>
 </html>
 <!-- ============================================== -->
    
-
