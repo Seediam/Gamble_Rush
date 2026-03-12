@@ -3475,15 +3475,44 @@ window.iniciarLigacao = function() {
 };
 
 // =========================================================
-// SISTEMA DE VOICE CHAT (LIGAÇÃO GLOBAL WEBRTC) - DEFINITIVO
+// SISTEMA DE VOICE CHAT COM DURAÇÃO E FIX DE ÁUDIO MUDO
 // =========================================================
 
 window.rtcPeer = null;
 window.localStream = null;
 window.callIdAtual = null;
 window._escutaLigacaoAtiva = false;
+window.callStartTime = 0; // Cronômetro de Duração
+window.quemTaLigando = null; // Guarda o nome pra botar no log caso a gente recuse
 
 const rtcServers = { iceServers: [{ urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }] };
+
+// --- FUNÇÃO PARA GERAR O LOG NO CHAT ---
+window.enviarLogChamada = function(tipo) {
+    if(!window.jogadorAtual) return;
+    let alvo = window.contatoSmsAtual || window.quemTaLigando;
+    if(!alvo) return;
+
+    let msg = "";
+    if(tipo === "cancelada") msg = "📞 Chamada perdida/cancelada.";
+    if(tipo === "recusada") msg = "📞 Chamada recusada.";
+    if(tipo === "finalizada") {
+        if(window.callStartTime === 0) return; // Não chegou a atender
+        let segs = Math.floor((Date.now() - window.callStartTime) / 1000);
+        let m = Math.floor(segs / 60);
+        let s = segs % 60;
+        msg = `📞 Chamada finalizada. Duração: ${m > 0 ? m + 'm ' : ''}${s}s`;
+    }
+
+    let chatId = [window.jogadorAtual, alvo].sort().join("_");
+    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push({
+        de: window.jogadorAtual,
+        para: alvo,
+        msg: msg,
+        data: new Date().toLocaleTimeString().substring(0, 5),
+        ts: Date.now()
+    });
+};
 
 // 1. FAZER A LIGAÇÃO
 window.iniciarLigacao = async function() {
@@ -3491,6 +3520,8 @@ window.iniciarLigacao = async function() {
     let alvo = window.contatoSmsAtual;
     let me = window.jogadorAtual;
     window.callIdAtual = [me, alvo].sort().join("_");
+    window.callStartTime = 0; 
+    window.quemTaLigando = alvo;
 
     let callBtn = document.getElementById("btnCallUI");
     callBtn.innerText = "🔴 Desligar";
@@ -3513,13 +3544,11 @@ window.iniciarLigacao = async function() {
         let remoteAudio = document.getElementById("remoteAudio");
         if(remoteAudio) {
             remoteAudio.srcObject = event.streams[0];
-            remoteAudio.play().catch(err => console.log("Áudio aguardando interação:", err));
+            remoteAudio.play().catch(e => console.log(e));
         }
     };
 
     let callDoc = window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`);
-    
-    // LIMPA E PREPARA A SALA PRIMEIRO (Evita o Bug do Áudio Mudo)
     await callDoc.remove(); 
     await callDoc.set({ from: me, to: alvo, status: "calling" });
 
@@ -3529,24 +3558,23 @@ window.iniciarLigacao = async function() {
 
     const offer = await window.rtcPeer.createOffer();
     await window.rtcPeer.setLocalDescription(offer);
-    
-    // ATUALIZA a oferta (NÃO usa set, usa update para não apagar os ICE)
     await callDoc.update({ offer: { type: offer.type, sdp: offer.sdp } });
 
-    // Toca o celular do alvo!
     window.db.ref(`tokyoRpg/users/${alvo}/incomingCall`).set({ from: me, callId: window.callIdAtual, ts: Date.now() });
 
-    callDoc.child('answer').on('value', snap => {
+    callDoc.child('answer').on('value', async snap => {
         let ans = snap.val();
-        if(ans && !window.rtcPeer.currentRemoteDescription) {
-            window.rtcPeer.setRemoteDescription(new RTCSessionDescription(ans));
+        if(ans && window.rtcPeer && !window.rtcPeer.currentRemoteDescription) {
+            await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(ans));
             window.showNeonToast("✅ Ligação Atendida!");
-        }
-    });
+            window.callStartTime = Date.now(); // Cronômetro inicia aqui!
 
-    callDoc.child('calleeCandidates').on('child_added', snap => {
-        let candidate = snap.val();
-        if(candidate) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
+            // FIX DE ÁUDIO: Só escuta a rota do outro APÓS a conexão firmar
+            callDoc.child('calleeCandidates').on('child_added', snapIce => {
+                let candidate = snapIce.val();
+                if(candidate && window.rtcPeer) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
+            });
+        }
     });
 
     callDoc.child('status').on('value', snap => {
@@ -3554,7 +3582,7 @@ window.iniciarLigacao = async function() {
     });
 };
 
-// 2. RADAR DE TOQUE DO CELULAR (À prova de falhas de login)
+// 2. RADAR DE TOQUE DO CELULAR
 setInterval(() => {
     if(window.jogadorAtual && window.db && !window._escutaLigacaoAtiva) {
         window._escutaLigacaoAtiva = true;
@@ -3567,25 +3595,21 @@ setInterval(() => {
                 if(modal) modal.style.display = "none";
                 return;
             }
-            
-            if(Date.now() - data.ts > 30000) return; // Mais de 30s é chamada velha
+            if(Date.now() - data.ts > 30000) return; 
 
             window.callIdAtual = data.callId;
+            window.quemTaLigando = data.from; // Salva para pôr no log
             
-            // Puxa a foto da pessoa pra colocar no centro!
             let u = window.usersGlobais[data.from] || {};
             let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${data.from}`;
-            
             let imgEl = document.getElementById("callModalAvatar");
             if(imgEl) imgEl.src = av;
             
             document.getElementById("callModalName").innerText = data.from;
-            if(modal) {
-                modal.style.display = "block";
-            }
+            if(modal) modal.style.display = "block";
         });
     }
-}, 2000); // Checa a cada 2 segundos se o jogador já logou
+}, 2000);
 
 // 3. ATENDER LIGAÇÃO
 window.aceitarLigacao = async function() {
@@ -3602,7 +3626,7 @@ window.aceitarLigacao = async function() {
     try {
         window.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     } catch(e) {
-        window.showNeonToast("Microfone bloqueado! Autorize no navegador."); window.recusarLigacao(); return;
+        window.showNeonToast("Microfone bloqueado!"); window.recusarLigacao(); return;
     }
 
     window.rtcPeer = new RTCPeerConnection(rtcServers);
@@ -3612,7 +3636,7 @@ window.aceitarLigacao = async function() {
         let remoteAudio = document.getElementById("remoteAudio");
         if(remoteAudio) {
             remoteAudio.srcObject = event.streams[0];
-            remoteAudio.play().catch(err => console.log("Erro no audio:", err));
+            remoteAudio.play().catch(e => console.log(e));
         }
     };
 
@@ -3627,19 +3651,22 @@ window.aceitarLigacao = async function() {
         if(!offer) return;
 
         await window.rtcPeer.setRemoteDescription(new RTCSessionDescription(offer));
+
+        // FIX DE ÁUDIO: Só escuta a rota de quem ligou APÓS a conexão firmar
+        callDoc.child('callerCandidates').on('child_added', snapIce => {
+            let candidate = snapIce.val();
+            if(candidate && window.rtcPeer) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
+        });
+
         const answer = await window.rtcPeer.createAnswer();
         await window.rtcPeer.setLocalDescription(answer);
 
-        // UPDATE em vez de SET para não apagar a rota!
         await callDoc.update({
             answer: { type: answer.type, sdp: answer.sdp },
             status: "answered"
         });
-    });
 
-    callDoc.child('callerCandidates').on('child_added', snap => {
-        let candidate = snap.val();
-        if(candidate) window.rtcPeer.addIceCandidate(new RTCIceCandidate(candidate));
+        window.callStartTime = Date.now(); // Cronômetro inicia aqui!
     });
 
     callDoc.child('status').on('value', snap => {
@@ -3653,17 +3680,30 @@ window.aceitarLigacao = async function() {
 window.recusarLigacao = function() {
     document.getElementById("callModal").style.display = "none";
     if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    
+    // Loga a recusa antes de limpar as variáveis
+    window.enviarLogChamada("recusada");
+    
     window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/incomingCall`).remove();
+    window.encerrarLigacaoLimpo();
 };
 
-// 5. DESLIGAR
+// 5. DESLIGAR (QUEM APERTAR O BOTÃO GERA O LOG DE TEMPO)
 window.encerrarLigacao = function() {
     if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}/status`).set("ended");
+    
+    // Loga a Duração Oficial no Banco de Dados
+    if(window.callStartTime > 0) {
+        window.enviarLogChamada("finalizada");
+    } else {
+        window.enviarLogChamada("cancelada");
+    }
+
     if(window.contatoSmsAtual) window.db.ref(`tokyoRpg/users/${window.contatoSmsAtual}/incomingCall`).remove();
     window.encerrarLigacaoLimpo();
 };
 
-// Limpa tudo
+// 6. LIMPEZA TOTAL DA CHAMADA
 window.encerrarLigacaoLimpo = function() {
     let modal = document.getElementById("callModal");
     if(modal) modal.style.display = "none";
@@ -3682,81 +3722,10 @@ window.encerrarLigacaoLimpo = function() {
     }
     
     if(window.callIdAtual) window.db.ref(`tokyoRpg/calls/${window.callIdAtual}`).off();
+    
+    // Reseta as variáveis
     window.callIdAtual = null;
+    window.callStartTime = 0;
+    window.quemTaLigando = null;
     window.showNeonToast("Ligação encerrada.");
-};;
-// =========================================================
-// CORREÇÃO: GERAÇÃO AUTOMÁTICA DE NÚMERO DE CELULAR (CHIP)
-// =========================================================
-
-window.renderizarFicha = function() {
-    if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
-    let u = window.usersGlobais[window.jogadorAtual]; 
-    let r = window.getSafeRpg(u); 
-    let mInteg = window.calcularMaxInteg(u); 
-    let buffs = window.calcularBuffsMoveis(u); 
-    let def = window.calcularDefesa(u);
-    
-    if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual);
-    if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
-    let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
-    if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
-    if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || "");
-    if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
-    
-    window.setElText("lblDef", def); 
-    if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres;
-    window.setElText("lblPts", r.pontosLivres);
-    window.setElText("valFor", r.for + buffs.for); window.setElText("valAgi", r.agi + buffs.agi); window.setElText("valMan", r.man + buffs.man); window.setElText("valVig", r.vig + buffs.vig); window.setElText("valInt", r.int + buffs.int);
-    window.setElText("lblIntegMax", mInteg); window.setElText("lblIntegVal", r.integridade + "%");
-    
-    let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
-    let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
-    
-    // VERIFICA SE O JOGADOR TEM CELULAR E CASA NA MOCHILA
-    let temCel = u.numero || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Tecnologia'));
-    let temCasa = (u.casa && Object.keys(u.casa).length > 0) || (u.mochila && Object.values(u.mochila).some(i => i.tipo === 'Móvel'));
-    
-    // ==========================================
-    // MÁGICA DO CHIP (GERADOR DE NÚMEROS)
-    // ==========================================
-    if (temCel && !u.numero && window.jogadorAtual !== "MESTRE") {
-        // Gera um número aleatório de 5 dígitos (Ex: 94512)
-        let novoNumero = "9" + Math.floor(1000 + Math.random() * 9000).toString();
-        u.numero = novoNumero; // Salva localmente pra não dar loop
-        
-        // Registra no Firebase
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/numero`).set(novoNumero).then(() => {
-            window.showNeonToast(`📱 Celular Ativado! Seu novo número é: ${novoNumero}`);
-        });
-    }
-    
-    // Atualiza o texto na tela para o jogador ver o próprio número
-    if(document.getElementById("perfilTelefone")) {
-        window.setElText("perfilTelefone", u.numero || "Sem Sinal");
-    }
-
-    // LIBERA O APP GAMBLENGER (HB-CELULAR)
-    let iCel = document.getElementById('hb-celular'); 
-    if(iCel) { 
-        if(temCel || window.isMaster) { 
-            iCel.classList.remove('locked'); 
-            iCel.onclick = () => { window.abrirApp('tab-celular', false); window.carregarContatosSMS(); }; 
-        } else { 
-            iCel.classList.add('locked'); 
-            iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre Tecnologia na Gamblezon."); 
-        } 
-    }
-    
-    // LIBERA O APP GAMBLE HOUSE (HB-CASA)
-    let iCasa = document.getElementById('hb-casa'); 
-    if(iCasa) { 
-        if(temCasa || window.isMaster) { 
-            iCasa.classList.remove('locked'); 
-            iCasa.onclick = () => window.abrirApp('tab-casa', false); 
-        } else { 
-            iCasa.classList.add('locked'); 
-            iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); 
-        } 
-    }
 };
