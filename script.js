@@ -487,7 +487,7 @@ window.initTacticalBoard = function() {
     let cols = conf.cols || 16;
     let rows = conf.rows || 12;
     let shape = conf.shape || 'quadrado';
-    let cellsData = conf.cells || {}; // Puxa os props e portais salvos!
+    let cellsData = conf.cells || {}; // Puxa os props e portais salvos do Firebase!
     
     let cellSize = window.VTT_CELL_SIZE || 50; 
 
@@ -500,21 +500,17 @@ window.initTacticalBoard = function() {
     b.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
     b.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 
-    // Garante que não tenham caixas vermelhas
     let ro = document.getElementById("roomOverlays"); if(ro) ro.innerHTML = ""; 
 
     for(let y=0; y<rows; y++) {
         for(let x=0; x<cols; x++) {
             let cid = `${x}_${y}`; 
             
-            // Lê se o mestre salvou alguma coisa neste quadrado
+            // Dados personalizados deste quadrado (salvos pelo mestre)
             let cData = cellsData[cid] || {};
-            
-            // O quadrado é obstáculo se o mestre marcou no banco
             let isObs = cData.obs || false; 
             let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
             
-            // Lógica de corte (Tetris)
             let isHidden = false;
             if (shape === 'l_shape') { if (x >= Math.floor(cols/2) && y < Math.floor(rows/2)) isHidden = true; } 
             else if (shape === 'u_shape') { if (x >= Math.floor(cols/4) && x < Math.floor(cols*0.75) && y < Math.floor(rows/2)) isHidden = true; } 
@@ -531,33 +527,44 @@ window.initTacticalBoard = function() {
             let cell = document.createElement("div"); 
             cell.id = `cell_${x}_${y}`; 
             cell.className = `tactical-cell ${obsClass} ${hideClass}`;
-            cell.style.position = "relative"; // Ajuda a posicionar o texto do portal
+            cell.style.position = "relative"; 
             
-            // SE TIVER IMAGEM DE PROP (Mesa, carro, barril)
+            // Renderiza o item/prop se o mestre tiver colocado a URL
             if(cData.img) {
-                cell.style.backgroundImage = `url('${cData.img}')`;
-                cell.style.backgroundSize = "100% 100%";
-                cell.style.backgroundPosition = "center";
-                cell.style.backgroundRepeat = "no-repeat";
+                let propImg = document.createElement("img");
+                propImg.src = cData.img;
+                propImg.style.width = "100%";
+                propImg.style.height = "100%";
+                propImg.style.objectFit = "contain"; // Garante que a imagem não fica esticada/deformada
+                propImg.style.position = "absolute";
+                propImg.style.top = "0";
+                propImg.style.left = "0";
+                propImg.style.pointerEvents = "none"; // Para não bloquear o clique no quadrado
+                cell.appendChild(propImg);
             }
 
-            // SE TIVER UM PORTAL PARA UMA CASA/AP
+            // Renderiza a indicação do Portal/AP
             if(cData.portal) {
                 cell.style.boxShadow = "inset 0 0 15px var(--accent-blue)";
-                cell.innerHTML = `<span style="font-size:9px; background:rgba(0,0,0,0.8); color:#0ff; position:absolute; bottom:0; left:0; width:100%; text-align:center; font-weight:bold; white-space:nowrap; overflow:hidden;">🏠 ${cData.portal}</span>`;
+                let portalTag = document.createElement("span");
+                portalTag.innerHTML = `🏠 ${cData.portal}`;
+                portalTag.style.cssText = "font-size:9px; background:rgba(0,0,0,0.8); color:#0ff; position:absolute; bottom:0; left:0; width:100%; text-align:center; font-weight:bold; white-space:nowrap; overflow:hidden; z-index: 5;";
+                cell.appendChild(portalTag);
             }
 
-            // O MÁGICO SHIFT+CLICK!
             if (!isHidden) { 
+                // CLIQUE NORMAL (Mover o Token)
                 cell.onclick = (e) => {
-                    // Se for o mestre e segurou Shift, abre a janela de edição!
-                    if(window.isMaster && e.shiftKey) {
-                        window.abrirModalMasterCell(cid);
-                    } else {
-                        // Se for clique normal, tenta andar
-                        if(typeof window.clicarGrid === "function") window.clicarGrid(x, y, isObs, cData.portal); 
-                    }
+                    if(typeof window.clicarGrid === "function") window.clicarGrid(x, y, isObs, cData.portal); 
                 }; 
+
+                // BOTÃO DIREITO DO RATO (Apenas o Mestre pode abrir o menu de Edição)
+                cell.oncontextmenu = (e) => {
+                    if(window.isMaster) {
+                        e.preventDefault(); // Impede que o menu normal do Chrome/Edge abra
+                        window.abrirModalMasterCell(cid);
+                    }
+                };
             }
             b.appendChild(cell);
         }
@@ -565,12 +572,12 @@ window.initTacticalBoard = function() {
 };
 
 // ==========================================================
-// FUNÇÕES DA JANELINHA DO MESTRE (SHIFT + CLICK)
+// FUNÇÕES DA JANELINHA DO MESTRE (BOTÃO DIREITO DO RATO)
 // ==========================================================
 window.abrirModalMasterCell = function(cid) {
     document.getElementById("mcCid").value = cid;
     
-    // Puxa os dados que já existem para não apagar sem querer
+    // Puxa os dados que já existem para os inputs
     let conf = window.submapasConfig[window.currentSubMapKey] || {};
     let cellData = (conf.cells && conf.cells[cid]) ? conf.cells[cid] : {};
 
@@ -578,7 +585,7 @@ window.abrirModalMasterCell = function(cid) {
     document.getElementById("mcImg").value = cellData.img || "";
     document.getElementById("mcPortal").value = cellData.portal || "";
 
-    // Mostra o modal que já está no seu HTML
+    // Abre a janela Modal
     let modal = document.getElementById('masterCellModal');
     if(modal) modal.style.display = 'flex';
 };
@@ -591,13 +598,14 @@ window.salvarCelulaCustom = function() {
 
     if(!window.currentSubMapKey || !cid) return;
 
-    // Salva no Firebase e a tela atualiza em milissegundos para todo mundo!
+    // Guarda os dados deste quadrado específico no Firebase
     window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}`).update({
         obs: isObs,
         img: imgUrl,
         portal: portalName
     });
 
+    // Fecha a janela
     document.getElementById('masterCellModal').style.display = 'none';
     if(typeof window.showNeonToast === "function") window.showNeonToast("Quadrado atualizado!");
 };
