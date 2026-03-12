@@ -1355,3 +1355,27 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     border: none !important;
     background: transparent !important;
 }
+
+/* === REGRAS DO NOVO TABULEIRO VTT === */
+#tacticalBoard {
+    overflow: auto !important; /* Faz o mapa ter barra de rolagem! */
+    position: relative;
+    background-image: none !important; /* Remove qualquer grid desenhado por CSS no fundo */
+}
+
+#vttWorldWrapper {
+    /* A imagem de fundo (seu mapa) vai preencher esse container exato */
+    background-size: 100% 100% !important;
+    background-repeat: no-repeat;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.tactical-cell {
+    /* Opcional: Se quiser esconder as linhas brancas do HTML e usar só as da sua imagem, 
+       mude a borda abaixo para "border: none;" */
+    border: 1px solid rgba(255, 255, 255, 0.15); 
+    box-sizing: border-box;
+}
+
