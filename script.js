@@ -570,7 +570,104 @@ window.fecharSubMapa = function() {
 };
 
 // ===============================================
-// RENDERIZAÇÃO DO GRID E DOS PROPS
+// 1. SISTEMA TETRIS (MOCHILA DE PROPS DO MESTRE)
+// ===============================================
+window.dmPropsCache = []; // Guarda as URLs temporariamente
+
+window.adicionarPropDock = function() {
+    let url = prompt("Cole a URL da imagem transparente (PNG) do Prop:");
+    if(!url) return;
+    window.dmPropsCache.push(url);
+    if(typeof window.renderPropDock === "function") window.renderPropDock();
+};
+
+window.renderPropDock = function() {
+    let list = document.getElementById("dmPropList");
+    if(!list) return;
+    list.innerHTML = "";
+    window.dmPropsCache.forEach((url, index) => {
+        let img = document.createElement("img");
+        img.src = url;
+        img.style.width = "60px";
+        img.style.height = "60px";
+        img.style.objectFit = "contain";
+        img.style.cursor = "grab";
+        img.style.border = "1px solid #333";
+        img.style.borderRadius = "5px";
+        img.style.backgroundColor = "rgba(255,255,255,0.1)";
+        img.draggable = true;
+        
+        // Quando arrasta
+        img.ondragstart = (e) => { e.dataTransfer.setData("text/plain", url); };
+        
+        // Clica com direito na mochila apaga
+        img.oncontextmenu = (e) => { 
+            e.preventDefault();
+            window.dmPropsCache.splice(index, 1);
+            window.renderPropDock();
+        };
+        list.appendChild(img);
+    });
+};
+
+// ===============================================
+// 2. CONTROLE DE TELAS DO MAPA E PLANETA
+// ===============================================
+window.desenharMapa = function() {
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "block";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "none";
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "none";
+    if(!mc) return; mc.innerHTML = "";
+    Object.keys(window.locaisMapa).forEach(key => {
+        let loc = window.locaisMapa[key];
+        let node = document.createElement("div");
+        node.className = "map-node";
+        node.style.left = loc.gx + "%"; node.style.top = loc.gy + "%";
+        node.innerHTML = `<div>${loc.nome}</div>`;
+        node.onclick = () => window.abrirSubMapa(key);
+        mc.appendChild(node);
+        if(loc.conexoes) { loc.conexoes.forEach(cKey => { let target = window.locaisMapa[cKey]; if(target) window.drawMapLine(mc, loc.gx, loc.gy, target.gx, target.gy); }); }
+    });
+};
+
+window.abrirSubMapa = function(localKey) {
+    window.currentSubMapKey = localKey;
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "flex";
+
+    let loc = window.locaisMapa[localKey] || { nome: localKey.replace(/_/g, " ") };
+    let titleEl = document.getElementById("subMapTitle"); if(titleEl) titleEl.innerText = loc.nome;
+
+    let bgUrl = window.submapasBGs[localKey] || "";
+    let wrapper = document.getElementById("vttWorldWrapper");
+    if(wrapper) {
+        if(bgUrl) { wrapper.style.backgroundImage = `url('${bgUrl}')`; wrapper.style.backgroundColor = "transparent"; } 
+        else { wrapper.style.backgroundImage = "none"; wrapper.style.backgroundColor = "#111"; }
+    }
+    
+    if(window.isMaster && typeof window.renderPropDock === "function") window.renderPropDock();
+    
+    window.initTacticalBoard();
+    window.updateTacticalBoard();
+
+    if(window.jogadorAtual && window.db) {
+        window.db.ref(`tokyoRpg/submapas/${localKey}`).once('value', s => {
+            let currentGrid = s.val() || {};
+            if(!Object.values(currentGrid).includes(window.jogadorAtual)) window.db.ref(`tokyoRpg/submapas/${localKey}/0_0`).set(window.jogadorAtual);
+        });
+    }
+};
+
+window.fecharSubMapa = function() {
+    window.currentSubMapKey = "";
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "block";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "none";
+    let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "none";
+};
+
+// ===============================================
+// 3. RENDERIZAÇÃO DO GRID E ARRASTAR PROPS
 // ===============================================
 window.initTacticalBoard = function() {
     let b = document.getElementById("gridCells"); if(!b) return; b.innerHTML = "";
@@ -604,7 +701,7 @@ window.initTacticalBoard = function() {
             cell.className = `tactical-cell ${obsClass} ${isHidden ? "hidden-vtt-cell" : ""}`;
             cell.style.position = "relative";
             
-            // DESENHA O PROP (Cadeira, Árvore, Carro...)
+            // DESENHA O PROP ARRASTADO NA TELA
             if(cData.prop) {
                 let pImg = document.createElement("img");
                 pImg.src = cData.prop.url;
@@ -614,11 +711,11 @@ window.initTacticalBoard = function() {
                 pImg.style.zIndex = "2"; pImg.style.pointerEvents = "auto";
                 
                 if (window.isMaster) {
-                    pImg.onclick = (e) => { // Click Esquerdo gira
+                    pImg.onclick = (e) => { // Click Esquerdo gira o Prop em 90 graus
                         e.stopPropagation();
                         window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}/prop/rot`).set((cData.prop.rot || 0) + 90);
                     };
-                    pImg.oncontextmenu = (e) => { // Click Direito deleta
+                    pImg.oncontextmenu = (e) => { // Click Direito deleta o Prop
                         e.preventDefault(); e.stopPropagation();
                         window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}/prop`).remove();
                     };
@@ -628,7 +725,7 @@ window.initTacticalBoard = function() {
 
             if (!isHidden) { 
                 if(window.isMaster) {
-                    // RECEBE O DROP DA MOCHILA
+                    // RECEBE O ITEM QUANDO ELE É SOLTO AQUI
                     cell.ondragover = (e) => e.preventDefault();
                     cell.ondrop = (e) => {
                         e.preventDefault();
@@ -641,11 +738,11 @@ window.initTacticalBoard = function() {
                         if(e.target === cell) {
                             e.preventDefault();
                             window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}/obs`).set(!isObs);
-                            if(typeof window.showNeonToast === "function") window.showNeonToast(!isObs ? "Bloqueado!" : "Caminho Livre!");
+                            if(typeof window.showNeonToast === "function") window.showNeonToast(!isObs ? "Bloqueado!" : "Livre!");
                         }
                     };
                 }
-                // Clique Normal (Andar)
+                // Clique Normal (Jogador Andar)
                 cell.onclick = (e) => {
                     if(e.target === cell || e.target.tagName !== "IMG") {
                         if(typeof window.clicarGrid === "function") window.clicarGrid(x, y, isObs, cData.portal); 
@@ -660,12 +757,15 @@ window.initTacticalBoard = function() {
 window.updateTacticalBoard = function() {
     if(!window.currentSubMapKey) return;
     
-    // Mostra as ferramentas do Mestre
+    // Mostra as ferramentas e a Mochila só para o Mestre
     let painelMestre = document.getElementById("mestreVTT");
     let propDock = document.getElementById("dmPropDock");
     if(window.isMaster) {
         if(painelMestre) painelMestre.style.display = "flex";
-        if(propDock) { propDock.style.display = "flex"; window.renderPropDock(); }
+        if(propDock) { 
+            propDock.style.display = "flex"; 
+            if(typeof window.renderPropDock === "function") window.renderPropDock(); 
+        }
         let conf = window.submapasConfig[window.currentSubMapKey] || {};
         if(document.getElementById("vttColsInp")) document.getElementById("vttColsInp").value = conf.cols || 16;
         if(document.getElementById("vttRowsInp")) document.getElementById("vttRowsInp").value = conf.rows || 12;
@@ -680,7 +780,6 @@ window.updateTacticalBoard = function() {
     let conf = window.submapasConfig[window.currentSubMapKey] || {};
     let cols = conf.cols || 16; let rows = conf.rows || 12; let cellSize = window.VTT_CELL_SIZE || 50; 
 
-    // Oculta a área de tokens se as posições mudarem
     let currentTokens = [];
     Object.keys(grid).forEach(cid => {
         let occupier = grid[cid]; if(!occupier) return;
@@ -706,7 +805,6 @@ window.updateTacticalBoard = function() {
             layer.appendChild(tHtml); tokenEl = tHtml; 
         }
 
-        // Camera Seguidora
         if(isMe && tokenEl) {
             setTimeout(() => {
                 let board = document.getElementById("tacticalBoard");
