@@ -482,41 +482,67 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
 
                 </div>
 
-              <!-- ABA GAMBLE HOUSE (TETRIS) -->
-<div id="tab-casa" class="tab-content">
-    <h1 class="neon-gold" style="text-align:center;">Gamble House</h1>
-    
-    <!-- Controles de Tamanho e Fundo -->
-    <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; background:#111; padding:10px; border-radius:8px; border:1px dashed var(--accent-gold);">
-        <input type="text" id="casaNomeInp" placeholder="Nome do Local" style="flex:1; min-width:120px;">
-        <input type="text" id="casaBgInp" placeholder="URL Planta Baixa" style="flex:2; min-width:150px;">
-        <input type="number" id="casaW" placeholder="Largura (Ex:10)" style="width: 100px;" title="Colunas do Grid">
-        <input type="number" id="casaH" placeholder="Altura (Ex:10)" style="width: 100px;" title="Linhas do Grid">
-        <button class="action-btn" onclick="window.salvarConfigCasa()" style="margin:0; border-color:var(--accent-gold); color:var(--accent-gold);">Salvar Planta</button>
-    </div>
-    
-    <p style="text-align:center; font-size:11px; color:#aaa;">Decore sua casa arrastando os móveis. O grid ficará transparente sobre sua imagem.</p>
-    
-    <div class="tetris-wrapper" style="overflow-x:auto;">
-        <div class="tetris-grid" id="grid-casa" style="border-color:var(--accent-gold); box-shadow:0 0 20px rgba(255,170,0,0.2); touch-action: none; position: relative;"></div>
-    </div>
-    
-    <h3 style="margin-top:20px; color:var(--accent-gold); border-bottom:1px dashed var(--accent-gold); padding-bottom:5px;">Depósito (Móveis Guardados)</h3>
-    <div class="inv-itens-soltos" id="lista-moveis-soltos" style="border-color:var(--accent-gold); min-height: 80px;"></div>
-</div>
+             <!-- ABA GAMBLE HOUSE (TETRIS) -->
+                <div id="tab-casa" class="tab-content">
+                    <h1 class="neon-gold" style="text-align:center;">Gamble House</h1>
+                    
+                    <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap; background:#111; padding:10px; border-radius:8px; border:1px dashed var(--accent-gold);">
+                        <input type="text" id="casaNomeInp" placeholder="Nome do Local" style="flex:1; min-width:120px;">
+                        <input type="text" id="casaBgInp" placeholder="URL Planta Baixa" style="flex:2; min-width:150px;">
+                        <input type="number" id="casaW" placeholder="Largura (Ex:10)" style="width: 100px;">
+                        <input type="number" id="casaH" placeholder="Altura (Ex:10)" style="width: 100px;">
+                        <button class="action-btn" onclick="window.salvarConfigCasa()" style="margin:0; border-color:var(--accent-gold); color:var(--accent-gold);">Salvar Planta</button>
+                    </div>
+                    
+                    <p style="text-align:center; font-size:11px; color:#aaa;">O grid é transparente. Se a planta for em "L", não coloque móveis fora do desenho!</p>
+                    
+                    <div class="tetris-wrapper" style="overflow-x:auto;">
+                        <div class="tetris-grid" id="grid-casa" style="border-color:var(--accent-gold); box-shadow:0 0 20px rgba(255,170,0,0.2); touch-action: none; position: relative;"></div>
+                    </div>
+                    
+                    <h3 style="margin-top:20px; color:var(--accent-gold); border-bottom:1px dashed var(--accent-gold); padding-bottom:5px;">Depósito (Móveis Guardados)</h3>
+                    <div class="inv-itens-soltos" id="lista-moveis-soltos" style="border-color:var(--accent-gold); min-height: 80px;"></div>
+                </div>
 
-<!-- ABA CELULAR (GAMBLENGER - DMs) -->
-<div id="tab-celular" class="tab-content">
-    <h1 style="color: #00ff00; text-align:center;">Gamblenger</h1>
-    <div style="background:#111; border:2px solid #333; border-radius:10px; display:flex; margin: 0 auto; width:100%; max-width:800px; height:65vh; overflow:hidden;">
-        
-        <!-- CONTATOS -->
-        <div style="width: 35%; min-width: 120px; border-right: 1px solid #333; display:flex; flex-direction:column; background:#0a0a0f;">
-            <div style="padding:15px; background:#000; border-bottom:1px solid #333; font-weight:bold; color:#00ff00; text-align:center; font-size:12px;">CONTATOS</div>
-            <div id="listaContatosSMS" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
-                <!-- Preenchido via JS -->
-            </div>
-        </div>
+                <!-- ABA CELULAR (GAMBLENGER - DMs E LIGAÇÕES) -->
+                <div id="tab-celular" class="tab-content">
+                    <h1 style="color: #00ff00; text-align:center;">Gamblenger</h1>
+                    <div style="background:#111; border:2px solid #333; border-radius:10px; display:flex; margin: 0 auto; width:100%; max-width:800px; height:65vh; overflow:hidden;">
+                        
+                        <!-- CONTATOS -->
+                        <div style="width: 35%; min-width: 120px; border-right: 1px solid #333; display:flex; flex-direction:column; background:#0a0a0f;">
+                            <div style="padding:15px; background:#000; font-weight:bold; color:#00ff00; text-align:center; font-size:12px;">AGENDA</div>
+                            
+                            <!-- ADICIONAR POR NÚMERO -->
+                            <div class="contact-add-bar">
+                                <input type="text" id="novoContatoNum" placeholder="Adicionar Nº...">
+                                <button onclick="window.adicionarContato()">+</button>
+                            </div>
+
+                            <div id="listaContatosSMS" style="flex:1; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:5px;">
+                                <!-- Preenchido via JS -->
+                            </div>
+                        </div>
+
+                        <!-- CHAT PRIVADO -->
+                        <div style="flex:1; display:flex; flex-direction:column; background:#050508; position:relative;">
+                            <div id="smsChatHeader" style="padding:15px; background:#000; border-bottom:1px solid #333; font-weight:bold; color:var(--accent-blue); display:flex; justify-content:space-between; align-items:center;">
+                                <span id="smsChatName">Selecione um Contato</span>
+                                <!-- BOTÃO DE LIGAR -->
+                                <button id="btnCallUI" class="action-btn" style="display:none; border-color:#0f0; color:#0f0; padding:4px 10px;" onclick="window.iniciarLigacao()">📞 Ligar</button>
+                            </div>
+                            
+                            <div id="smsLog" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;">
+                                <div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura.</div>
+                            </div>
+                            
+                            <div style="padding:10px; background:#000; border-top:1px solid #333; display:flex; gap:10px;">
+                                <input type="text" id="smsTexto" placeholder="Mensagem cifrada..." style="flex:1;" onkeydown="if(event.key==='Enter') window.enviarSMS()">
+                                <button class="action-btn" style="border-color:#0f0; color:#0f0;" onclick="window.enviarSMS()">Enviar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
         <!-- CHAT PRIVADO -->
         <div style="flex:1; display:flex; flex-direction:column; background:#050508; position:relative;">
