@@ -82,20 +82,17 @@
     <!-- BASE DESKTOP (FUNDO QUANDO O CELULAR ESTÁ MINIMIZADO) -->
     <div id="base-desktop">
         
-       <!-- CONTROLES FLUTUANTES GLOBAIS -->
-<div class="floating-controls">
-    <!-- BOTÃO PARA ABRIR O CELULAR -->
-    <div class="btn-floating" id="btnPhoneToggle" onclick="window.abrirCelularMain()">📱</div>
-    
-    <!-- BOTÃO HOME (Voltar pro Celular quando em um APP) -->
-    <div class="btn-floating" id="btnHomeApp" onclick="window.fecharApp()">⌂</div>
-    
-    <!-- NOVO: BOTÃO SAIR DO VTT (PLANETINHA) - Fica invisível até entrar numa sala -->
-    <div class="btn-floating" id="btnSairVTT" onclick="window.fecharSubMapa()" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); font-size:18px;" title="Sair da Sala">🌍</div>
-    
-    <!-- BOTÃO VOLTAR iGAMBLE -->
-    <div class="btn-floating" id="btnBackIgamble" onclick="window.voltarParaMenuIgamble()" style="display:none; border-color:var(--accent-purple); color:var(--accent-purple); box-shadow: 0 0 15px rgba(176,0,255,0.5);">↩</div>
-</div>
+        <!-- CONTROLES FLUTUANTES GLOBAIS -->
+        <div class="floating-controls">
+            <!-- BOTÃO PARA ABRIR O CELULAR -->
+            <div class="btn-floating" id="btnPhoneToggle" onclick="window.abrirCelularMain()">📱</div>
+            
+            <!-- BOTÃO HOME (Voltar pro Celular quando em um APP) -->
+            <div class="btn-floating" id="btnHomeApp" onclick="window.fecharApp()">⌂</div>
+            
+            <!-- BOTÃO VOLTAR iGAMBLE -->
+            <div class="btn-floating" id="btnBackIgamble" onclick="window.voltarParaMenuIgamble()" style="display:none; border-color:var(--accent-purple); color:var(--accent-purple); box-shadow: 0 0 15px rgba(176,0,255,0.5);">↩</div>
+        </div>
 
         <!-- GAVETA LATERAL DE AGENTES -->
         <div class="sidebar minimized" id="sidebarAgents">
@@ -204,67 +201,108 @@
                                 <div id="diceLog" style="flex:1; overflow-y:auto; font-size:11px; padding:5px; background:#000; min-height: 80px; max-height: 120px;"></div>
                             </div>
                         </div>
- <!-- AREA VISUAL MAPA E TABULEIRO -->
-<div class="map-visual-area">
-    
-    <!-- MAPA GLOBAL DE SELEÇÃO -->
-    <div class="map-canvas" id="mapCanvas"></div>
-    
-    <!-- TABULEIRO VTT INTERNO -->
-    <div class="submap-canvas" id="subMapCanvas" style="display:none; width: 100%; height: 100%; flex-direction: column; position: relative;">
+                        <!-- AREA VISUAL MAPA E TABULEIRO -->
+                        <div class="map-visual-area">
+                            <!-- MAPA GLOBAL -->
+                            <div class="map-canvas" id="mapCanvas">
+                                <!-- MAP DRAWN VIA JS -->
+                            </div>
+                            
+                            <!-- TABULEIRO VTT INTERNO -->
+<div class="submap-canvas" id="subMapCanvas">
+    <!-- BARRA SUPERIOR DO TABULEIRO -->
+    <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.85); padding:10px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+        <div>
+            <h2 id="subMapTitle" style="margin:0; font-size:14px;">Local</h2>
+            <p id="movRestantes" style="color:#0f0;font-size:11px;margin:0; font-weight:bold;">Passos Livres: 0</p>
+        </div>
         
-        <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.85); padding:10px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:10px;">
-            <div><h2 id="subMapTitle" style="margin:0; font-size:14px;">Local</h2><p id="movRestantes" style="color:#0f0;font-size:11px;margin:0;">Passos Livres: 0</p></div>
-            <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0;"></div>
-            <div style="display:flex; gap:5px; align-items:center;">
-                <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
-                <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim Turno</button>
+        <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0;"></div>
+        
+        <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+            <button class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
+            <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim de Turno</button>
+            
+            <!-- PAINEL DO MESTRE NO VTT -->
+            <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px; flex-wrap:wrap; align-items: center;">
+                <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Iniciativas</button>
+                <input type="text" id="vttBgInp" placeholder="URL Fundo..." style="width:100px; padding:5px; font-size:10px;">
+                <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Fundo</button>
+
+                <div style="display:flex; gap:5px; align-items:center; border-left:1px solid #555; padding-left:10px; margin-left:5px;">
+                    <span style="font-size:10px; color:#aaa;">Grid:</span>
+                    <input type="number" id="vttColsInp" value="16" title="Colunas" style="width:40px; padding:2px; font-size:10px; text-align:center;">
+                    <span style="font-size:10px; color:#aaa;">x</span>
+                    <input type="number" id="vttRowsInp" value="12" title="Linhas" style="width:40px; padding:2px; font-size:10px; text-align:center;">
+                    
+                    <select id="vttShapeInp" style="padding:2px; font-size:10px; width:100px; background:#000; color:#fff; border:1px solid #333;">
+                        <option value="quadrado">⬛ Quadrado</option>
+                        <option value="l_shape">▛ Formato L</option>
+                        <option value="u_shape">◳ Formato U</option>
+                        <option value="cross">➕ Cruzamento</option>
+                        <option value="corredor">➖ Corredor</option>
+                        <option value="hexagono">⬡ Arena Hex.</option>
+                    </select>
+                    <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 5px;" onclick="window.salvarFormatoMapa()">Moldar</button>
+                </div>
             </div>
         </div>
+        
+        <!-- O BOTÃO DE SAIR (PLANETINHA) ESTÁ AQUI -->
+        <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue); padding: 5px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px;" onclick="window.fecharSubMapa()">🌍</button>
+    </div>
 
-        <!-- PAINEL SUPERIOR DO MESTRE -->
-        <div id="mestreVTT" style="display:none; background:#111; padding:5px 10px; border-bottom:1px solid #333; gap:10px; flex-wrap:wrap; align-items:center;">
-            <span style="color:var(--accent-red); font-size:12px; font-weight:bold;">MESTRE:</span>
-            <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 2px 5px; font-size:10px;" onclick="window.iniciarIniciativaVTT()">Iniciativas</button>
-            <input type="text" id="vttBgInp" placeholder="URL Fundo..." style="width:100px; padding:2px; font-size:10px;">
-            <button class="action-btn" style="border-color:var(--accent-blue); padding: 2px 5px; font-size:10px;" onclick="window.mudarBgSubMapa()">Fundo</button>
-            <span style="font-size:10px; color:#aaa; margin-left:10px;">Grid:</span>
-            <input type="number" id="vttColsInp" value="16" style="width:35px; padding:2px; font-size:10px; text-align:center;"> x 
-            <input type="number" id="vttRowsInp" value="12" style="width:35px; padding:2px; font-size:10px; text-align:center;">
-            <select id="vttShapeInp" style="padding:2px; font-size:10px; background:#000; color:#fff;">
-                <option value="quadrado">⬛ Quadrado</option>
-                <option value="l_shape">▛ Formato L</option>
-                <option value="u_shape">◳ Formato U</option>
-                <option value="cross">➕ Cruz</option>
-                <option value="corredor">➖ Corredor</option>
-                <option value="hexagono">⬡ Arena</option>
-            </select>
-            <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 2px 5px; font-size:10px;" onclick="window.salvarFormatoMapa()">Moldar</button>
+    <div id="vttFoodActions" class="food-action-bar"></div>
+    
+    <!-- ÁREA DO MAPA ONDE A IMAGEM E O GRID FICAM -->
+    <div class="tactical-board" id="tacticalBoard" style="overflow: hidden; position: relative; scroll-behavior: smooth;">
+        <!-- CORRIGIDO: Adicionado width e height 100% para o Wrapper do Grid não sumir -->
+        <div id="vttWorldWrapper" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+            <div id="roomOverlays"></div>
+            <div id="gridCells" class="grid-cells-container"></div>
+            <div id="tokensLayer" class="tokens-layer"></div>
         </div>
-
-        <!-- O TABULEIRO -->
-        <div class="tactical-board" id="tacticalBoard" style="overflow: auto; position: relative; scroll-behavior: smooth; flex: 1;">
-            <div id="vttWorldWrapper" style="position: absolute; top: 0; left: 0;">
-                <div id="gridCells" class="grid-cells-container"></div>
-                <div id="tokensLayer" class="tokens-layer"></div>
-            </div>
-        </div>
-
-        <!-- MOCHILA TETRIS DO MESTRE (ARRASTAR E SOLTAR PROPS) -->
-        <div id="dmPropDock" style="display:none; width:100%; height:80px; background:rgba(0,0,0,0.95); border-top:2px solid var(--accent-blue); align-items:center; padding:10px; gap:10px; overflow-x:auto;">
-            <button class="action-btn" onclick="window.adicionarPropDock()" style="min-width:60px; height:60px; border-color:#0f0; color:#0f0; display:flex; flex-direction:column; justify-content:center; align-items:center;">
-                <span style="font-size:20px;">+</span> <span style="font-size:8px;">URL PROP</span>
-            </button>
-            <div id="dmPropList" style="display:flex; gap:10px; align-items:center;"></div>
-            <div style="margin-left:auto; color:#888; font-size:10px; text-align:right;">
-                1. <b>Arraste</b> para o mapa<br>
-                2. <b>Click esquerdo</b> para girar<br>
-                3. <b>Click direito</b> para apagar
-            </div>
-        </div>
-
     </div>
 </div>
+                                        <!-- PAINEL DO MESTRE NO VTT -->
+<div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px; flex-wrap:wrap; align-items: center;">
+    
+    <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Iniciativas</button>
+    
+    <input type="text" id="vttBgInp" placeholder="URL Fundo..." style="width:100px; padding:5px; font-size:10px;">
+    <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Fundo</button>
+
+    <!-- CONFIGURADOR DE TERRENO -->
+    <div style="display:flex; gap:5px; align-items:center; border-left:1px solid #555; padding-left:10px; margin-left:5px;">
+        <span style="font-size:10px; color:#aaa;">Grid:</span>
+        <input type="number" id="vttColsInp" value="16" title="Colunas" style="width:40px; padding:2px; font-size:10px; text-align:center;">
+        <span style="font-size:10px; color:#aaa;">x</span>
+        <input type="number" id="vttRowsInp" value="12" title="Linhas" style="width:40px; padding:2px; font-size:10px; text-align:center;">
+        
+        <select id="vttShapeInp" style="padding:2px; font-size:10px; width:100px; background:#000; color:#fff; border:1px solid #333;">
+            <option value="quadrado">⬛ Quadrado</option>
+            <option value="l_shape">▛ Formato L</option>
+            <option value="u_shape">◳ Formato U</option>
+            <option value="cross">➕ Cruzamento</option>
+            <option value="corredor">➖ Corredor</option>
+            <option value="hexagono">⬡ Arena Hex.</option>
+        </select>
+        
+        <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 5px;" onclick="window.salvarFormatoMapa()">Moldar Terreno</button>
+    </div>
+</div>
+                                
+                                <div id="vttFoodActions" class="food-action-bar"></div>
+                                
+                                <div class="tactical-board" id="tacticalBoard">
+                                    <div id="roomOverlays"></div>
+                                    <div id="gridCells" class="grid-cells-container"></div>
+                                    <div id="tokensLayer" class="tokens-layer"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ABA MY GAMBLE (PERSONAGEM) -->
                 <div id="tab-personagem" class="tab-content">
