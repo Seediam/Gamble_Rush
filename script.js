@@ -543,6 +543,7 @@ window.initTacticalBoard = function() {
 window.updateTacticalBoard = function() {
     if(!window.currentSubMapKey) return;
     
+    // Atualiza visão do Mestre
     let painelMestre = document.getElementById("mestreVTT");
     if(painelMestre) {
         if(window.isMaster) {
@@ -564,11 +565,13 @@ window.updateTacticalBoard = function() {
     let conf = window.submapasConfig[window.currentSubMapKey] || {cols: 16, rows: 12};
     let cols = conf.cols || 16;
     let rows = conf.rows || 12;
-    let cellSize = window.VTT_CELL_SIZE || 50;
+    let cellSize = window.VTT_CELL_SIZE || 50; // Tamanho fixo do quadrado
 
+    // Acha a posição X e Y atuais do jogador que está se movendo
     let px = -1, py = -1;
     Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
 
+    // Pinta as células de alcance de movimento
     for(let y=0; y<rows; y++) {
         for(let x=0; x<cols; x++) {
             let cid = `${x}_${y}`;
@@ -600,37 +603,70 @@ window.updateTacticalBoard = function() {
         let hp = window.usersGlobais[occupier]?.rpg?.hp || 100;
         let isMe = (occupier === window.jogadorAtual);
 
-        // POSICIONA O TOKEN EM PIXELS EXACTOS
-        let leftPos = (x * cellSize) + "px";
-        let topPos = (y * cellSize) + "px";
-        let tWidth = cellSize + "px";
-        let tHeight = cellSize + "px";
+        // Define a posição exata em pixels
+        let leftPx = (x * cellSize);
+        let topPx = (y * cellSize);
 
         if(tokenEl) {
-            tokenEl.style.left = leftPos; tokenEl.style.top = topPos;
-            tokenEl.style.width = tWidth; tokenEl.style.height = tHeight;
+            tokenEl.style.left = leftPx + "px"; 
+            tokenEl.style.top = topPx + "px";
+            tokenEl.style.width = cellSize + "px"; 
+            tokenEl.style.height = cellSize + "px";
             if (tokenEl.querySelector('.token-hp')) tokenEl.querySelector('.token-hp').innerText = hp;
         } else {
             let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token";
             if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; }
             tHtml.style.backgroundImage = `url('${avToken}')`; 
-            tHtml.style.left = leftPos; tHtml.style.top = topPos;
-            tHtml.style.width = tWidth; tHtml.style.height = tHeight;
+            tHtml.style.left = leftPx + "px"; 
+            tHtml.style.top = topPx + "px";
+            tHtml.style.width = cellSize + "px"; 
+            tHtml.style.height = cellSize + "px";
             tHtml.innerHTML = `<div class="token-hp">${hp}</div>`; layer.appendChild(tHtml);
-            tokenEl = tHtml; // Salva referência recém criada
+            tokenEl = tHtml; 
         }
 
-        // === CÂMERA DO JOGO ===
-        // Se for o token do próprio jogador que se moveu, rola a div até ele!
+        // === CÂMERA INTELIGENTE (SIDEVIEW DE 3 BLOCOS) ===
         if(isMe && tokenEl) {
             setTimeout(() => {
-                tokenEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                let board = document.getElementById("tacticalBoard");
+                if(board) {
+                    let margin = window.VTT_CELL_SIZE * 3; // Margem de 3 quadrados
+                    
+                    // Posição do Token no tabuleiro
+                    let tokenL = leftPx;
+                    let tokenT = topPx;
+                    let tokenR = tokenL + window.VTT_CELL_SIZE;
+                    let tokenB = tokenT + window.VTT_CELL_SIZE;
+
+                    // O que a tela está mostrando agora
+                    let viewL = board.scrollLeft;
+                    let viewR = viewL + board.clientWidth;
+                    let viewT = board.scrollTop;
+                    let viewB = viewT + board.clientHeight;
+
+                    let targetScrollL = viewL;
+                    let targetScrollT = viewT;
+
+                    // Se encostou na margem Esquerda ou Direita, empurra a tela
+                    if (tokenL < viewL + margin) targetScrollL = tokenL - margin;
+                    else if (tokenR > viewR - margin) targetScrollL = tokenR + margin - board.clientWidth;
+
+                    // Se encostou na margem Cima ou Baixo, empurra a tela
+                    if (tokenT < viewT + margin) targetScrollT = tokenT - margin;
+                    else if (tokenB > viewB - margin) targetScrollT = tokenB + margin - board.clientHeight;
+
+                    // Aplica o movimento na câmera apenas se saiu da zona de conforto
+                    if(targetScrollL !== viewL || targetScrollT !== viewT) {
+                        board.scrollTo({ left: targetScrollL, top: targetScrollT, behavior: 'smooth' });
+                    }
+                }
             }, 100);
         }
     });
 
     Array.from(layer.children).forEach(t => { if(!currentTokens.includes(t.id)) t.remove(); });
     
+    // Atualiza UI de turnos
     let tBar = document.getElementById("turnOrderUI"); let btnP = document.getElementById("btnPassTurno");
     if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0) {
         if(tBar) { tBar.style.display="flex"; tBar.innerHTML=""; }
