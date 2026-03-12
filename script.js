@@ -2389,15 +2389,16 @@ window.startMentionInboxListener = function(){
   });
 
   // 2) novos em tempo real
-  ref.on("child_added", snap => {
-    const item = snap.val();
-    if(!item) return;
+       // 2) novos em tempo real
+      ref.on("child_added", snap => {
+        const item = snap.val();
+        if(!item) return;
 
-    // ignora itens muito antigos (pra não duplicar backlog)
-    const age = Date.now() - (item.ts||0);
-    if(age > 15000) return; // 15s pra trás -> considera backlog
+        // ignora itens muito antigos (pra não duplicar backlog)
+        const age = Date.now() - (item.ts||0);
+        if(age > 15000) return; // 15s pra trás -> considera backlog
 
-    window.renderMentionNotify(item);
-  });
+        window.renderMentionNotify(item);
+      });
 };
     
