@@ -353,7 +353,15 @@
 
                       <div class="igamble-chat">
                         <div class="chat-messages" id="chatMessages"></div>
-
+<!-- PREVIEW DE RESPOSTA (WHATSAPP STYLE) -->
+<div id="replyPreview" class="reply-preview" style="display:none;">
+  <div class="reply-bar"></div>
+  <div class="reply-texts">
+    <div id="replyToName" class="reply-to-name">Respondendo...</div>
+    <div id="replyToText" class="reply-to-text">...</div>
+  </div>
+  <button class="reply-cancel" onclick="window.cancelReply()">✖</button>
+</div>
 						  
                         <div class="chat-input-area" style="position: relative;">
                           <button class="neon-icon-btn" onclick="window.enviarAnexo()">📎</button>
@@ -566,9 +574,8 @@ style="width:100%; background:#111; color:#fff; border:1px solid #333; border-ra
     </div>
     <!-- ============================================== -->
 
-    <!-- CARREGAR O SCRIPT SEPARADO -->
-    <script src="script.js"></script>
-</body>
+<!-- NOTIFICAÇÕES DE MENÇÃO -->
+<div id="mentionNotifyStack" class="mention-notify-stack"></div>
     <!-- CARREGAR O SCRIPT SEPARADO -->
     <script src="script.js"></script>
 </body>
