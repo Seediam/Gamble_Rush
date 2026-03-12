@@ -1901,7 +1901,7 @@ window.atualizarBadgeNotificacoes = function(qtd) {
             let msg = tipoContexto === 'post' ? "mencionou você em um post" : "mencionou você em um comentário";
             window.enviarNotificacao(mencionado, 'mention_' + tipoContexto, autor, msg, contextoId);
         }
-    });
+    };
 };
     window.mensagemEmResposta = null; // Armazena a mensagem que está sendo respondida
 
