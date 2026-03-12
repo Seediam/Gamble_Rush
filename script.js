@@ -4771,3 +4771,62 @@ window.reagir = function(tipo) {
     window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}/pendencia`).remove();
 };
 
+// Dentro do loop de células em window.updateTacticalBoard:
+if(window.ataqueSelecionado) {
+    let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
+    if(dist > 0 && dist <= window.ataqueSelecionado.range) {
+        cell.classList.add("in-range-blocked"); // Usa o estilo vermelho de bloqueio para o ataque
+    }
+}
+// Função para listar os ataques baseados no equipamento
+window.renderizarAtaquesHUD = function() {
+    const container = document.getElementById("combatAtaquesList");
+    if(!container || !window.jogadorAtual) return;
+    container.innerHTML = "";
+    
+    const u = window.usersGlobais[window.jogadorAtual];
+    const r = window.getSafeRpg(u);
+
+    // Ataque Padrão (Sempre disponível)
+    container.innerHTML += `<button class="action-btn" onclick="window.prepararAtaque('Soco', '1d4+${r.for}', 1, 'linear')">👊 Soco (1d4+${r.for})</button>`;
+
+    // Listar Armas Equipadas
+    if(u.mochila) {
+        Object.keys(u.mochila).forEach(k => {
+            const i = u.mochila[k];
+            if(i.tipo === 'Arma' && i.eq) {
+                const range = i.range || 1; // Pega o range do item se existir
+                container.innerHTML += `
+                    <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red);" 
+                        onclick="window.prepararAtaque('${i.nome}', '${i.poder}', ${range}, 'linear')">
+                        ⚔️ ${i.nome} (${i.poder})
+                    </button>`;
+            }
+        });
+    }
+};
+
+// Armazena o ataque que o player selecionou
+window.ataqueSelecionado = null;
+
+window.prepararAtaque = function(nome, dano, range, shape) {
+    window.ataqueSelecionado = { nome, dano, range, shape };
+    window.showNeonToast(`Ataque ${nome} selecionado!`);
+    window.updateTacticalBoard(); // Atualiza o grid para mostrar o alcance do ataque
+};
+
+window.executarAtaqueNoAlvo = function(alvoNome) {
+    if(!window.ataqueSelecionado) return;
+    
+    // Notifica o alvo via Firebase para abrir o modal de reação
+    window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}/pendencia`).set({
+        alvo: alvoNome,
+        atacante: window.jogadorAtual,
+        dano: window.ataqueSelecionado.dano,
+        nomeAtaque: window.ataqueSelecionado.nome,
+        ts: Date.now()
+    });
+    
+    window.ataqueSelecionado = null; // Limpa seleção após usar
+    window.updateTacticalBoard();
+};
