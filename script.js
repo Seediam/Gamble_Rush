@@ -1381,13 +1381,15 @@ window.switchIGambleTab = function(tabId, btnEl) {
                 window.postObserver.observe(c);
             });
         }, 100);
-    } else {
+       } else {
         // Se saiu da aba, cala todos os áudios
         document.querySelectorAll('audio.post-audio').forEach(a => {
             a.pause();
             a.currentTime = 0;
         });
     }
+}; // <--- ADICIONE ESTE }; AQUI PARA FECHAR A FUNÇÃO!
+
 // =========================================================
 // IGAMBLE POSTS: LÓGICA UNIFICADA (LIKES, ÁUDIO E DOUBLE TAP)
 // =========================================================
@@ -2399,4 +2401,3 @@ window.startMentionInboxListener = function(){
   });
 };
     
-};
