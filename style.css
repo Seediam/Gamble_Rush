@@ -53,6 +53,7 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 .hp-display { font-weight: bold; color: var(--accent-red); font-size: 12px; margin-top: 5px; text-shadow: 0 0 5px var(--accent-red);}
 
 /* BOTÕES FLUTUANTES GLOBAIS (ESQUERDA INFERIOR) */
+/* BOTÕES FLUTUANTES GLOBAIS (ESQUERDA INFERIOR) */
 .floating-controls { position: fixed; bottom: 20px; left: 20px; display: flex; flex-direction: column-reverse; gap: 15px; z-index: 4500; }
 .btn-floating { width: 55px; height: 55px; background: rgba(0,0,0,0.85); border: 2px solid var(--accent-blue); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 26px; cursor: pointer; box-shadow: 0 0 20px rgba(0,229,255,0.5); transition: transform 0.2s;}
 .btn-floating:hover { transform: scale(1.1); background: var(--accent-blue); color:#000; text-shadow: none; }
@@ -66,8 +67,8 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     position: relative;
     width: 100%; 
     max-width: 400px; 
-    aspect-ratio: 9 / 18.5; 
-    max-height: 90vh; 
+    aspect-ratio: 9 / 18.5; /* Mantém a proporção real de um celular */
+    max-height: 90vh; /* Não deixa vazar no PC */
     background-image: url('bg.png'); 
     background-size: 100% 100%; 
     border-radius: 35px; 
@@ -88,7 +89,7 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     gap: 45px; 
 }
 
-.app-hitbox { background: transparent; border: none; cursor: pointer; border-radius: 20px; transition: 0.1s; position: relative; }
+.app-hitbox { background: transparent; border: none; cursor: pointer; border-radius: 20px; transition: 0.1s; }
 .app-hitbox:active { background: rgba(255,255,255,0.2); transform: scale(0.95); }
 
 .close-phone-btn { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); color: #fff; background: rgba(0,0,0,0.8); border: 1px solid var(--accent-red); width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; font-weight: bold; box-shadow: 0 0 15px var(--accent-red);}
@@ -140,39 +141,26 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 
 @keyframes pulseDanger { 0% { box-shadow: 0 0 5px #f00; } 50% { box-shadow: 0 0 20px #f00; } 100% { box-shadow: 0 0 5px #f00; } }
 
-/* VTT INTERIOR E TÁTICAS */
+/* VTT INTERIOR E TÁTICAS (ALCANCE / SLIDE) */
 .submap-canvas { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #050505; z-index: 100; flex-direction: column; padding: 15px; background-size: cover; background-position: center;}
 
-.tactical-board { flex: 1; position: relative; background-color: transparent !important; background-image: none !important; border-top: 2px solid var(--accent-blue); overflow: auto !important;}
+.tactical-board { flex: 1; position: relative; background: rgba(0,0,0,0.7); border-top: 2px solid var(--accent-blue); overflow: hidden;}
 .grid-cells-container { display: grid; grid-template-columns: repeat(16, 1fr); grid-template-rows: repeat(12, 1fr); width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 2; }
 .tokens-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
 
-#vttWorldWrapper { background-size: 100% 100% !important; background-repeat: no-repeat; position: absolute; top: 0; left: 0; }
+.tactical-cell { border: 1px solid rgba(0, 229, 255, 0.15); transition: background-color 0.2s; position: relative;}
+.tactical-cell:hover { background: rgba(0,229,255,0.3); }
 
-.hidden-vtt-cell { visibility: hidden !important; pointer-events: none !important; border: none !important; background: transparent !important; }
-#roomOverlays, .room-overlay { display: none !important; visibility: hidden !important; }
+.tactical-cell.in-range { background: rgba(0, 255, 100, 0.25); box-shadow: inset 0 0 15px rgba(0, 255, 100, 0.6); cursor: pointer; border: 1px dashed #0f0; z-index: 3;}
+.tactical-cell.in-range-blocked { background: rgba(255, 26, 85, 0.25); box-shadow: inset 0 0 15px rgba(255, 26, 85, 0.6); cursor: not-allowed; border: 1px dashed #f00; z-index: 3;}
 
-.tactical-cell { border: 1px solid rgba(0, 0, 0, 0.7) !important; background-color: rgba(0, 0, 0, 0.4) !important; box-sizing: border-box; transition: background-color 0.2s; position: relative; }
-.tactical-cell:hover { background-color: rgba(255, 255, 255, 0.15) !important; border: 1px solid #fff !important; cursor: pointer; }
-
-.tactical-cell.in-range { background: rgba(0, 255, 100, 0.25) !important; box-shadow: inset 0 0 15px rgba(0, 255, 100, 0.6); cursor: pointer; border: 1px dashed #0f0 !important; z-index: 3;}
-.tactical-cell.in-range-blocked { background: rgba(255, 26, 85, 0.25) !important; box-shadow: inset 0 0 15px rgba(255, 26, 85, 0.6); cursor: not-allowed; border: 1px dashed #f00 !important; z-index: 3;}
-
-.cell-obstacle { background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255, 26, 85, 0.3) 5px, rgba(255, 26, 85, 0.3) 10px) !important; border: 1px solid rgba(255, 26, 85, 0.5) !important; cursor: not-allowed;}
+.cell-obstacle { background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255, 26, 85, 0.3) 5px, rgba(255, 26, 85, 0.3) 10px); border: 1px solid rgba(255, 26, 85, 0.5); cursor: not-allowed;}
 .cell-obstacle-gaia { border-color: #00ff00 !important; cursor: crosshair !important; box-shadow: inset 0 0 10px rgba(0,255,0,0.2);}
 
 .tactical-token { position: absolute; width: 6.25%; height: 8.33%; background-size: cover; border-radius: 50%; border: 2px solid #00ff00; box-shadow: 0 0 15px #00ff00; transition: left 0.4s cubic-bezier(0.25, 1, 0.5, 1), top 0.4s cubic-bezier(0.25, 1, 0.5, 1); pointer-events: none;}
 
-/* SISTEMA TETRIS DO VTT (MOCHILA DO MESTRE) */
-.prop-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; justify-content: center; align-items: center; z-index: 5; cursor: grab; }
-.prop-container:active { cursor: grabbing; }
+.room-overlay { position: absolute; border: 2px solid var(--accent-blue); background: rgba(0,229,255,0.05); display: flex; align-items: flex-start; justify-content: center; padding-top: 5px; color: #fff; font-size: 14px; font-weight: bold; text-shadow: 0 0 8px var(--accent-blue); pointer-events: none; z-index: 1;}
 
-.prop-controls { display: none; position: absolute; top: -45px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.95); border: 2px solid var(--accent-blue); border-radius: 8px; padding: 8px 15px; gap: 15px; font-size: 18px; z-index: 9999; white-space: nowrap; pointer-events: auto; box-shadow: 0 0 20px rgba(0, 229, 255, 0.8); }
-.prop-container:hover .prop-controls { display: flex; }
-.prop-controls span { cursor: pointer; transition: 0.2s; }
-.prop-controls span:hover { color: var(--accent-red); transform: scale(1.3); }
-
-/* TURNOS E COMIDA */
 .turn-order-bar { display:flex; gap:10px; overflow-x:auto; background:rgba(0,0,0,0.8); padding:5px; border:1px solid var(--accent-red); align-items:center; border-radius: 4px; max-width: 100%;}
 .turn-avatar { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #555; opacity: 0.5; transition: 0.3s; flex-shrink: 0;}
 .turn-avatar.active { border-color: #00ff00; opacity: 1; box-shadow: 0 0 15px #00ff00; transform: scale(1.1); }
@@ -185,18 +173,29 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 .eating-bar-bg { width: 300px; height: 25px; border: 2px solid #00ff00; border-radius: 12px; padding: 3px; background: #111; }
 .eating-bar-fill { height: 100%; background: #00ff00; width: 0%; box-shadow: 0 0 20px #00ff00; border-radius: 8px; }
 
-/* DADOS OVERLAY */
+/* DADOS OVERLAY (SKIP CLICÁVEL) */
 .dice-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 8000; display: none; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
 .dice-box-panel { background: rgba(5,5,10,0.95); border: 2px solid var(--accent-blue); border-radius: 15px; padding: 40px; box-shadow: 0 0 60px rgba(0,229,255,0.5); text-align: center; width: 90%; max-width: 400px; pointer-events: none;}
 .dice-spinners { display: flex; gap: 15px; margin: 25px 0; font-size: 36px; font-weight: bold; color: var(--accent-red); text-shadow: 0 0 20px var(--accent-red); font-family: monospace; flex-wrap: wrap; justify-content: center;}
 .dice-number { background: #111; border: 2px solid var(--accent-red); border-radius: 10px; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 20px rgba(255,26,85,0.4);}
 .dice-result-box { display: inline-block; background: #000; border: 2px solid #00ff00; color: #00ff00; padding: 15px 25px; border-radius: 10px; margin: 5px; font-weight: bold; font-size: 28px; box-shadow: 0 0 15px rgba(0,255,0,0.5), inset 0 0 10px rgba(0,255,0,0.3);}
+/* --- AJUSTE DOS DADOS NO HISTÓRICO (MESA DE DADOS) --- */
+#diceLog .dice-result-box {
+    padding: 2px 8px;          /* Diminui o espaço interno */
+    font-size: 12px;           /* Diminui o tamanho do número */
+    margin: 2px;               /* Diminui o espaço entre um dado e outro */
+    border-width: 1px;         /* Borda mais fina */
+    border-radius: 4px;        /* Canto menos arredondado */
+    box-shadow: 0 0 5px rgba(0, 255, 0, 0.4); /* Brilho menor */
+    display: inline-block;
+    vertical-align: middle;
+}
 
-/* HISTÓRICO DE DADOS */
-#diceLog .dice-result-box { padding: 2px 8px; font-size: 12px; margin: 2px; border-width: 1px; border-radius: 4px; box-shadow: 0 0 5px rgba(0, 255, 0, 0.4); display: inline-block; vertical-align: middle; }
-#diceLog div { line-height: 1.8; }
+#diceLog div {
+    line-height: 1.8; /* Dá um respiro entre as linhas do histórico para os quadradinhos não encavalarem */
+}
 
-/* === INVENTÁRIO TETRIS (MOCHILA) === */
+/* === TETRIS (PERSONAGEM / INVENTÁRIO) === */
 .tetris-wrapper { display: flex; justify-content: center; margin-top: 15px; overflow-x: auto; padding: 10px; }
 .tetris-grid { position: relative; display: grid; gap: 1px; background: #111; border: 2px solid var(--accent-blue); box-shadow: 0 0 20px rgba(0,229,255,0.2); touch-action: none; box-sizing: content-box; min-width: max-content; margin: 0 auto; }
 .grid-cell { background: #050505; width: 45px; height: 45px; border: 1px dashed #333; }
@@ -207,9 +206,14 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 
 .btn-excluir-item { position:absolute; top:-8px; right:-8px; font-size:12px; width:22px; height:22px; background:#000; color:var(--accent-gold); border:1px solid var(--accent-gold); border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:10; box-shadow:0 0 8px var(--accent-gold); text-shadow:0 0 5px var(--accent-gold); padding:0; }
 .btn-excluir-item.discard { color:var(--accent-red); border-color:var(--accent-red); box-shadow:0 0 8px var(--accent-red); text-shadow:0 0 5px var(--accent-red); }
-.btn-rotate-item { position:absolute; top:-8px; left:-8px; font-size:12px; width:22px; height:22px; background:#000; color:var(--accent-blue); border:1px solid var(--accent-blue); border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:10; box-shadow:0 0 8px var(--accent-blue); text-shadow:0 0 5px var(--accent-blue); padding:0; }
+/* BOTÃO DE ROTACIONAR ITENS DO INVENTÁRIO */
+.btn-rotate-item { 
+    position:absolute; top:-8px; left:-8px; font-size:12px; width:22px; height:22px; 
+    background:#000; color:var(--accent-blue); border:1px solid var(--accent-blue); 
+    border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; 
+    z-index:10; box-shadow:0 0 8px var(--accent-blue); text-shadow:0 0 5px var(--accent-blue); padding:0; 
+}
 .btn-rotate-item:hover { background: var(--accent-blue); color: #000; }
-
 .item-tetris.Arma { background: rgba(255, 26, 85, 0.8); border: 1px solid var(--accent-red); }
 .item-tetris.Roupa { background: rgba(0, 119, 255, 0.8); border: 1px solid var(--rarity-rar); }
 .item-tetris.Comida { background: rgba(0, 255, 102, 0.8); border: 1px solid var(--rarity-inc); color: #000;}
@@ -231,38 +235,132 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 .card.selected { border-color: #0f0; box-shadow: 0 0 30px #0f0;}
 @keyframes slotMachine { 0% { transform: translateY(-2px); } 50% { transform: translateY(2px); } 100% { transform: translateY(-2px); } }
 
-/* === IGAMBLE CHAT PREMIUM E POSTS === */
-#tab-igamble { height: calc(100vh - 50px); overflow: hidden; display: none; }
-#tab-igamble.active { display: flex !important; flex-direction: column; }
-.igamble-wrapper { display: flex; flex-direction: column; gap: 15px; width: 100%; flex: 1; min-height: 0; overflow: hidden; }
+/* === IGAMBLE CHAT PREMIUM === */
+#tab-igamble {
+    height: calc(100vh - 50px);
+    overflow: hidden;
+    display: none; /* Força sumir quando inativo */
+}
 
-.igamble-nav { display: none !important; justify-content: center; gap: 10px; padding: 10px; background: #000; border-bottom: 1px solid var(--accent-blue); flex-shrink: 0; }
-.igamble-tab-btn { background: #111; color: #aaa; border: 1px solid #333; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; transition: 0.3s; }
-.igamble-tab-btn.active { background: var(--accent-blue); color: #000; border-color: var(--accent-blue); box-shadow: 0 0 10px var(--accent-blue); }
+#tab-igamble.active {
+    display: flex !important; /* Exige que apareça quando ativo */
+    flex-direction: column;
+}
 
-.igamble-view { display: none !important; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
-.igamble-view.active { display: flex !important; }
+.igamble-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
 
-@media(min-width: 768px) { .igamble-wrapper { flex-direction: row; } }
+/* --- NAVEGAÇÃO INTERNA DO IGAMBLE --- */
+/* --- NAVEGAÇÃO INTERNA DO IGAMBLE --- */
+.igamble-nav {
+    display: none !important; /* Antigamente era flex. Escondido para forçar a navegação via Celular bg2.png */
+    justify-content: center;
+    gap: 10px;
+    padding: 10px;
+    background: #000;
+    border-bottom: 1px solid var(--accent-blue);
+    flex-shrink: 0;
+}
 
-.igamble-side { display: flex; flex-direction: column; gap: 15px; overflow-y: auto; max-height: 250px; flex-shrink: 0; }
-@media(min-width: 768px) { .igamble-side { flex: 1; min-width: 250px; max-width: 320px; max-height: 100%; height: 100%; } }
+.igamble-tab-btn {
+    background: #111;
+    color: #aaa;
+    border: 1px solid #333;
+    padding: 8px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 14px;
+    transition: 0.3s;
+}
 
-.igamble-chat { flex: 2; display: flex; flex-direction: column; background: #050508; border: 1px solid var(--accent-blue); border-radius: 8px; box-shadow: 0 0 20px rgba(0,229,255,0.1); height: 100%; overflow: hidden; min-height: 0; }
+.igamble-tab-btn.active {
+    background: var(--accent-blue);
+    color: #000;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 10px var(--accent-blue);
+}
+
+.igamble-tab-btn:hover:not(.active) {
+    background: #222;
+    color: #fff;
+}
+
+/* --- VIEWS INTERNAS (Esconde/Mostra) --- */
+.igamble-view {
+    display: none; /* Escondido por padrão */
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.igamble-view.active {
+    display: flex; /* Visível quando o botão for clicado */
+}
+
+@media(min-width: 768px) {
+    .igamble-wrapper { flex-direction: row; } /* PC: Fica Lado a Lado */
+}
+
+/* PAINEL LATERAL (Galeria e Títulos) */
+.igamble-side {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+    max-height: 250px; /* CELULAR: Limita a galeria para sobrar espaço pro Chat */
+    flex-shrink: 0;
+}
+
+@media(min-width: 768px) {
+    .igamble-side {
+        flex: 1;
+        min-width: 250px;
+        max-width: 320px;
+        max-height: 100%; /* PC: Estica até o fim da tela */
+        height: 100%;
+    }
+}
+
+/* CHAT PRINCIPAL */
+.igamble-chat {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    background: #050508;
+    border: 1px solid var(--accent-blue);
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,229,255,0.1);
+    height: 100%;
+    overflow: hidden;
+    min-height: 0;
+}
 
 .avatar-maker-panel { background: #0a0a0f; border: 1px dashed var(--accent-blue); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0;}
 .avatar-grid-select { display: grid; grid-template-columns: repeat(auto-fill, minmax(45px, 1fr)); gap: 8px; max-height: 200px; overflow-y: auto; background: #000; padding: 10px; border: 1px solid #333; border-radius: 4px; }
 
+/* TRAVANDO OS SVGS DA GALERIA */
 .av-thumb { width: 45px !important; height: 45px !important; max-width: 45px !important; max-height: 45px !important; flex-shrink: 0; cursor: pointer; border-radius: 50%; border: 2px solid transparent; transition: 0.2s; background: #111; object-fit: cover; }
 .av-thumb:hover { transform: scale(1.1); }
 .av-thumb.selected { border-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red); }
 
+/* CONTROLES DO CHAT */
 .chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; min-height: 0; }
 .chat-input-area { display: flex; padding: 10px; background: #000; border-top: 1px solid var(--accent-blue); align-items: center; gap: 10px; flex-shrink: 0; }
 .chat-input-area input { flex: 1; border: none !important; box-shadow: none !important; padding: 12px; font-size: 14px; background: #111 !important; }
 .neon-icon-btn { background: transparent !important; color: var(--accent-blue) !important; border: none !important; font-size: 24px; text-shadow: 0 0 10px var(--accent-blue); padding: 0 5px; width: auto; }
 .neon-icon-btn:hover { color: #fff !important; text-shadow: 0 0 15px #fff; }
 
+/* ESTILO DAS MENSAGENS E IMAGENS */
 .msg-box { display: flex; gap: 15px; align-items: flex-start; width: 100%; }
 .msg-avatar-container { display: flex; flex-direction: column; align-items: center; min-width: 50px; max-width: 50px; flex-shrink: 0; gap: 5px; }
 .msg-avatar { width: 45px !important; height: 45px !important; max-width: 45px !important; max-height: 45px !important; flex-shrink: 0; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-blue); box-shadow: 0 0 10px rgba(0,229,255,0.5); background:#111; object-fit:cover; }
@@ -276,116 +374,205 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 .title-tag.epi { color: var(--rarity-epi); text-shadow: 0 0 8px var(--rarity-epi); }
 .title-tag.leg { color: var(--rarity-leg); text-shadow: 0 0 10px var(--rarity-leg); }
 
-/* FEED DE POSTS (TIKTOK STYLE) */
+/* =========================================================
+   POSTS DA REDE SOCIAL (INSTA/TIKTOK UI)
+   ========================================================= */
 .post-creator-box { background: #0a0a0f; padding: 15px; border: 1px solid #222; border-radius: 8px; }
 .gamble-input { background: #000; border: 1px solid #333; color: #fff; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 12px; width: 100%; outline:none; }
 .gamble-input:focus { border-color: var(--accent-blue); }
 
-#igamble-view-posts { flex: 1; min-height: 0; padding: 0; display: none; flex-direction: column; background: #000; }
-#igamble-view-posts.active { display: flex !important; }
-#igamble-view-posts .feed-container { flex: 1 !important; height: 100% !important; overflow-y: scroll !important; scroll-snap-type: y mandatory !important; scroll-behavior: smooth !important; -webkit-overflow-scrolling: touch !important; -ms-overflow-style: none; scrollbar-width: none; box-sizing: border-box !important; }
-#igamble-view-posts .feed-container::-webkit-scrollbar { display: none !important; }
+/* feed: 1 post por tela */
+.feed-container {
+    height: 65vh;
+    max-height: 600px;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    border: 1px solid #222;
+    border-radius: 12px;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.feed-container::-webkit-scrollbar { display: none; }
 
-#igamble-view-posts .post-card { height: 100% !important; width: 100% !important; flex: 0 0 100% !important; position: relative !important; scroll-snap-align: start !important; scroll-snap-stop: always !important; border-bottom: 2px solid #111 !important; overflow: hidden !important; box-sizing: border-box !important; min-height: 0 !important; }
-#igamble-view-posts .post-media{ position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: contain !important; z-index: 2 !important; pointer-events: auto !important; }
-#igamble-view-posts .post-media-bg{ position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; opacity: 0.30 !important; filter: blur(20px) !important; transform: scale(1.10) !important; z-index: 1 !important; }
-#igamble-view-posts .post-overlay{ position: absolute !important; inset: 0 !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; padding: 15px !important; pointer-events: none; z-index: 10 !important; }
-
-#igamble-view-posts .post-header { display: flex !important; justify-content: space-between !important; align-items: center !important; pointer-events: auto !important; gap: 10px !important; position: absolute !important; top: 15px !important; left: 15px !important; right: 15px !important; z-index: 10 !important; }
-.post-header-left { display:flex; align-items:center; gap:10px; }
-.post-avatar { width: 45px; height: 45px; border-radius: 50%; border: 2px solid var(--accent-blue); background:#111; object-fit: cover; }
-.post-name { font-weight: bold; color: #fff; font-size: 14px; text-shadow: 0 2px 5px #000; }
-.post-ad-tag { background: var(--accent-gold); color: #000; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 8px; border: 1px solid #fff; }
-
-#igamble-view-posts .post-caption{ position: absolute !important; bottom: 25px !important; left: 15px !important; width: calc(100% - 90px) !important; background: rgba(0, 0, 0, 0.6) !important; backdrop-filter: blur(5px) !important; border: 1px solid rgba(255,255,255,0.15) !important; padding: 10px !important; border-radius: 12px !important; white-space: normal !important; overflow-wrap: anywhere !important; word-break: break-word !important; line-height: 1.35 !important; font-size: 13px !important; max-height: 120px !important; overflow-y: auto !important; text-shadow: 0 2px 10px #000 !important; pointer-events: none !important; z-index: 10 !important; }
-
-#igamble-view-posts .post-sidebar { position: absolute !important; bottom: 25px !important; right: 15px !important; left: auto !important; display: flex !important; flex-direction: column !important; gap: 15px !important; pointer-events: auto !important; z-index: 20 !important; }
-#igamble-view-posts .post-btn-vert { width: 44px !important; height: 44px !important; border-radius: 50% !important; background: rgba(0, 0, 0, 0.6) !important; border: 1px solid rgba(255,255,255,0.2) !important; }
-.post-btn-vert:hover { transform: scale(1.06); border-color: var(--accent-blue); }
-.post-btn-vert span { font-size: 10px; font-weight: 900; line-height: 1; }
-.post-btn-vert.liked { color: var(--accent-red); text-shadow: 0 0 15px var(--accent-red); border-color: rgba(255, 26, 85, 0.45); }
-.post-btn-vert.reposted { color: #00ff00; text-shadow: 0 0 15px #00ff00; border-color: rgba(0,255,0,0.35); }
-.post-del-btn{ background: rgba(255,0,0,0.18); border: 1px solid #ff1a55; color: #ff1a55; font-size: 10px; padding: 6px 10px; border-radius: 8px; cursor: pointer; text-transform: uppercase; }
-.post-del-btn:hover{ background: #ff1a55; color: #000; }
-
-@media(max-width: 600px){
-  #igamble-view-posts .post-caption{ left: 10px !important; bottom: 35px !important; max-height: 130px !important; font-size: 12px !important; width: calc(100% - 75px) !important;}
-  #igamble-view-posts .post-sidebar{ right: 10px !important; bottom: 35px !important; gap: 10px !important; }
+/* --- VIEWS INTERNAS (Esconde/Mostra) --- */
+.igamble-view {
+    display: none !important; /* Força o display none em todas as views não ativas */
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
-/* CORAÇÕES FLUTUANTES (LIKES TIKTOK) */
-.floating-heart { position: absolute; bottom: 45%; left: 50%; color: var(--accent-red); font-size: 45px; z-index: 100; pointer-events: none; animation: floatHeartAnim 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; text-shadow: 0 0 15px var(--accent-red), 0 0 30px var(--accent-red); }
-@keyframes floatHeartAnim { 0% { transform: translate(-50%, 0) scale(0.5) rotate(0deg); opacity: 0; } 15% { opacity: 1; transform: translate(-50%, -20px) scale(1.2) rotate(-10deg); } 100% { transform: translate(-50%, -250px) scale(1.5) rotate(20deg); opacity: 0; } }
+.igamble-view.active {
+    display: flex !important; /* Visível APENAS quando o botão for clicado */
+}
 
-.floating-heart-purple { position: fixed; color: var(--accent-purple); font-size: 60px; z-index: 9999; pointer-events: none; transform: translate(-50%, -50%); animation: purpleHeartAnim 1s ease-out forwards; text-shadow: 0 0 20px var(--accent-purple), 0 0 40px var(--accent-purple); }
-@keyframes purpleHeartAnim { 0% { transform: translate(-50%, -50%) scale(0); opacity: 1; } 50% { transform: translate(-50%, -70px) scale(1.2); opacity: 1; } 100% { transform: translate(-50%, -100px) scale(1.5); opacity: 0; } }
+#igamble-view-posts {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    display: none; /* Muda isso de flex para none */
+    flex-direction: column;
+    background: #000;
+}
+#igamble-view-posts.active {
+    display: flex !important; /* E garante que aqui ele vai aparecer só quando for active */
+}
+#igamble-view-posts .feed-container {
+    flex: 1 !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    overflow-y: scroll !important;
+    scroll-snap-type: y mandatory !important;
+    scroll-behavior: smooth !important;
+    -webkit-overflow-scrolling: touch !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    box-sizing: border-box !important;
+}
+#igamble-view-posts .feed-container::-webkit-scrollbar { display: none !important; }
 
-/* REAÇÕES CHAT E EMOJIS */
-.react-add { background: transparent; border: 1px dashed var(--accent-blue); color: var(--accent-blue); border-radius: 12px; padding: 3px 8px; font-size: 11px; cursor: pointer; transition: 0.2s; font-weight: bold; }
-.react-add:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 10px var(--accent-blue); }
-.react-btn { background: rgba(0,0,0,0.5); border: 1px solid #333; color: #fff; border-radius: 12px; padding: 3px 8px; font-size: 11px; display: flex; align-items: center; gap: 4px; }
-.emoji-popup { position: fixed; background: rgba(10, 10, 15, 0.95); border: 1px solid var(--accent-blue); border-radius: 8px; padding: 10px; display: none; flex-wrap: wrap; gap: 10px; width: 200px; box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); z-index: 9999 !important; }
-.emoji-popup .emoji-btn { background: #000; border: 1px solid #333; font-size: 20px; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
-.emoji-popup .emoji-btn:hover { border-color: var(--accent-blue); transform: scale(1.1); }
+/* 3. O Post: Ocupa 100% da tela visível, sem passar 1 pixel */
+#igamble-view-posts .post-card {
+    height: 100% !important;
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    position: relative !important;
+    scroll-snap-align: start !important;
+    scroll-snap-stop: always !important;
+    border-bottom: 2px solid #111 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important; /* Impede a borda de quebrar o scroll */
+    min-height: 0 !important; /* Anula o 520px antigo */
+}
 
-/* SISTEMA DE FOLLOW E NOTIFICAÇÕES */
-.avatar-wrapper { position: relative; display: inline-flex; flex-direction: column; align-items: center; }
-.follow-badge-btn { position: absolute; bottom: -6px; background: #000; border: 1px solid var(--accent-blue); color: var(--accent-blue); border-radius: 12px; font-size: 10px; padding: 2px 6px; cursor: pointer; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 5px rgba(0, 229, 255, 0.5); transition: 0.2s; z-index: 15; white-space: nowrap; }
-.follow-badge-btn:hover { background: var(--accent-blue); color: #000; transform: scale(1.1); }
-.follow-badge-btn.following { border-color: #00ff66; color: #00ff66; box-shadow: 0 0 5px rgba(0, 255, 102, 0.5); }
-.follow-badge-btn.friends { border-color: var(--accent-purple); color: var(--accent-purple); box-shadow: 0 0 5px rgba(176, 0, 255, 0.5); }
+#igamble-view-posts .post-media{
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  z-index: 2 !important;
+}
 
-.app-hitbox { position: relative; }
-.notification-badge { position: absolute; top: -5px; right: -5px; background: var(--accent-red); color: #fff; font-size: 11px; font-weight: 900; border-radius: 50%; width: 22px; height: 22px; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 10px var(--accent-red); border: 2px solid #000; z-index: 10; pointer-events: none; }
-#badge-igamble-main { top: 5px; right: 5px; font-size: 16px; padding: 4px 10px; width: auto; height: auto;}
+#igamble-view-posts .post-media-bg{
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  opacity: 0.30 !important;
+  filter: blur(20px) !important;
+  transform: scale(1.10) !important;
+  z-index: 1 !important;
+}
 
-/* SISTEMA DE MENÇÕES (@) E COMENTÁRIOS */
-.mention-dropdown { position: fixed !important; z-index: 999999 !important; background: #111; border: 1px solid var(--accent-blue); border-radius: 8px; box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); max-height: 200px; overflow-y: auto; width: 250px; }
-.mention-item { padding: 10px; cursor: pointer; color: #fff; font-size: 13px; border-bottom: 1px solid #333; display: flex; align-items: center; gap: 10px; font-weight: bold; transition: background 0.2s;}
-.mention-item:last-child { border-bottom: none; }
-.mention-item:hover, .mention-item.active { background: rgba(0, 229, 255, 0.2); color: var(--accent-blue); }
-.mention-avatar { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #555; object-fit: cover; background: #000; }
+#igamble-view-posts .post-overlay{
+  position: absolute !important;
+  inset: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  padding: 15px !important;
+  pointer-events: none;
+  z-index: 10 !important;
+}
 
-.comments-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 6000; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(3px); }
-.comments-panel { width: 100%; max-width: 500px; height: 75vh; background: #050508; border-top-left-radius: 20px; border-top-right-radius: 20px; border: 1px solid var(--accent-blue); border-bottom: none; display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1); box-shadow: 0 -10px 40px rgba(0,0,0,0.8); position: relative;}
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+#igamble-view-posts .post-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    pointer-events: auto !important;
+    gap: 10px !important;
+}
+.post-header-left { display:flex; align-items:center; gap:10px; }
 
-.comments-header { display: flex; justify-content: center; align-items: center; padding: 15px; border-bottom: 1px solid #222; position: relative; }
-.drag-handle { width: 40px; height: 5px; background: #444; border-radius: 5px; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); cursor: grab; }
-.drag-handle:active { cursor: grabbing; background: var(--accent-blue); }
-.comments-header h3 { margin: 0; font-size: 14px; color: #fff; text-transform: uppercase; margin-top: 5px; }
-.close-comments-btn { position: absolute; right: 15px; top: 15px; background: transparent; border: none; color: #aaa; font-size: 18px; cursor: pointer; }
-.close-comments-btn:hover { color: var(--accent-red); }
+.post-avatar {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-blue);
+    background:#111;
+    object-fit: cover;
+}
+.post-name { font-weight: bold; color: #fff; font-size: 14px; text-shadow: 0 2px 5px #000; }
+.post-ad-tag { background: var(--accent-gold); color: #000; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 8px; text-shadow: none; border: 1px solid #fff; }
 
-.comments-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
-.comment-item { display: flex; gap: 10px; }
-.comment-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #333; }
-.comment-content { flex: 1; background: #111; padding: 10px; border-radius: 8px; font-size: 13px; line-height: 1.4; color: #ddd; word-break: break-word; }
-.comment-name { font-weight: bold; color: #fff; margin-bottom: 4px; font-size: 12px; }
+#igamble-view-posts .post-caption{
+  position: absolute !important;
+  left: 18px !important;
+  bottom: 14px !important;
+  right: calc(50% + (var(--imgW) / 2) + var(--gap)) !important;
 
-.comments-input-area { padding: 15px; background: #000; border-top: 1px solid var(--accent-blue); display: flex; gap: 10px; align-items: center; border-radius: 0;}
-.comments-input-area input { flex: 1; border: none !important; background: #111 !important; color: #fff; padding: 12px 15px; border-radius: 20px; font-size: 13px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5) !important; outline: none; }
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
 
-/* WHATSAPP REPLY (G-CHAT) E POPUPS */
-.reply-preview { display:flex; align-items:center; gap:10px; background: rgba(0,0,0,0.85); border-top: 1px solid rgba(0,229,255,0.35); border-bottom: 1px solid rgba(0,229,255,0.35); padding: 10px 12px; margin: 0 10px; border-radius: 10px; }
-.reply-bar { width:4px; height:34px; border-radius:10px; background: var(--accent-blue); box-shadow: 0 0 10px rgba(0,229,255,0.5); }
-.reply-texts { flex:1; min-width:0; }
-.reply-to-name { font-size: 12px; font-weight: 900; color: var(--accent-blue); margin-bottom: 2px; text-transform: uppercase; }
-.reply-to-text { font-size: 12px; color:#bbb; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.reply-cancel { background: transparent; border:none; color:#aaa; font-size: 16px; cursor:pointer; }
-.reply-cancel:hover { color: var(--accent-red); }
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 
-.mention-notify-stack { position: fixed; top: 14px; right: 14px; z-index: 99999; display:flex; flex-direction:column; gap: 10px; pointer-events:none; }
-.mention-notify { width: 280px; max-width: calc(100vw - 28px); display:flex; gap: 10px; align-items:center; background: rgba(0,0,0,0.88); border: 1px solid rgba(0,229,255,0.5); border-radius: 14px; padding: 10px 12px; box-shadow: 0 0 25px rgba(0,229,255,0.15); transform: translateX(120%); opacity: 0; animation: mentionIn 0.35s cubic-bezier(0.25,1,0.5,1) forwards; }
-@keyframes mentionIn { to { transform: translateX(0); opacity: 1; } }
-.mention-notify.out { animation: mentionOut 0.35s ease forwards; }
-@keyframes mentionOut { to { transform: translateX(120%); opacity: 0; } }
-.mention-notify img { width: 38px; height: 38px; border-radius: 50%; border: 2px solid rgba(0,229,255,0.6); object-fit: cover; background:#000; }
-.mention-notify .mn-texts { min-width:0; }
-.mention-notify .mn-title { color:#fff; font-weight:900; font-size: 12px; line-height: 1.1; }
-.mention-notify .mn-sub { color:#bbb; font-size: 12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 210px; }
+  line-height: 1.35 !important;
+  font-size: 13px !important;
+  max-height: 160px !important;
+  overflow: hidden !important; 
+  text-shadow: 0 2px 10px #000 !important;
 
-/* === ARENA EMBATES === */
+  pointer-events: none !important;
+}
+
+#igamble-view-posts .post-sidebar {
+    position: absolute !important;
+    bottom: 25px !important;
+    right: 15px !important;
+    left: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    pointer-events: auto !important;
+    z-index: 20 !important;
+}
+
+    #igamble-view-posts .post-btn-vert {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 50% !important;
+        background: rgba(0, 0, 0, 0.6) !important;
+        /* backdrop-filter: blur(5px) !important; REMOVIDO PARA EVITAR LAG */
+        border: 1px solid rgba(255,255,255,0.2) !important;
+    }
+.post-btn-vert:hover { transform: scale(1.06); border-color: var(--accent-blue); }
+.post-btn-vert span { font-size: 10px; font-weight: 900; line-height: 1; }
+
+.post-btn-vert.liked { color: var(--accent-red); text-shadow: 0 0 15px var(--accent-red); border-color: rgba(255, 26, 85, 0.45); }
+.post-btn-vert.reposted { color: #00ff00; text-shadow: 0 0 15px #00ff00; border-color: rgba(0,255,0,0.35); }
+
+.post-del-btn{
+  background: rgba(255,0,0,0.18);
+  border: 1px solid #ff1a55;
+  color: #ff1a55;
+  font-size: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.post-del-btn:hover{
+  background: #ff1a55;
+  color: #000;
+}
+
+@media(max-width: 500px){
+  #igamble-view-posts .feed-container{ height: calc(100vh - 190px) !important; }
+  #igamble-view-posts .post-card{ height: calc(100vh - 190px) !important; min-height: 520px; --imgW: 300px; --gap: 12px;}
+  #igamble-view-posts .post-caption{ left: 12px !important; bottom: 10px !important; max-height: 130px !important; font-size: 12px !important; }
+  #igamble-view-posts .post-sidebar{ bottom: 12px !important; }
+}
+
+/* === CARD DE EMBATES (ARENA) === */
 .embate-card { background: linear-gradient(135deg, #110000 0%, #000011 100%); border: 1px solid #333; border-radius: 8px; padding: 15px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 0 20px rgba(255,0,0,0.1); }
 .embate-desc { font-size: 12px; color: #aaa; margin-bottom: 15px; font-style: italic; }
 .embate-vs-container { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
@@ -395,43 +582,776 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 .embate-vs-text { font-size: 30px; font-weight: 900; font-style: italic; color: #f00; text-shadow: 0 0 10px #f00; margin: 0 10px; }
 .embate-premio { margin-top: 15px; border-top: 1px dashed #333; padding-top: 10px; color: var(--accent-gold); font-weight: bold; }
 
-/* === LOJA GAMBLEZON CAROUSEL === */
-#tab-loja { width: 100%; max-width: 1200px; margin: 0 auto; height: calc(100vh - 120px); overflow: hidden; padding: 10px; }
-#tab-loja.active { display: flex; flex-direction: column; gap: 15px; }
-#tab-loja > h1 { margin: 0; text-align: center; font-size: 30px; color: var(--accent-blue); text-shadow: 0 0 15px rgba(0, 229, 255, 0.5); }
 
-#masterShopPanel { width: 100%; padding: 15px; border-radius: 12px; background: rgba(10, 10, 15, 0.9); border: 1px solid rgba(255, 26, 85, 0.5); box-shadow: 0 0 20px rgba(255, 26, 85, 0.2); }
+/* =========================================================
+   MERCADO NEGRO (CORREÇÃO DE VISIBILIDADE E CAROUSEL COM SETAS)
+   ========================================================= */
 
-.shop-tabs { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px; border-radius: 12px; background: rgba(0, 0, 0, 0.6); border: 1px solid rgba(0, 229, 255, 0.2); }
-.shop-tab-btn { background: rgba(0, 0, 0, 0.8); border: 1px solid rgba(255, 255, 255, 0.2); color: #ccc; padding: 8px 15px; border-radius: 8px; font-weight: bold; text-transform: uppercase; transition: 0.2s; }
-.shop-tab-btn:hover { border-color: rgba(0, 229, 255, 0.6); color: #fff; box-shadow: 0 0 15px rgba(0, 229, 255, 0.3); }
-.shop-tab-btn.active { background: rgba(0, 229, 255, 0.2); border-color: var(--accent-blue); color: var(--accent-blue); box-shadow: 0 0 20px rgba(0, 229, 255, 0.4); }
+/* 1) Tab Loja: Só aparece quando tiver a classe "active" */
+#tab-loja {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  height: calc(100vh - 120px);
+  overflow: hidden;
+  padding: 10px;
+}
 
-.shop-carousel-wrapper { display: flex; align-items: center; gap: 10px; width: 100%; flex: 1; min-height: 0; position: relative; }
-#shopGrid { display: flex; gap: 15px; overflow-x: auto; overflow-y: hidden; scroll-behavior: smooth; scroll-snap-type: x mandatory; width: 100%; height: 100%; padding-bottom: 10px; scrollbar-width: none; }
-#shopGrid::-webkit-scrollbar { display: none; }
+#tab-loja.active {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
 
-.shop-nav-btn { background: rgba(0, 0, 0, 0.7); color: var(--accent-blue); border: 1px solid var(--accent-blue); border-radius: 50%; width: 40px; height: 40px; font-size: 20px; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; box-shadow: 0 0 10px rgba(0, 229, 255, 0.3); transition: 0.2s; flex-shrink: 0; }
-.shop-nav-btn:hover { background: var(--accent-blue); color: #000; box-shadow: 0 0 20px var(--accent-blue); }
+/* Título da loja */
+#tab-loja > h1 {
+  margin: 0;
+  text-align: center;
+  font-size: 30px;
+  color: var(--accent-blue);
+  text-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+}
 
-.shop-item { position: relative; flex: 0 0 calc(25% - 12px); scroll-snap-align: start; border-radius: 12px; background: radial-gradient(circle at top left, rgba(0, 229, 255, 0.1), rgba(0, 0, 0, 0.95)); border: 1px solid rgba(0, 229, 255, 0.2); box-shadow: 0 0 20px rgba(0, 229, 255, 0.1); padding: 15px; display: flex; flex-direction: column; justify-content: space-between; min-height: 250px; }
-.shop-item.master-edit { border: 1px dashed rgba(0, 229, 255, 0.3); cursor:pointer;}
+/* 2) Painel do mestre */
+#masterShopPanel {
+  width: 100%;
+  padding: 15px;
+  border-radius: 12px;
+  background: rgba(10, 10, 15, 0.9);
+  border: 1px solid rgba(255, 26, 85, 0.5);
+  box-shadow: 0 0 20px rgba(255, 26, 85, 0.2);
+}
+
+/* 3) Tabs neon */
+.shop-tabs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.shop-tab-btn {
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ccc;
+  padding: 8px 15px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+  transition: 0.2s;
+}
+
+.shop-tab-btn:hover {
+  border-color: rgba(0, 229, 255, 0.6);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+}
+
+.shop-tab-btn.active {
+  background: rgba(0, 229, 255, 0.2);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+}
+
+/* 4) Layout do Carousel de Itens (NOVO) */
+.shop-carousel-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  flex: 1;
+  min-height: 0; /* Impede que o flex vaze da tela */
+  position: relative;
+}
+
+/* O grid de itens agora é um container de scroll lateral */
+#shopGrid {
+  display: flex;
+  gap: 15px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  width: 100%;
+  height: 100%;
+  padding-bottom: 10px; /* Evita que a scrollbar passe por cima dos itens */
+  scrollbar-width: none; /* Esconde scrollbar no Firefox */
+}
+
+#shopGrid::-webkit-scrollbar {
+  display: none; /* Esconde scrollbar no Chrome/Safari */
+}
+
+/* Botões laterais de Navegação */
+.shop-nav-btn {
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--accent-blue);
+  border: 1px solid var(--accent-blue);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+  transition: 0.2s;
+  flex-shrink: 0;
+}
+
+.shop-nav-btn:hover {
+  background: var(--accent-blue);
+  color: #000;
+  box-shadow: 0 0 20px var(--accent-blue);
+}
+
+/* 5) Estilo do Card Individual */
+.shop-item {
+  position: relative;
+  flex: 0 0 calc(25% - 12px); /* Por padrão exibe 4 itens por vez na tela */
+  scroll-snap-align: start; /* Para travar certinho ao passar para o lado */
+  
+  border-radius: 12px;
+  background: radial-gradient(circle at top left, rgba(0, 229, 255, 0.1), rgba(0, 0, 0, 0.95));
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+  padding: 15px;
+  
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 250px;
+}
+
+/* Impede o hover e master borders de quebrarem o layout */
+.shop-item.master-edit { border: 1px dashed rgba(0, 229, 255, 0.3); }
+
+/* Conteúdo do item (Textos e descrição) */
 .shop-item-content { flex: 1; margin-bottom: 10px;}
 .shop-item-content h3 { margin: 5px 0; font-size: 16px;}
-.shop-item-content p { margin: 0; font-size: 12px; color: #bbb; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.shop-item-content p {
+  margin: 0;
+  font-size: 12px;
+  color: #bbb;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Footer do item (Preço e botão) */
 .shop-item-footer h2 { margin: 0 0 10px 0; font-size: 20px; }
 .shop-item-footer .action-btn { width: 100%; border-radius: 8px;}
 
-.shop-promo-tag { position: absolute; top: 10px; right: 10px; background: var(--accent-red); color: #fff; font-size: 10px; font-weight: 900; padding: 4px 8px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 0 10px rgba(255, 26, 85, 0.5); letter-spacing: 1px; z-index: 5; pointer-events: none; }
+/* 6) Tag de Promoção Corrigida */
+.shop-promo-tag {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--accent-red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 10px rgba(255, 26, 85, 0.5);
+  letter-spacing: 1px;
+  z-index: 5;
+  pointer-events: none;
+}
 
-@media (max-width: 1100px) { .shop-item { flex: 0 0 calc(33.33% - 10px); } }
-@media (max-width: 820px) { .shop-item { flex: 0 0 calc(50% - 8px); } }
-@media (max-width: 520px) { .shop-item { flex: 0 0 100%; } .shop-nav-btn { width: 35px; height: 35px; font-size: 16px; } }
+/* Responsividade do Carrossel */
+@media (max-width: 1100px) {
+  .shop-item { flex: 0 0 calc(33.33% - 10px); } /* 3 por vez */
+}
 
-/* === GAMBLE HOUSE E AGENDA === */
-#grid-casa { background-color: transparent !important; background-size: 100% 100%; background-position: center; background-repeat: no-repeat; }
-#grid-casa .grid-cell { background: rgba(0, 0, 0, 0.4) !important; border: 1px dashed rgba(255, 170, 0, 0.15) !important; }
+@media (max-width: 820px) {
+  .shop-item { flex: 0 0 calc(50% - 8px); } /* 2 por vez */
+}
 
+@media (max-width: 520px) {
+  .shop-item { flex: 0 0 100%; } /* 1 por vez no celular */
+  .shop-nav-btn { width: 35px; height: 35px; font-size: 16px; }
+}
+
+/* =========================================================
+   PATCH: REAÇÕES DO CHAT ALINHADAS
+   ========================================================= */
+.react-add {
+    background: transparent;
+    border: 1px dashed var(--accent-blue);
+    color: var(--accent-blue);
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+    font-weight: bold;
+}
+.react-add:hover {
+    background: var(--accent-blue);
+    color: #000;
+    box-shadow: 0 0 10px var(--accent-blue);
+}
+.react-btn {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #333;
+    color: #fff;
+    border-radius: 12px;
+    padding: 3px 8px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: inherit;
+}
+
+/* =========================================================
+   PATCH: ANIMAÇÃO DE CORAÇÕES FLUTUANTES (LIVE TIKTOK)
+   ========================================================= */
+.floating-heart {
+    position: absolute;
+    bottom: 80px;         /* Nasce perto do botão de curtir */
+    right: 25px;          
+    color: var(--accent-red);
+    font-size: 28px;
+    z-index: 100;         /* Fica por cima da imagem */
+    pointer-events: none; /* O mouse passa direto por ele */
+    animation: floatHeartAnim 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    text-shadow: 0 0 15px var(--accent-red), 0 0 30px var(--accent-red);
+}
+
+/* O coração sobe, aumenta de tamanho, gira um pouquinho e some */
+@keyframes floatHeartAnim {
+    0% { transform: translateY(0) scale(0.5) rotate(0deg); opacity: 0; }
+    15% { opacity: 1; }
+    100% { transform: translateY(-250px) scale(1.5) rotate(-25deg); opacity: 0; }
+}
+
+/* =========================================================
+   PATCH: ANIMAÇÃO DE CORAÇÕES NO CENTRO DA IMAGEM
+   ========================================================= */
+.floating-heart {
+    position: absolute;
+    bottom: 45%;         /* Nasce bem no meio da imagem */
+    left: 50%;           /* Centralizado horizontalmente */
+    color: var(--accent-red);
+    font-size: 45px;     /* Bem grandão para dar impacto */
+    z-index: 100;
+    pointer-events: none;
+    animation: floatHeartAnim 2.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    text-shadow: 0 0 15px var(--accent-red), 0 0 30px var(--accent-red);
+}
+
+/* O coração sobe pelo meio da tela girando de leve */
+@keyframes floatHeartAnim {
+    0% { transform: translate(-50%, 0) scale(0.5) rotate(0deg); opacity: 0; }
+    15% { opacity: 1; transform: translate(-50%, -20px) scale(1.2) rotate(-10deg); }
+    100% { transform: translate(-50%, -250px) scale(1.5) rotate(20deg); opacity: 0; }
+}
+
+
+/* =========================================================
+   IGAMBLE POSTS: LAYOUT DEFINITIVO (TIKTOK STYLE)
+   ========================================================= */
+
+/* 1. Trava a altura do App para o scroll magnético não quebrar */
+/* 1. Trava a altura do App para o scroll magnético não quebrar */
+#tab-igamble.active {
+    height: calc(100vh - 50px) !important;
+}
+
+#igamble-view-posts {
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    display: none; /* Desliga o important */
+    flex-direction: column;
+    background: #000;
+}
+#igamble-view-posts.active {
+    display: flex !important; /* Só mostra quando a sub-aba estiver ativa */
+}
+
+/* 2. O Feed: Rola perfeitamente 1 por 1 */
+#igamble-view-posts .feed-container {
+    flex: 1 !important;
+    height: 100% !important;
+    overflow-y: scroll !important;
+    scroll-snap-type: y mandatory !important;
+    scroll-behavior: smooth !important;
+    -webkit-overflow-scrolling: touch !important;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+#igamble-view-posts .feed-container::-webkit-scrollbar { display: none !important; }
+
+/* 3. O Post: Ocupa 100% da tela visível, sem passar 1 pixel */
+#igamble-view-posts .post-card {
+    height: 100% !important;
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    position: relative !important;
+    scroll-snap-align: start !important;
+    scroll-snap-stop: always !important;
+    border-bottom: 2px solid #111;
+    overflow: hidden !important;
+}
+
+/* 4. A Imagem: Nunca é cortada */
+#igamble-view-posts .post-media {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain !important;
+    z-index: 2 !important;
+    pointer-events: auto !important; /* Libera para o clique duplo */
+}
+#igamble-view-posts .post-media-bg {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    z-index: 1 !important;
+    opacity: 0.3 !important;
+    filter: blur(20px);
+    transform: scale(1.1);
+}
+
+/* 5. Cabeçalho (Foto e Nome) */
+#igamble-view-posts .post-header {
+    position: absolute !important;
+    top: 15px !important;
+    left: 15px !important;
+    right: 15px !important;
+    z-index: 10 !important;
+}
+
+/* 6. Legenda (Por cima da foto, no canto inferior esquerdo) */
+#igamble-view-posts .post-caption {
+    position: absolute !important;
+    bottom: 25px !important;
+    left: 15px !important;
+    width: calc(100% - 90px) !important;
+    max-height: 120px !important;
+    overflow-y: auto !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    backdrop-filter: blur(5px) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    border-radius: 12px !important;
+    padding: 10px !important;
+    color: #fff !important;
+    font-size: 13px !important;
+    z-index: 10 !important;
+}
+
+/* 7. Botões Laterais (Por cima da foto, canto inferior direito) */
+#igamble-view-posts .post-sidebar {
+    position: absolute !important;
+    bottom: 25px !important;
+    right: 15px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    z-index: 10 !important;
+}
+
+/* 8. Ajustes Exclusivos para Celular */
+@media(max-width: 600px) {
+    #igamble-view-posts .post-caption {
+        bottom: 35px !important;
+        left: 10px !important;
+        width: calc(100% - 75px) !important;
+        font-size: 12px !important;
+    }
+    #igamble-view-posts .post-sidebar {
+        bottom: 35px !important;
+        right: 10px !important;
+        left: auto !important; /* Fixa no lado direito por cima da foto */
+        gap: 10px !important;
+    }
+    #igamble-view-posts .post-btn-vert {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 50% !important;
+        background: rgba(0, 0, 0, 0.6) !important;
+        backdrop-filter: blur(5px) !important;
+        border: 1px solid rgba(255,255,255,0.2) !important;
+    }
+}
+
+.floating-heart-purple {
+    position: fixed; /* Nasce onde o mouse clicou */
+    color: var(--accent-purple);
+    font-size: 60px;
+    z-index: 9999;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: purpleHeartAnim 1s ease-out forwards;
+    text-shadow: 0 0 20px var(--accent-purple), 0 0 40px var(--accent-purple);
+}
+
+@keyframes floatHeartAnim {
+    0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
+    15% { opacity: 1; transform: translate(-50%, -20px) scale(1.2); }
+    100% { transform: translate(-50%, -250px) scale(1.5); opacity: 0; }
+}
+
+@keyframes purpleHeartAnim {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    50% { transform: translate(-50%, -70px) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -100px) scale(1.5); opacity: 0; }
+}
+/* ESTILO DO POPUP DE EMOJIS DO CHAT */
+.emoji-popup {
+    position: fixed;
+    background: rgba(10, 10, 15, 0.95);
+    border: 1px solid var(--accent-blue);
+    border-radius: 8px;
+    padding: 10px;
+    display: none; /* Escondido por padrão */
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 200px;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+    z-index: 9999 !important; /* Força ficar na frente de tudo */
+}
+
+.emoji-popup .emoji-btn {
+    background: #000;
+    border: 1px solid #333;
+    font-size: 20px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.emoji-popup .emoji-btn:hover {
+    border-color: var(--accent-blue);
+    transform: scale(1.1);
+}
+/* =========================================================
+   SISTEMA DE MENÇÕES (@) E COMENTÁRIOS INSTAGRAM
+   ========================================================= */
+
+/* DROPDOWN DE MENÇÕES */
+.mention-dropdown { position: absolute; background: #0a0a0f; border: 1px solid var(--accent-blue); border-radius: 8px; max-height: 160px; overflow-y: auto; z-index: 9999; width: 220px; box-shadow: 0 0 20px rgba(0,229,255,0.4); }
+.mention-item { padding: 10px; cursor: pointer; color: #fff; font-size: 13px; border-bottom: 1px solid #222; display: flex; align-items: center; gap: 10px; font-weight: bold;}
+.mention-item:last-child { border-bottom: none; }
+.mention-item:hover, .mention-item.active { background: rgba(0, 229, 255, 0.2); color: var(--accent-blue); }
+.mention-avatar { width: 24px; height: 24px; border-radius: 50%; border: 1px solid #555; object-fit: cover; background: #000; }
+
+/* OVERLAY E PAINEL DE COMENTÁRIOS (SLIDE UP) */
+.comments-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 6000; display: flex; align-items: flex-end; justify-content: center; backdrop-filter: blur(3px); }
+.comments-panel { width: 100%; max-width: 500px; height: 75vh; background: #050508; border-top-left-radius: 20px; border-top-right-radius: 20px; border: 1px solid var(--accent-blue); border-bottom: none; display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.25, 1, 0.5, 1); box-shadow: 0 -10px 40px rgba(0,0,0,0.8); position: relative;}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* HEADER DOS COMENTÁRIOS */
+.comments-header { display: flex; justify-content: center; align-items: center; padding: 15px; border-bottom: 1px solid #222; position: relative; }
+.drag-handle { width: 40px; height: 5px; background: #444; border-radius: 5px; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); cursor: grab; }
+.drag-handle:active { cursor: grabbing; background: var(--accent-blue); }
+.comments-header h3 { margin: 0; font-size: 14px; color: #fff; text-transform: uppercase; margin-top: 5px; }
+.close-comments-btn { position: absolute; right: 15px; top: 15px; background: transparent; border: none; color: #aaa; font-size: 18px; cursor: pointer; }
+.close-comments-btn:hover { color: var(--accent-red); }
+
+/* LISTA E ITENS */
+.comments-list { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; }
+.comment-item { display: flex; gap: 10px; }
+.comment-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 1px solid #333; }
+.comment-content { flex: 1; background: #111; padding: 10px; border-radius: 8px; font-size: 13px; line-height: 1.4; color: #ddd; word-break: break-word; }
+.comment-name { font-weight: bold; color: #fff; margin-bottom: 4px; font-size: 12px; }
+
+/* ÁREA DE INPUT */
+.comments-input-area { padding: 15px; background: #000; border-top: 1px solid var(--accent-blue); display: flex; gap: 10px; align-items: center; border-radius: 0;}
+.comments-input-area input { flex: 1; border: none !important; background: #111 !important; color: #fff; padding: 12px 15px; border-radius: 20px; font-size: 13px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5) !important; outline: none; }
+
+/* Garante que o dropdown de menções fique por cima de QUALQUER modal */
+.mention-dropdown {
+    position: fixed !important; /* Fixed é melhor para contornar modais */
+    z-index: 999999 !important; /* Força ficar na frente */
+    background: #111;
+    border: 1px solid var(--accent-blue, #00f0ff);
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    max-height: 200px;
+    overflow-y: auto;
+    width: 250px;
+}
+.mention-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #333;
+    transition: background 0.2s;
+}
+.mention-item:hover {
+    background: #222;
+}
+
+/* =========================================================
+   WHATSAPP REPLY (G-CHAT) + NOTIFICAÇÕES DE MENÇÃO
+   ========================================================= */
+
+/* Reply preview acima do input do chat */
+.reply-preview{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background: rgba(0,0,0,0.85);
+  border-top: 1px solid rgba(0,229,255,0.35);
+  border-bottom: 1px solid rgba(0,229,255,0.35);
+  padding: 10px 12px;
+  margin: 0 10px;
+  border-radius: 10px;
+}
+.reply-bar{
+  width:4px;
+  height:34px;
+  border-radius:10px;
+  background: var(--accent-blue);
+  box-shadow: 0 0 10px rgba(0,229,255,0.5);
+}
+.reply-texts{ flex:1; min-width:0; }
+.reply-to-name{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--accent-blue);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+.reply-to-text{
+  font-size: 12px;
+  color:#bbb;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.reply-cancel{
+  background: transparent;
+  border:none;
+  color:#aaa;
+  font-size: 16px;
+  cursor:pointer;
+}
+.reply-cancel:hover{ color: var(--accent-red); }
+
+/* Stack de notificação top-right (máx 3) */
+.mention-notify-stack{
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 99999;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  pointer-events:none;
+}
+
+.mention-notify{
+  width: 280px;
+  max-width: calc(100vw - 28px);
+  display:flex;
+  gap: 10px;
+  align-items:center;
+
+  background: rgba(0,0,0,0.88);
+  border: 1px solid rgba(0,229,255,0.5);
+  border-radius: 14px;
+  padding: 10px 12px;
+  box-shadow: 0 0 25px rgba(0,229,255,0.15);
+
+  transform: translateX(120%);
+  opacity: 0;
+  animation: mentionIn 0.35s cubic-bezier(0.25,1,0.5,1) forwards;
+}
+
+@keyframes mentionIn{
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.mention-notify.out{
+  animation: mentionOut 0.35s ease forwards;
+}
+
+@keyframes mentionOut{
+  to { transform: translateX(120%); opacity: 0; }
+}
+
+.mention-notify img{
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,229,255,0.6);
+  object-fit: cover;
+  background:#000;
+}
+
+.mention-notify .mn-texts{ min-width:0; }
+.mention-notify .mn-title{
+  color:#fff;
+  font-weight:900;
+  font-size: 12px;
+  line-height: 1.1;
+}
+.mention-notify .mn-sub{
+  color:#bbb;
+  font-size: 12px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width: 210px;
+}
+
+/* =========================================================
+   NOTIFICAÇÕES (BOLINHAS ESTILO INSTAGRAM)
+   ========================================================= */
+.notification-badge {
+    position: absolute;
+    top: 0px;
+    right: 5px;
+    background: #ff1a55;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 900;
+    padding: 2px 8px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px #ff1a55;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    pointer-events: none; /* Deixa clicar através dela no botão */
+    border: 2px solid #000;
+}
+
+#badge-igamble-main {
+    top: 5px;
+    right: 5px;
+    font-size: 16px;
+    padding: 4px 10px;
+}
+
+/* BADGES DE NOTIFICAÇÃO (BOLINHA VERMELHA) */
+.app-hitbox { position: relative; } /* Garante que a bolinha fique presa no botão */
+
+.notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--accent-red);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 900;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 0 10px var(--accent-red);
+    border: 2px solid #000;
+    z-index: 10;
+    pointer-events: none;
+    font-family: Arial, sans-serif;
+}
+
+/* =========================================================
+   SISTEMA DE FOLLOW (AMIGOS)
+   ========================================================= */
+.avatar-wrapper {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.follow-badge-btn {
+    position: absolute;
+    bottom: -6px; /* Fica na bordinha de baixo do avatar */
+    background: #000;
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    border-radius: 12px;
+    font-size: 10px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 5px rgba(0, 229, 255, 0.5);
+    transition: 0.2s;
+    z-index: 15;
+    white-space: nowrap;
+}
+
+.follow-badge-btn:hover {
+    background: var(--accent-blue);
+    color: #000;
+    transform: scale(1.1);
+}
+
+.follow-badge-btn.following {
+    border-color: #00ff66;
+    color: #00ff66;
+    box-shadow: 0 0 5px rgba(0, 255, 102, 0.5);
+}
+
+.follow-badge-btn.friends {
+    border-color: var(--accent-purple);
+    color: var(--accent-purple);
+    box-shadow: 0 0 5px rgba(176, 0, 255, 0.5);
+}
+
+/* =========================================================
+   GAMBLE HOUSE - TRANSPARÊNCIA E AGENDA CELULAR
+   ========================================================= */
+#grid-casa {
+    background-color: transparent !important;
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+#grid-casa .grid-cell {
+    background: rgba(0, 0, 0, 0.4) !important; /* Deixa o fundo visível */
+    border: 1px dashed rgba(255, 170, 0, 0.15) !important; /* Borda dourada bem suave */
+}
+
+/* Agenda do Celular */
 .contact-add-bar { display:flex; gap:5px; padding:10px; background:#000; border-bottom:1px solid #333; }
 .contact-add-bar input { flex:1; font-size:11px; padding:5px; border-radius:4px; border:1px solid var(--accent-blue); background:#111; color:#fff; outline:none; }
 .contact-add-bar button { background:var(--accent-blue); color:#000; border:none; border-radius:4px; font-weight:bold; cursor:pointer; padding:0 15px; }
+/* === SISTEMA DE FORMATO DE MAPA VTT === */
+.hidden-vtt-cell {
+    visibility: hidden;
+    pointer-events: none; /* Impede o clique em áreas cortadas */
+    border: none !important;
+    background: transparent !important;
+}
+
+/* === SISTEMA DE FORMATO E CORTES DE MAPA VTT === */
+.hidden-vtt-cell {
+    visibility: hidden !important;
+    pointer-events: none !important;
+    border: none !important;
+    background: transparent !important;
+}
