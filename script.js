@@ -2822,3 +2822,69 @@ window.carregarComentarios = function(postId) {
     });
 };
 
+// =========================================================
+// CORREÇÃO: NOTIFICAÇÕES PADRONIZADAS E AVISO DE SEGUIDOR
+// =========================================================
+
+// 1. Padronizamos a função para salvar no caminho exato que as Bolinhas (Badges) leem
+window.enviarNotificacao = function(alvo, contextType, from, text, contextId = "") {
+    if (!window.db || !alvo || alvo === from) return;
+
+    window.db.ref(`tokyoRpg/users/${alvo}/notificacoes`).push({
+        from: from,
+        contextType: contextType, // "gchat", "gpost" ou "embates"
+        contextId: contextId,
+        texto: text,
+        lida: false,
+        ts: Date.now()
+    });
+};
+
+// 2. Atualizamos o Toggle Follow para disparar a notificação certa
+window.toggleFollow = function(alvo, event) {
+    if (event) event.stopPropagation();
+    if (!window.jogadorAtual || alvo === window.jogadorAtual) return;
+    
+    let me = window.usersGlobais[window.jogadorAtual] || {};
+    let target = window.usersGlobais[alvo] || {};
+    
+    let isFollowing = me.seguindo && me.seguindo[alvo];
+    let theyFollow = target.seguindo && target.seguindo[window.jogadorAtual];
+    
+    let updates = {};
+    if (isFollowing) {
+        // Deixar de seguir
+        updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = null;
+        updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = null;
+        window.showNeonToast(`Você deixou de seguir ${alvo}`);
+    } else {
+        // Seguir
+        updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = true;
+        updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = true;
+        
+        // AQUI ESTÁ A MÁGICA: Envia a notificação informando o Follow! 
+        // Vai cair na aba "G-Post" para fazer a bolinha acender.
+        window.enviarNotificacao(alvo, 'gpost', window.jogadorAtual, "começou a seguir você!", "follow");
+        
+        window.showNeonToast(`Você agora segue ${alvo}`);
+    }
+    
+    window.db.ref().update(updates);
+    
+    // Troca o botão na mesma hora sem lagar a tela
+    let safeClass = alvo.replace(/[^a-zA-Z0-9]/g, '');
+    document.querySelectorAll(`.follow-btn-${safeClass}`).forEach(btn => {
+        if (isFollowing) { 
+            btn.className = `follow-badge-btn follow-btn-${safeClass}`;
+            btn.innerHTML = "+";
+        } else { 
+            if(theyFollow) {
+                btn.className = `follow-badge-btn friends follow-btn-${safeClass}`;
+                btn.innerHTML = "✓✓ Amigos";
+            } else {
+                btn.className = `follow-badge-btn following follow-btn-${safeClass}`;
+                btn.innerHTML = "✓";
+            }
+        }
+    });
+};
