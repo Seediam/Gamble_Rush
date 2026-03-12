@@ -1,5 +1,7 @@
 // 1. CONFIGURAÇÕES BASE E DEUSES
-window.submapasConfigs = {}; // Armazena o shape e tamanho de cada local
+window.submapasConfigs = {}; 
+window.submapasCustom = {};
+window.casaSendoVisitada = null; // Variável para o sistema de portais
 window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
 window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
 window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.movimentosRestantes = 0; window.connectionRef = null;
@@ -1083,6 +1085,8 @@ window.onload = function() {
     window.initTacticalBoard(); 
     window.updateTacticalBoard(); 
 });
+       window.db.ref('tokyoRpg/submapsConfigs').on('value', s => { window.submapasConfigs = s.val() || {}; if(window.currentSubMapKey) window.initTacticalBoard(); });
+window.db.ref('tokyoRpg/submapsCustom').on('value', s => { window.submapasCustom = s.val() || {}; if(window.currentSubMapKey) window.initTacticalBoard(); });
         window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; window.drawMapVisuals(); window.desenharListaUsuarios(); });
         window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; window.drawMapVisuals(); });
         window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; window.renderizarLojaUI(); window.renderizarFicha(); window.renderizarMochila(); window.drawCasaBoard(); }); 
@@ -4249,16 +4253,22 @@ window.encerrarLigacaoLimpo = function() {
 };
 
 window.initTacticalBoard = function() {
-    let b = document.getElementById("gridCells"); if(!b) return; b.innerHTML = "";
+    let b = document.getElementById("gridCells"); if(!b) return; 
+    b.innerHTML = "";
     let loc = window.locaisMapa[window.currentSubMapKey] || {}; 
     let baseObsList = loc.obs || [];
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
-    // LÊ O FORMATO SALVO PELO MESTRE
-    let conf = window.submapasConfigs[window.currentSubMapKey] || { w: 16, h: 12, shape: 'quadrado' };
-    let cols = conf.w; let rows = conf.h; let shape = conf.shape;
+    // BLINDAGEM: Se não tiver config salva, usa 16x12 padrão
+    let conf = window.submapasConfigs[window.currentSubMapKey];
+    if(!conf) conf = { w: 16, h: 12, shape: 'quadrado' };
+    
+    let cols = parseInt(conf.w) || 16; 
+    let rows = parseInt(conf.h) || 12; 
+    let shape = conf.shape || 'quadrado';
     let customData = window.submapasCustom[window.currentSubMapKey] || {};
 
+    b.style.display = "grid";
     b.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     b.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
 
@@ -4275,8 +4285,10 @@ window.initTacticalBoard = function() {
             if(shape === 'hexagono' && ((x<=1 && y<=1) || (x>=cols-2 && y<=1) || (x<=1 && y>=rows-2) || (x>=cols-2 && y>=rows-2))) hidden = true;
 
             if(hidden) {
-                let cell = document.createElement("div"); cell.className = "tactical-cell hidden-vtt-cell"; 
-                b.appendChild(cell); continue;
+                let cell = document.createElement("div"); 
+                cell.className = "tactical-cell hidden-vtt-cell"; 
+                b.appendChild(cell); 
+                continue;
             }
 
             // LÊ OS DADOS CUSTOMIZADOS DA CÉLULA (DO MESTRE)
@@ -4287,17 +4299,18 @@ window.initTacticalBoard = function() {
             let cell = document.createElement("div"); 
             cell.id = `cell_${x}_${y}`; 
             cell.className = `tactical-cell ${obsClass}`;
+            cell.style.position = "relative";
             
             // Se o mestre colocou uma prop visual, desenha!
             if(cellData.img) {
                 cell.innerHTML += `<img src="${cellData.img}" class="prop-token">`;
             }
-            // Se o mestre marcou como PORTAL PARA AP, exibe o nome!
+            // Se o mestre marcou como PORTAL PARA AP
             if(cellData.portal) {
                 cell.innerHTML += `<div class="portal-tag">🚪 ${cellData.portal}</div>`;
             }
 
-            // ATENÇÃO AO EVENTO: Passamos o evento 'e' para checar o SHIFT
+            // EVENTO DE CLIQUE (Mestre ou Jogador)
             cell.onclick = (e) => window.clicarGrid(x, y, isObs, e); 
             b.appendChild(cell);
         }
@@ -4313,9 +4326,9 @@ window.updateTacticalBoard = function() {
     let customData = window.submapasCustom[window.currentSubMapKey] || {};
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
 
-    // PRECISAMOS USAR AS COLUNAS/LINHAS DINÂMICAS PARA OS TOKENS OBEDECEREM O TAMANHO
     let conf = window.submapasConfigs[window.currentSubMapKey] || { w: 16, h: 12 };
-    let cols = conf.w; let rows = conf.h;
+    let cols = parseInt(conf.w) || 16; 
+    let rows = parseInt(conf.h) || 12;
 
     let px = -1, py = -1;
     Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
@@ -4330,6 +4343,7 @@ window.updateTacticalBoard = function() {
                 let cellData = customData[cid] || {};
                 let isObs = baseObsList.includes(cid) || cellData.isObs;
                 let canWalk = !isObs || isGaia || window.isMaster;
+                
                 if(px !== -1 && py !== -1 && window.movimentosRestantes > 0) {
                     let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
                     if(dist > 0 && dist <= window.movimentosRestantes && !grid[cid]) {
@@ -4351,7 +4365,7 @@ window.updateTacticalBoard = function() {
         let hp = window.usersGlobais[occupier]?.rpg?.hp || 100;
         let isMe = (occupier === window.jogadorAtual);
 
-        // Ajusta as posições usando cols/rows variáveis
+        // Ajusta as posições usando cols/rows variáveis para não bugar o visual
         if(tokenEl) {
             tokenEl.style.left = `${(x / cols) * 100}%`; 
             tokenEl.style.top = `${(y / rows) * 100}%`;
@@ -4389,7 +4403,9 @@ window.clicarGrid = function(x,y, isObs, event) {
     let cid = `${x}_${y}`;
     let customData = window.submapasCustom[window.currentSubMapKey] || {};
     
-    // FUNÇÃO MASTER: Se segurar SHIFT e clicar no mapa, ABRE O MENU DO QUADRADO!
+    // ==============================================================
+    // FUNÇÃO MASTER: Se segurar SHIFT e clicar no mapa, EDITA O QUADRADO
+    // ==============================================================
     if(window.isMaster && event && event.shiftKey) {
         let cData = customData[cid] || {};
         document.getElementById("mcCid").value = cid;
@@ -4404,7 +4420,7 @@ window.clicarGrid = function(x,y, isObs, event) {
     if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
     
     let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-    if(grid[cid]) return; // Ocupado
+    if(grid[cid]) return; 
     
     let px = -1, py = -1; let isAlreadyOnBoard = false;
     Object.keys(grid).forEach(k => { if(grid[k] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = k.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
@@ -4420,21 +4436,25 @@ window.clicarGrid = function(x,y, isObs, event) {
 
     let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[cid] = window.jogadorAtual;
     
-    // EXECUTA O MOVIMENTO NO BANCO E VÊ SE PISOU EM UM PORTAL
     window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up).then(() => {
+        // CHECA SE PISOU NO PORTAL PARA ENTRAR NA CASA DO ALVO
         let stepData = customData[cid];
         if(stepData && stepData.portal) {
             window.showNeonToast(`Entrando no AP de ${stepData.portal}...`);
-            // Abre o aplicativo de Casa, mas renderiza a casa do ALVO!
-            window.casaSendoVisitada = stepData.portal;
+            window.casaSendoVisitada = stepData.portal; // Define quem é o dono da casa
             window.abrirApp('tab-casa', false);
-            window.renderizarCasaTetris();
+            
+            // Força a casa a puxar os móveis da visita, se a função existir
+            if(typeof window.renderizarCasaTetris === 'function') {
+                setTimeout(window.renderizarCasaTetris, 300);
+            }
         }
     });
 };
 
-// FUNÇÃO PARA SALVAR O GRID EDITADO PELO MESTRE E MOLDAR TERRENO
+// FUNÇÕES DE BOTÃO DO MESTRE
 window.salvarCelulaCustom = function() {
+    if(!window.currentSubMapKey) return;
     let cid = document.getElementById("mcCid").value;
     let isObs = document.getElementById("mcObs").checked;
     let img = document.getElementById("mcImg").value.trim();
@@ -4445,7 +4465,7 @@ window.salvarCelulaCustom = function() {
     
     window.db.ref(`tokyoRpg/submapsCustom/${window.currentSubMapKey}/${cid}`).set(payload);
     document.getElementById("masterCellModal").style.display = "none";
-    window.showNeonToast("Célula Salva com Sucesso!");
+    window.showNeonToast("Célula Editada com Sucesso!");
 };
 
 window.salvarFormatoMapa = function() {
@@ -4455,5 +4475,5 @@ window.salvarFormatoMapa = function() {
     let shape = document.getElementById("vttShapeInp").value;
     
     window.db.ref(`tokyoRpg/submapsConfigs/${window.currentSubMapKey}`).set({ w: w, h: h, shape: shape });
-    window.showNeonToast("Planta do Mapa Recortada!");
-};
+    window.showNeonToast("O Grid foi Moldado!");
+};;
