@@ -4328,3 +4328,17 @@ window.salvarFormatoMapa = function() {
     
     window.showNeonToast(`Terreno alterado para ${cols}x${rows} (${shape})!`);
 };
+window.desenharMapa = function() {
+    // 1. Esconde o mapa velho global e mostra a Mesa VTT
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none";
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
+    
+    // 2. Define uma sala padrão invisível para todo mundo cair nela juntos
+    if(!window.currentSubMapKey) {
+        window.currentSubMapKey = "Mesa_Principal";
+    }
+    
+    // 3. Renderiza o grid do VTT e os tokens
+    window.initTacticalBoard();
+    window.updateTacticalBoard();
+};
