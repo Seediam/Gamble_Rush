@@ -1415,3 +1415,45 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     background-image: none !important;
 }
 
+/* === SISTEMA TETRIS: MENUS E PROPS === */
+.prop-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform-origin: center;
+    z-index: 2;
+    cursor: grab;
+}
+.prop-container:active { cursor: grabbing; }
+
+.prop-controls {
+    display: none;
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.95);
+    border: 1px solid var(--accent-blue);
+    border-radius: 8px;
+    padding: 5px 10px;
+    gap: 15px;
+    font-size: 16px;
+    z-index: 100;
+    white-space: nowrap;
+    box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
+}
+
+/* O Menu só aparece quando o Mestre passa o rato no item */
+.prop-container:hover .prop-controls {
+    display: flex;
+}
+
+.prop-controls span {
+    cursor: pointer;
+    transition: 0.2s;
+}
+.prop-controls span:hover {
+    color: var(--accent-red);
+    transform: scale(1.3);
+}
+
