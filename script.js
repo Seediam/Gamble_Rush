@@ -666,7 +666,6 @@ window.fecharSubMapa = function() {
     let btnSair = document.getElementById("btnSairVTT"); if(btnSair) btnSair.style.display = "none";
 };
 
-
 window.updateTacticalBoard = function() {
     if(!window.currentSubMapKey) return;
     
