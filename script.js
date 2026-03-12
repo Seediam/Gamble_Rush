@@ -1382,12 +1382,13 @@ window.switchIGambleTab = function(tabId, btnEl) {
             });
         }, 100);
     } else {
-        // Se saiu da aba, cala todos os áudios
-        document.querySelectorAll('audio.post-audio').forEach(a => {
-            a.pause();
-            a.currentTime = 0;
-        });
-    }
+            // Se saiu da aba, cala todos os áudios
+            document.querySelectorAll('audio.post-audio').forEach(a => {
+                a.pause();
+                a.currentTime = 0;
+            });
+        }
+    }; 
 // =========================================================
 // IGAMBLE POSTS: LÓGICA UNIFICADA (LIKES, ÁUDIO E DOUBLE TAP)
 // =========================================================
@@ -1868,7 +1869,7 @@ window.switchIGambleTab = function(tabId, btnEl) {
     if(tabId === 'posts') window.marcarNotificacoesComoLidas('post');
     if(tabId === 'embates') window.marcarNotificacoesComoLidas('embate');
 };
-};
+
 
 window.atualizarBadgeNotificacoes = function(qtd) {
     let badge = document.getElementById("notificacoesBadge");
