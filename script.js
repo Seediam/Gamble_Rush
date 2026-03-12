@@ -833,7 +833,7 @@ window.updateTacticalBoard = function() {
         if(tBar) tBar.style.display="none"; 
         if(btnP) btnP.style.display="none"; 
     }
-};
+
 
 window.renderVttFoodActions = function() {
     let bar = document.getElementById("vttFoodActions"); if(!bar) return; bar.innerHTML = "";
