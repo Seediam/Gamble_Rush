@@ -906,6 +906,10 @@ window.executarAtaque = function(tx, ty) {
         if (arma.wpnStyle === 'trap') {
             let dest = `${tx}_${ty}`; if (grid[dest]) { window.showNeonToast("Local ocupado! Armadilhas devem ir no chão."); return; }
             let d20Atk = Math.floor(Math.random() * 20) + 1; let isCrit = (d20Atk === 20);
+            
+            // NOVO: Animação de dado para a Armadilha
+            window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Plantou Armadilha`, results: [d20Atk], ts: Date.now() });
+
             let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice = 1; if(isNaN(sides)) sides = 4;
             let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalDmg = dmgRoll + (parseInt(arma.wpnBonus) || 0);
             if(isCrit) { let critRule = arma.wpnCrit || "2x"; if(critRule === "2x") totalDmg *= 2; else if(critRule === "3x") totalDmg *= 3; else if(critRule === "4x") totalDmg *= 4; else if(critRule === "+12") totalDmg += 12; else if(critRule === "+10") totalDmg += 10; else if(critRule === "+5") totalDmg += 5; }
@@ -928,6 +932,12 @@ window.executarAtaque = function(tx, ty) {
 
         let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let attrMod = arma.wpnStyle === 'melee' ? (r.for + buffs.for) : (r.man + buffs.man);
         let d20Atk = Math.floor(Math.random() * 20) + 1; let totalAtk = d20Atk + attrMod; let isCrit = (d20Atk === 20);
+        
+        // NOVO: FORÇA A ANIMAÇÃO DO DADO GLOBAL DO ATAQUE PARA TODOS!
+        if(!isHeal) {
+            window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Ataque: ${arma.nome}`, results: [d20Atk], ts: Date.now() });
+        }
+
         let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice = 1; if(isNaN(sides)) sides = 4;
         let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalDmg = dmgRoll + (parseInt(arma.wpnBonus) || 0);
 
@@ -950,36 +960,6 @@ window.executarAtaque = function(tx, ty) {
     }
 };
 
-window.focarCameraVTT = function(x, y) {
-    let board = document.getElementById("tacticalBoard"); if(!board) return;
-    let cellSize = window.VTT_CELL_SIZE || 50;
-    let leftPx = (x * cellSize); let topPx = (y * cellSize); let vW = board.clientWidth; let vH = board.clientHeight;
-    let targetL = leftPx - (vW / 2) + (cellSize / 2); let targetT = topPx - (vH / 2) + (cellSize / 2);
-    targetL = Math.max(0, Math.min(targetL, board.scrollWidth - vW)); targetT = Math.max(0, Math.min(targetT, board.scrollHeight - vH));
-    board.scrollTo({ left: targetL, top: targetT, behavior: 'smooth' });
-};
-
-window.listenCombatEvents = function() {
-    if(!window.db) return;
-    if(window.currentCombatListener && window._lastCombatMap === window.currentSubMapKey) return;
-    if(window.currentCombatListener && window._lastCombatMap) { window.db.ref(`tokyoRpg/submapsCombat/${window._lastCombatMap}`).off('child_added', window.currentCombatListener); }
-    window._lastCombatMap = window.currentSubMapKey;
-    
-    window.currentCombatListener = window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}`).on('child_added', snap => {
-        let atk = snap.val(); let atkId = snap.key; if(!atk) return;
-        if(Date.now() - atk.timestamp > 60000) return; 
-        if(atk.targets && atk.targets.includes(window.jogadorAtual)) { window.mostrarUIReacao(atkId, atk); }
-    });
-};
-
-window.mostrarUIReacao = function(atkId, atkData) {
-    window.pendingAttack = { id: atkId, data: atkData };
-    if (atkData.isHeal) { window.reagirAtaque('aceitar'); return; }
-    let info = document.getElementById("reactionInfo");
-    if(info) { info.innerHTML = `<strong style="color:var(--accent-blue);">${atkData.attacker}</strong> atacou você com <strong>${atkData.weaponName}</strong>!<br>Poder de Ataque: <span class="neon-red" style="font-size:18px;">${atkData.atkRoll}</span>`; }
-    document.getElementById("reactionModal").style.display = "flex";
-};
-
 window.reagirAtaque = function(tipo) {
     if(!window.pendingAttack) return;
     let atk = window.pendingAttack.data; let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u);
@@ -988,13 +968,21 @@ window.reagirAtaque = function(tipo) {
     if (atk.isHeal) {
         reactionText = `Recebeu cura / efeito benéfico.`; resultText = `+${finalDmg} HP RESTAURADO!`; winnerId = 'heal'; 
     } else if(tipo === 'esquiva') {
-        let agiTotal = r.agi + buffs.agi; let d20 = Math.floor(Math.random() * 20) + 1; defRollVal = d20 + agiTotal;
+        let d20 = Math.floor(Math.random() * 20) + 1; 
+        // NOVO: Animação Global do dado da Esquiva!
+        window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Tentativa de Esquiva`, results: [d20], ts: Date.now() });
+
+        let agiTotal = r.agi + buffs.agi; defRollVal = d20 + agiTotal;
         if (d20 === 1) { finalDmg = atk.dmgRoll || 0; winnerId = 'atk'; reactionText = `Tentou Esquivar (<span class="neon-blue">1</span>). Tomou <span class="neon-red">${finalDmg}</span> de dano crítico.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
         else if(defRollVal > atk.atkRoll) { finalDmg = 0; winnerId = 'def'; reactionText = `Rolou Esquiva (<span class="neon-green">${defRollVal}</span>) e evitou!`; resultText = "ESQUIVOU COM SUCESSO!"; } 
         else { reactionText = `Tentou Esquivar (<span class="neon-red">${defRollVal}</span>) mas falhou! Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `SOFREU ${finalDmg} DE DANO!`; }
     } else if(tipo === 'defender') {
-        let vigTotal = r.vig + buffs.vig; let defArmor = window.calcularDefesa(u); let d20 = Math.floor(Math.random() * 20) + 1; defRollVal = d20 + vigTotal;
-        if (d20 === 1) { finalDmg = atk.dmgRoll || 0; winnerId = 'atk'; reactionText = `Rolou Defesa (<span class="neon-blue">1</span>). Armadura (${defArmor}) ignorada. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
+        let d20 = Math.floor(Math.random() * 20) + 1; 
+        // NOVO: Animação Global do dado da Defesa!
+        window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Tentativa de Defesa`, results: [d20], ts: Date.now() });
+
+        let vigTotal = r.vig + buffs.vig; let defArmor = window.calcularDefesa(u); defRollVal = d20 + vigTotal;
+        if (d20 === 1) { finalDmg = atk.dmgRoll || 0; winnerId = 'atk'; reactionText = `Rolou Defesa (<span class="neon-blue">1</span>). Armadura ignorada. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
         else if (defRollVal > atk.atkRoll) { finalDmg = 0; winnerId = 'def'; reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>) e superou o ataque. Tomou 0.`; resultText = `DEFESA PERFEITA!`; } 
         else {
             finalDmg = Math.max(0, (atk.dmgRoll || 0) - defArmor); reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>). Reduziu com Armadura (${defArmor}). Tomou <span class="neon-red">${finalDmg}</span> de dano.`;
@@ -1014,8 +1002,14 @@ window.reagirAtaque = function(tipo) {
         effect: atk.wpnEffect || "", effectVal: atk.wpnEffectVal || 1, atkX: atk.atkX !== undefined ? atk.atkX : -1, atkY: atk.atkY !== undefined ? atk.atkY : -1, isHeal: atk.isHeal || false
     };
 
-    window.db.ref('tokyoRpg/currentClash').set(clashPayload);
+    // Fechar Modal. Se teve dado, espera 2.5 segundos para a animação do dado da defesa rodar, e SÓ ENTÃO abre a tela de CLASH!
     document.getElementById("reactionModal").style.display = "none";
+    if(tipo !== 'aceitar' && !atk.isHeal) {
+        setTimeout(() => { window.db.ref('tokyoRpg/currentClash').set(clashPayload); }, 2500);
+    } else {
+        window.db.ref('tokyoRpg/currentClash').set(clashPayload);
+    }
+    
     if(window.currentSubMapKey && window.pendingAttack.id) window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${window.pendingAttack.id}`).remove().catch(()=>{});
     window.pendingAttack = null;
 };
@@ -1344,143 +1338,115 @@ window.toggleVttFields = function() {
     if(wpnF) { wpnF.style.display = isVtt ? "grid" : "none"; }
 };
 
-window.iconesMercado = { "Arma": "🔫", "Munição": "🪫", "Roupa": "🦺", "Comida": "🍫", "Móvel": "🪑", "Tecnologia": "📱", "Acessório": "📿", "Mochila": "🎒" };
+window.prepararEdicaoLoja = function(id) {
+    try {
+        if(!window.isMaster) return; 
+        let i = window.lojaGlobal[id]; 
+        if(!i) return; 
+        window.editandoItemId = id;
+        
+        window.setElVal("niType", i.tipo || "Arma"); 
+        if(typeof window.atualizarPlaceholdersLoja === "function") window.atualizarPlaceholdersLoja(i.tipo || "Arma");
+        
+        window.setElVal("niName", i.nome || ""); 
+        window.setElVal("niDesc", i.desc || ""); 
+        window.setElVal("niBuffType", i.buffType || ""); 
+        window.setElVal("niPoder", i.poder || ""); 
+        window.setElVal("niW", i.w || ""); 
+        window.setElVal("niH", i.h || ""); 
+        window.setElVal("niPrice", i.preco || ""); 
+        window.setElVal("niExW", i.extraW || ""); 
+        window.setElVal("niExH", i.extraH || ""); 
+        window.setElVal("niPeso", i.peso || ""); 
+        window.setElVal("niCD", i.cd || "");
+        
+        let chkPromo = document.getElementById("niPromo"); if(chkPromo) chkPromo.checked = (i.isPromo === true);
+        let chkCons = document.getElementById("niConsumable"); if(chkCons) chkCons.checked = (i.isConsumable === true);
+        
+        // Garante que não trave se for item antigo
+        let isVttItem = (i.isVTT === true || i.tipo === 'Arma' || i.tipo === 'Munição'); 
+        let chkVTT = document.getElementById("niIsVTT"); 
+        if(chkVTT) { chkVTT.checked = isVttItem; window.toggleVttFields(); }
 
-window.termoBuscaLoja = "";
-window.buscarNaLoja = function(val) {
-    window.termoBuscaLoja = val.toLowerCase();
-    window.renderizarLojaUI();
-};
-
-window.filtrarLoja = function(cat, btnEl) {
-    window.filtroLojaAtual = cat;
-    
-    // CORREÇÃO: Limpa a busca ao clicar em uma aba para não travar a tela
-    window.termoBuscaLoja = "";
-    let searchInp = document.getElementById("shopSearchInp");
-    if(searchInp) searchInp.value = "";
-    
-    let botoes = document.querySelectorAll(".shop-tab-btn");
-    botoes.forEach(b => b.classList.remove("active"));
-    if(btnEl) btnEl.classList.add("active");
-    window.renderizarLojaUI();
-};
-
-
-// === SISTEMA DE CARRINHO DE COMPRAS E QUANTIDADE ===
-window.itemCompraAtual = null;
-
-window.comprarItem = function(id, n, p, t, d, poder, buff, w, h, exW, exH, peso, cd, ev) {
-    if(ev) ev.stopPropagation(); 
-    if(!window.jogadorAtual || window.isMaster) return; 
-    
-    let c = window.usersGlobais[window.jogadorAtual].carteira || 0; 
-    
-    // Guarda as infos globais para a tela de confirmação
-    window.itemCompraAtual = { id: id, n: n, p: p, t: t, d: d, poder: poder, buff: buff, w: w, h: h, exW: exW, exH: exH, peso: peso, cd: cd };
-    
-    document.getElementById("buyItemName").innerText = n;
-    document.getElementById("buyQtdInput").value = 1;
-    document.getElementById("buyCurrentBalance").innerText = c + " ¥";
-    
-    window.atualizarTotalCompra();
-    document.getElementById("buyModal").style.display = "flex";
-};
-
-window.fecharBuyModal = function() {
-    document.getElementById("buyModal").style.display = "none";
-    window.itemCompraAtual = null;
-};
-
-window.alterarQtdCompra = function(delta) {
-    let inp = document.getElementById("buyQtdInput");
-    let val = parseInt(inp.value) + delta;
-    if(isNaN(val) || val < 1) val = 1;
-    inp.value = val;
-    window.atualizarTotalCompra();
-};
-
-window.atualizarTotalCompra = function() {
-    if(!window.itemCompraAtual) return;
-    
-    let inp = document.getElementById("buyQtdInput");
-    let qtd = parseInt(inp.value);
-    if(isNaN(qtd) || qtd < 1) { qtd = 1; inp.value = 1; }
-    
-    let saldoAtual = window.usersGlobais[window.jogadorAtual].carteira || 0;
-    let precoUnitario = window.itemCompraAtual.p;
-    let custoTotal = precoUnitario * qtd;
-    let saldoFinal = saldoAtual - custoTotal;
-
-    document.getElementById("buyTotalCost").innerText = custoTotal + " ¥";
-    
-    let btn = document.getElementById("btnConfirmBuy");
-    let spanFinal = document.getElementById("buyFinalBalance");
-    spanFinal.innerText = saldoFinal + " ¥";
-    
-    // Bloqueia o botão e pinta de vermelho se não tiver dinheiro suficiente
-    if(saldoFinal < 0) {
-        spanFinal.style.color = "#ff1a55";
-        btn.disabled = true;
-        btn.style.opacity = "0.5";
-        btn.style.cursor = "not-allowed";
-        btn.innerText = "SEM FUNDOS";
-    } else {
-        spanFinal.style.color = "var(--accent-blue)";
-        btn.disabled = false;
-        btn.style.opacity = "1";
-        btn.style.cursor = "pointer";
-        btn.innerText = "FINALIZAR";
+        if(isVttItem) {
+            window.setElVal("niWpnStyle", i.wpnStyle || 'melee'); 
+            window.setElVal("niWpnRange", i.wpnRange || ""); 
+            window.setElVal("niWpnDice", i.wpnDice || ""); 
+            window.setElVal("niWpnBonus", i.wpnBonus || ""); 
+            window.setElVal("niWpnCrit", i.wpnCrit || "2x"); 
+            window.setElVal("niWpnEffect", i.wpnEffect || ""); 
+            window.setElVal("niWpnEffectVal", i.wpnEffectVal || ""); 
+            window.setElVal("niWpnCode", i.wpnCode || "");
+        }
+        
+        if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Salvar Alterações";
+        window.setElDisplay("btnCancelarEdicao", "inline-block"); 
+        
+        let content = document.getElementById("masterShopContent"); let icon = document.getElementById("masterShopToggleIcon");
+        if(content && content.style.display === "none") { content.style.display = "block"; icon.innerText = "▼ Ocultar"; }
+        let p = document.getElementById("masterShopPanel"); if(p) p.scrollIntoView({behavior: "smooth"});
+        
+    } catch(err) {
+        console.error("Erro ao editar:", err);
+        window.showNeonToast("Erro na edição! Sistema auto-corrigido.");
     }
 };
 
-window.confirmarCompraModal = function() {
-    if(!window.itemCompraAtual) return;
+window.cancelarEdicaoLoja = function() { 
+    window.editandoItemId = null; 
+    window.setElVal("niName", ""); window.setElVal("niDesc", ""); window.setElVal("niPrice", ""); window.setElVal("niPoder", ""); window.setElVal("niExW", ""); window.setElVal("niExH", ""); window.setElVal("niPeso", ""); window.setElVal("niCD", ""); 
     
-    let qtd = parseInt(document.getElementById("buyQtdInput").value);
-    if(isNaN(qtd) || qtd < 1) qtd = 1;
+    let chkPromo = document.getElementById("niPromo"); if(chkPromo) chkPromo.checked = false;
+    let chkCons = document.getElementById("niConsumable"); if(chkCons) chkCons.checked = false;
+    let chkVTT = document.getElementById("niIsVTT"); if(chkVTT) { chkVTT.checked = false; window.toggleVttFields(); }
     
-    let saldoAtual = window.usersGlobais[window.jogadorAtual].carteira || 0;
-    let totalCusto = window.itemCompraAtual.p * qtd;
+    window.setElVal("niType", "Arma"); 
+    if(typeof window.atualizarPlaceholdersLoja === "function") window.atualizarPlaceholdersLoja("Arma");
     
-    if(saldoAtual < totalCusto) {
-        window.showNeonToast(`Sem Yenes suficientes!`);
-        return;
-    }
+    window.setElVal("niWpnStyle", "melee"); window.setElVal("niWpnRange", ""); window.setElVal("niWpnDice", ""); window.setElVal("niWpnBonus", ""); window.setElVal("niWpnCrit", "2x"); window.setElVal("niWpnEffect", ""); window.setElVal("niWpnEffectVal", ""); window.setElVal("niWpnCode", "");
+
+    if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Publicar no Mercado"; 
+    window.setElDisplay("btnCancelarEdicao", "none"); 
+};
+
+window.criarItemLoja = function() {
+    if(!window.isMaster) return; 
+    let nomeVal = document.getElementById("niName").value.trim();
+    let precoVal = document.getElementById("niPrice").value;
+
+    if(!nomeVal || precoVal === "") { window.showNeonToast("ERRO: Preencha o Nome e o Preço (pode ser 0)."); return; }
+
+    let isP = document.getElementById("niPromo") ? document.getElementById("niPromo").checked : false;
+    let isCons = document.getElementById("niConsumable") ? document.getElementById("niConsumable").checked : false;
+    let isVttCheck = document.getElementById("niIsVTT") ? document.getElementById("niIsVTT").checked : false;
     
-    let i = window.itemCompraAtual;
-    let lojaItem = window.lojaGlobal[i.id]; 
-    
-    // Desconta o dinheiro
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(saldoAtual - totalCusto);
-    
-    let isCons = lojaItem ? (lojaItem.isConsumable || false) : false;
-    let isVttItem = lojaItem ? (lojaItem.isVTT === true || lojaItem.tipo === 'Arma' || lojaItem.tipo === 'Munição') : false;
-    
-    let itemPayload = { 
-        id: i.id, nome: i.n, tipo: i.t, desc: i.d, poder: i.poder, buffType: i.buff, 
-        w: i.w, h: i.h, extraW: i.exW, extraH: i.exH, peso: i.peso, cd: i.cd, 
-        eq: false, isConsumable: isCons, isVTT: isVttItem 
+    let payload = { 
+        tipo: document.getElementById("niType").value, nome: nomeVal, desc: document.getElementById("niDesc").value.trim(), buffType: document.getElementById("niBuffType").value, poder: parseInt(document.getElementById("niPoder").value||"0"), w: parseInt(document.getElementById("niW").value||"1"), h: parseInt(document.getElementById("niH").value||"1"), preco: parseInt(precoVal||"0"), extraW: parseInt(document.getElementById("niExW").value||"0"), extraH: parseInt(document.getElementById("niExH").value||"0"), peso: parseInt(document.getElementById("niPeso").value||"1"), cd: parseInt(document.getElementById("niCD").value||"2"), isPromo: isP, isConsumable: isCons, isVTT: isVttCheck
     };
-    
-    if(isVttItem && lojaItem && lojaItem.wpnStyle) { 
-        itemPayload.wpnStyle = lojaItem.wpnStyle; itemPayload.wpnRange = lojaItem.wpnRange || 1; 
-        itemPayload.wpnDice = lojaItem.wpnDice || '1d4'; itemPayload.wpnBonus = lojaItem.wpnBonus || 0; 
-        itemPayload.wpnCrit = lojaItem.wpnCrit || '2x'; itemPayload.wpnEffect = lojaItem.wpnEffect || ''; 
-        itemPayload.wpnEffectVal = lojaItem.wpnEffectVal || 1; 
+
+    if(isVttCheck) {
+        payload.wpnStyle = document.getElementById("niWpnStyle") ? document.getElementById("niWpnStyle").value : "melee"; 
+        payload.wpnRange = document.getElementById("niWpnRange") ? parseInt(document.getElementById("niWpnRange").value || "1") : 1; 
+        payload.wpnDice = document.getElementById("niWpnDice") ? (document.getElementById("niWpnDice").value || "1d4") : "1d4"; 
+        payload.wpnBonus = document.getElementById("niWpnBonus") ? parseInt(document.getElementById("niWpnBonus").value || "0") : 0; 
+        payload.wpnCrit = document.getElementById("niWpnCrit") ? (document.getElementById("niWpnCrit").value || "2x") : "2x"; 
+        payload.wpnEffect = document.getElementById("niWpnEffect") ? (document.getElementById("niWpnEffect").value || "") : ""; 
+        payload.wpnEffectVal = document.getElementById("niWpnEffectVal") ? parseInt(document.getElementById("niWpnEffectVal").value || "1") : 1; 
+        payload.wpnCode = document.getElementById("niWpnCode") ? document.getElementById("niWpnCode").value.trim().toUpperCase() : "";
+    } else {
+        payload.wpnStyle = null; 
     }
-    
-    // Envia múltiplas cópias para o banco se a quantidade for maior que 1
-    let updates = {};
-    for(let idx = 0; idx < qtd; idx++) {
-        let newRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push();
-        updates[`tokyoRpg/users/${window.jogadorAtual}/mochila/${newRef.key}`] = itemPayload;
-    }
-    
-    window.db.ref().update(updates).then(() => {
-        window.showNeonToast(`${qtd}x [${i.n}] Adquirido!`);
-        window.fecharBuyModal();
-    });
+
+    if(window.editandoItemId) {
+        window.db.ref('tokyoRpg/loja/' + window.editandoItemId).update(payload).then(() => {
+            window.db.ref('tokyoRpg/users').once('value').then(snap => {
+                let usrs = snap.val(); let updates = {};
+                if(usrs) { Object.keys(usrs).forEach(uKey => { let inv = usrs[uKey].mochila; if(inv) { Object.keys(inv).forEach(mKey => { if(inv[mKey].id === window.editandoItemId || inv[mKey].nome === payload.nome) { updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/nome`] = payload.nome; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/desc`] = payload.desc; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/poder`] = payload.poder; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/buffType`] = payload.buffType; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/w`] = payload.w; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/h`] = payload.h; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/extraW`] = payload.extraW; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/extraH`] = payload.extraH; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/peso`] = payload.peso; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/cd`] = payload.cd; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/isConsumable`] = payload.isConsumable; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/isVTT`] = payload.isVTT; if(isVttCheck) { updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnStyle`] = payload.wpnStyle; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnRange`] = payload.wpnRange; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnDice`] = payload.wpnDice; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnBonus`] = payload.wpnBonus; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnCrit`] = payload.wpnCrit; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnEffect`] = payload.wpnEffect; updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnEffectVal`] = payload.wpnEffectVal; } else { updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnStyle`] = null; } } }); } }); }
+                if(Object.keys(updates).length > 0) window.db.ref().update(updates);
+            });
+        });
+        window.showNeonToast("Item Atualizado!"); window.cancelarEdicaoLoja();
+    } else { window.db.ref('tokyoRpg/loja').push(payload); window.showNeonToast("Publicado!"); window.cancelarEdicaoLoja(); }
 };
 // =========================================================
 // AVATARES E IGAMBLE (INALTERADOS MAS PRESENTES)
