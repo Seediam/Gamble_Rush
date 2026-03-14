@@ -1,4 +1,6 @@
+// =========================================================
 // 1. CONFIGURAÇÕES BASE E DEUSES
+// =========================================================
 window.submapasConfig = {};
 window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
 window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
@@ -6,66 +8,36 @@ window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; wind
 window.MASTER_SERIAL = "4053-DC1";
 
 // === VARIÁVEIS DE COMBATE VTT E FILA DE ANIMAÇÕES ===
-window.combatState = {
-    active: false,
-    weapon: null
-};
-window.currentCombatListener = null;
-window.currentCombatChange = null;
-window._lastCombatMap = null;
-window.pendingAttack = null;
-window.clashQueue = [];
-window.isClashing = false;
-window.lastClashTs = 0;
-// ================================
+window.combatState = { active: false, weapon: null };
+window.currentCombatListener = null; window.currentCombatChange = null; window._lastCombatMap = null; window.pendingAttack = null; window.clashQueue = []; window.isClashing = false; window.lastClashTs = 0;
+window.submapasTraps = {};
 
 window.codigosPromocionais = { "PLEBE": 15000, "JOBBER": 25000, "NOBLESS": 50000 };
-window.iconesMercado = { "Arma": "🔫", "Roupa": "🦺", "Comida": "🍫", "Móvel": "🪑", "Tecnologia": "📱", "Acessório": "📿", "Mochila": "🎒" };
+window.iconesMercado = { "Arma": "🔫", "Munição": "🪫", "Roupa": "🦺", "Comida": "🍫", "Móvel": "🪑", "Tecnologia": "📱", "Acessório": "📿", "Mochila": "🎒" };
 
 window.deusesPanteao = [
-    { nome: "Oizus (Miséria)", desc: "Dobra risco do adversário e reduz o seu." },
-    { nome: "Afrodite (Desejo)", desc: "Força acordo não-letal irresistível." },
-    { nome: "Athena (Estratégia)", desc: "Recebe pista dedutiva do mestre." },
-    { nome: "Hades (Submundo)", desc: "Herda automaticamente Yenes de mortos." },
-    { nome: "Hermes (Tráfico)", desc: "Garante fuga perfeita de embates." },
-    { nome: "Gaia (Território)", desc: "Destaca as melhores rotas de fuga no mapa e usa Vias Verdes." },
-    { nome: "Zeus (Autoridade)", desc: "Força aposta pública ou multa de 10%." },
-    { nome: "Diogenes (Cinismo)", desc: "Imune a manipulações de apostas." },
-    { nome: "Ares (Violência)", desc: "Ignora dor leve e descobre armas." },
-    { nome: "Poseidon (Maré)", desc: "Pode anular completamente a última transação." },
-    { nome: "Apolo (Verdade)", desc: "Força o alvo a responder Sim/Não com verdade." },
-    { nome: "Ártemis (Caçada)", desc: "Rastreio infalível e bônus de furtividade." }
+    { nome: "Oizus (Miséria)", desc: "Dobra risco do adversário e reduz o seu." }, { nome: "Afrodite (Desejo)", desc: "Força acordo não-letal irresistível." },
+    { nome: "Athena (Estratégia)", desc: "Recebe pista dedutiva do mestre." }, { nome: "Hades (Submundo)", desc: "Herda automaticamente Yenes de mortos." },
+    { nome: "Hermes (Tráfico)", desc: "Garante fuga perfeita de embates." }, { nome: "Gaia (Território)", desc: "Destaca as melhores rotas de fuga no mapa e usa Vias Verdes." },
+    { nome: "Zeus (Autoridade)", desc: "Força aposta pública ou multa de 10%." }, { nome: "Diogenes (Cinismo)", desc: "Imune a manipulações de apostas." },
+    { nome: "Ares (Violência)", desc: "Ignora dor leve e descobre armas." }, { nome: "Poseidon (Maré)", desc: "Pode anular completamente a última transação." },
+    { nome: "Apolo (Verdade)", desc: "Força o alvo a responder Sim/Não com verdade." }, { nome: "Ártemis (Caçada)", desc: "Rastreio infalível e bônus de furtividade." }
 ];
 
 window.locaisMapa = {
-    "p1": { nome: "Praça Central", x: 50, y: 50 },
-    "p2": { nome: "Ramen Fantasma", x: 35, y: 65 },
-    "p3": { nome: "Viela da Fome", x: 15, y: 65 },
-    "p4": { nome: "Clube Neon", x: 50, y: 80 },
-    "p5": { nome: "Avenida Ouro", x: 35, y: 35 },
-    "p6": { nome: "Bar Submundo", x: 15, y: 35 },
-    "p7": { nome: "Beco Sombrio", x: 15, y: 50 },
-    "p8": { nome: "Esconderijo Alfa", x: 15, y: 80 },
-    "p9": { nome: "Alameda das Sombras", x: 65, y: 35 },
-    "p10":{ nome: "Apts Safehouse", x: 85, y: 35 },
-    "p11":{ nome: "Covil de Hackers", x: 85, y: 50 },
-    "p12":{ nome: "Mercado Negro", x: 85, y: 65 },
-    "p13":{ nome: "QG da Yakuza", x: 65, y: 80 },
-    "p14":{ nome: "Parque Sombrio", x: 85, y: 80 },
-    "p15":{ nome: "Cemitério", x: 35, y: 80 }
+    "p1": { nome: "Praça Central", x: 50, y: 50 }, "p2": { nome: "Ramen Fantasma", x: 35, y: 65 }, "p3": { nome: "Viela da Fome", x: 15, y: 65 }, "p4": { nome: "Clube Neon", x: 50, y: 80 },
+    "p5": { nome: "Avenida Ouro", x: 35, y: 35 }, "p6": { nome: "Bar Submundo", x: 15, y: 35 }, "p7": { nome: "Beco Sombrio", x: 15, y: 50 }, "p8": { nome: "Esconderijo Alfa", x: 15, y: 80 },
+    "p9": { nome: "Alameda das Sombras", x: 65, y: 35 }, "p10":{ nome: "Apts Safehouse", x: 85, y: 35 }, "p11":{ nome: "Covil de Hackers", x: 85, y: 50 }, "p12":{ nome: "Mercado Negro", x: 85, y: 65 },
+    "p13":{ nome: "QG da Yakuza", x: 65, y: 80 }, "p14":{ nome: "Parque Sombrio", x: 85, y: 80 }, "p15":{ nome: "Cemitério", x: 35, y: 80 }
 };
 window.conexoesMapa = [ {de:"p1", para:"p2"}, {de:"p2", para:"p3"}, {de:"p1", para:"p4"}, {de:"p1", para:"p5"}, {de:"p5", para:"p6"}, {de:"p1", para:"p9"}, {de:"p9", para:"p10"}, {de:"p10", para:"p11"}, {de:"p11", para:"p12"}, {de:"p2", para:"p13"}, {de:"p13", para:"p14"}, {de:"p3", para:"p8"}, {de:"p7", para:"p6"}, {de:"p3", para:"p7"}, {de:"p2", para:"p15"}, {de:"p4", para:"p13"} ];
 window.rotasSecretasGaia = [ {de:"p1", para:"p6"}, {de:"p15", para:"p10"}, {de:"p8", para:"p14"}, {de:"p11", para:"p4"} ];
 
-window.filtroLojaAtual = "Promoções"; window.editandoItemId = null;
+window.filtroLojaAtual = "Promoções"; window.editandoItemId = null; window.termoBuscaLoja = "";
 window.GRID_COLS = 5; window.GRID_ROWS = 3; window.CELL_SIZE = 45; window.GRID_GAP = 1; window.REAL_CELL_SIZE = window.CELL_SIZE + window.GRID_GAP;
 window.tetrisMatrix = []; window.arrastandoKey = null; window.itemArrastado = null; window.offsetX = 0; window.offsetY = 0; window.origin = null; window.initPos = {c:-1, r:-1};
 
-window.titulosExtensos = [
-    "Novato|com|0", "Alvo Fácil|com|500", "Rato de Beco|com|800", "Corredor|com|1000", "Sobrevivente|com|1200", "Apostador|com|1500",
-    "Lutador|inc|2000", "Atirador|inc|2500", "Sombra|inc|3000", "Estrategista|rar|6000", "Investigador|rar|7000",
-    "O Hacker|epi|12000", "Ceifador|epi|30000", "Demônio de Neon|leg|40000", "Deus das Apostas|leg|45000", "A Lenda Viva|leg|60000", "Líder Supremo|leg|100000"
-];
+window.titulosExtensos = [ "Novato|com|0", "Alvo Fácil|com|500", "Rato de Beco|com|800", "Corredor|com|1000", "Sobrevivente|com|1200", "Apostador|com|1500", "Lutador|inc|2000", "Atirador|inc|2500", "Sombra|inc|3000", "Estrategista|rar|6000", "Investigador|rar|7000", "O Hacker|epi|12000", "Ceifador|epi|30000", "Demônio de Neon|leg|40000", "Deus das Apostas|leg|45000", "A Lenda Viva|leg|60000", "Líder Supremo|leg|100000" ];
 
 // INICIALIZAÇÃO FIREBASE
 try { firebase.initializeApp(window.firebaseConfig); window.db = firebase.database(); } catch (e) { console.error("Firebase falhou:", e); }
@@ -75,523 +47,180 @@ window.setElHTML = function(id, h) { let e = document.getElementById(id); if(e) 
 window.setElDisplay = function(id, d) { let e = document.getElementById(id); if(e) e.style.display = d; };
 window.setElVal = function(id, v) { let e = document.getElementById(id); if(e) e.value = v; };
 
-window.showNeonToast = function(msg) {
-    let t = document.getElementById("neonToast");
-    if(t) {
-        t.innerText = msg;
-        t.classList.add("show");
-        setTimeout(() => t.classList.remove("show"), 3000);
-    }
-};
-
-window.fecharDadoOverlay = function() { 
-    if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
-    if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
-    window.setElDisplay("globalDiceOverlay", "none"); 
-};
+window.showNeonToast = function(msg) { let t = document.getElementById("neonToast"); if(t) { t.innerText = msg; t.classList.add("show"); setTimeout(() => t.classList.remove("show"), 3000); } };
+window.fecharDadoOverlay = function() { if(window.currentSpinInterval) clearInterval(window.currentSpinInterval); if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout); window.setElDisplay("globalDiceOverlay", "none"); };
 
 window.getSafeRpg = function(u) { 
     let d = { for: 1, agi: 1, man: 1, vig: 1, int: 1, pontosLivres: 3, nivel: 1, integridade: 100, hp: 100 }; 
-    if (!u || !u.rpg) return d;
-    let r = u.rpg;
-    let spent = Math.max(0, (r.for||1)-1) + Math.max(0, (r.agi||1)-1) + Math.max(0, (r.man||1)-1) + Math.max(0, (r.vig||1)-1) + Math.max(0, (r.int||1)-1);
-    let realPts = Math.max(0, 3 + ((r.nivel||1)-1) - spent);
+    if (!u || !u.rpg) return d; let r = u.rpg; let spent = Math.max(0, (r.for||1)-1) + Math.max(0, (r.agi||1)-1) + Math.max(0, (r.man||1)-1) + Math.max(0, (r.vig||1)-1) + Math.max(0, (r.int||1)-1); let realPts = Math.max(0, 3 + ((r.nivel||1)-1) - spent);
     return { for: r.for||1, agi: r.agi||1, man: r.man||1, vig: r.vig||1, int: r.int||1, pontosLivres: (r.pontosLivres!==undefined)?r.pontosLivres:realPts, nivel: r.nivel||1, integridade: (r.integridade!==undefined)?r.integridade:100, hp: (r.hp!==undefined)?r.hp:100 };
 };
-
 window.calcularMaxInteg = function(u) { let m = 100; if(u && u.mochila) Object.values(u.mochila).forEach(i => { if(i.tipo==="Móvel" && i.inHouse === true && i.buffType==="integ" && i.poder) m += parseInt(i.poder); }); return m; };
 window.calcularBuffsMoveis = function(u) { let buffs = { for:0, agi:0, int:0, vig:0, man:0 }; if(u && u.mochila) Object.values(u.mochila).forEach(i => { if(i.tipo==="Móvel" && i.inHouse === true && i.buffType && i.poder && buffs[i.buffType] !== undefined) buffs[i.buffType] += parseInt(i.poder); }); return buffs; };
 window.calcularDefesa = function(u) { let def = 0; if(u && u.mochila) { Object.values(u.mochila).forEach(i => { if(i.eq && i.tipo === 'Roupa') def += (parseInt(i.poder) || 0); }); } return def; };
 window.getPesoStatus = function(u) { let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let max = 10 + ((r.for+buffs.for)*5); let peso = 0; if(u?.mochila) Object.values(u.mochila).forEach(i => peso += (parseInt(i.peso)||1)); return {atual:peso, max:max, sobrepeso: peso > max}; };
 
-// === 4. INTERFACE GLOBAL E SISTEMA OS ===
-window.abrirCelularMain = function() {
-    window.setElDisplay("phoneOverlay", "flex");
-    window.voltarPhoneMain();
-};
-
-window.fecharCelular = function() {
-    window.setElDisplay("phoneOverlay", "none");
-};
-
-window.abrirIgambleMenu = function() {
-    let frame = document.getElementById('phoneFrameUI');
-    let mainScreen = document.getElementById('phoneMainScreen');
-    let igambleScreen = document.getElementById('phoneIgambleScreen');
-    let closeBtn = document.getElementById('btnClosePhone');
-    
-    if (frame) frame.style.backgroundImage = "url('bg2.png')";
-    if (mainScreen) mainScreen.style.display = "none";
-    if (igambleScreen) igambleScreen.style.display = "block";
-    if (closeBtn) closeBtn.style.display = "none"; 
-};
-
-window.voltarPhoneMain = function() {
-    let frame = document.getElementById('phoneFrameUI');
-    let mainScreen = document.getElementById('phoneMainScreen');
-    let igambleScreen = document.getElementById('phoneIgambleScreen');
-    let closeBtn = document.getElementById('btnClosePhone');
-    
-    if (frame) frame.style.backgroundImage = "url('bg.png')";
-    if (mainScreen) mainScreen.style.display = "grid";
-    if (igambleScreen) igambleScreen.style.display = "none";
-    if (closeBtn) closeBtn.style.display = "flex";
-};
-
-window.abrirIgambleApp = function(tabName) {
-    window.abrirApp('tab-igamble');
-    let btn = document.querySelector(`.igamble-nav button[onclick*="${tabName}"]`);
-    if(btn) window.switchIGambleTab(tabName, btn);
-};
-
-window.voltarParaMenuIgamble = function() {
-    window.fecharApp(); 
-    window.abrirCelularMain(); 
-    window.abrirIgambleMenu(); 
-};
+// =========================================================
+// 4. INTERFACE GLOBAL E SISTEMA OS
+// =========================================================
+window.abrirCelularMain = function() { window.setElDisplay("phoneOverlay", "flex"); window.voltarPhoneMain(); };
+window.fecharCelular = function() { window.setElDisplay("phoneOverlay", "none"); };
+window.abrirIgambleMenu = function() { let frame = document.getElementById('phoneFrameUI'); let mainScreen = document.getElementById('phoneMainScreen'); let igambleScreen = document.getElementById('phoneIgambleScreen'); let closeBtn = document.getElementById('btnClosePhone'); if (frame) frame.style.backgroundImage = "url('bg2.png')"; if (mainScreen) mainScreen.style.display = "none"; if (igambleScreen) igambleScreen.style.display = "block"; if (closeBtn) closeBtn.style.display = "none"; };
+window.voltarPhoneMain = function() { let frame = document.getElementById('phoneFrameUI'); let mainScreen = document.getElementById('phoneMainScreen'); let igambleScreen = document.getElementById('phoneIgambleScreen'); let closeBtn = document.getElementById('btnClosePhone'); if (frame) frame.style.backgroundImage = "url('bg.png')"; if (mainScreen) mainScreen.style.display = "grid"; if (igambleScreen) igambleScreen.style.display = "none"; if (closeBtn) closeBtn.style.display = "flex"; };
+window.abrirIgambleApp = function(tabName) { window.abrirApp('tab-igamble'); let btn = document.querySelector(`.igamble-nav button[onclick*="${tabName}"]`); if(btn) window.switchIGambleTab(tabName, btn); };
+window.voltarParaMenuIgamble = function() { window.fecharApp(); window.abrirCelularMain(); window.abrirIgambleMenu(); };
 
 window.abrirApp = function(appId, isLocked, lockMsg) {
     if(isLocked) { window.showNeonToast(lockMsg); return; }
-    
-    window.fecharCelular(); 
-    window.setElDisplay("gameContainer", "block");
-    window.setElDisplay("btnHomeApp", "flex");
-    
-    if(appId === 'tab-igamble') window.setElDisplay("btnBackIgamble", "flex");
-    else window.setElDisplay("btnBackIgamble", "none");
-    
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    let a = document.getElementById(appId); if(a) a.classList.add('active');
-    
-    if(appId === 'tab-mapa') window.desenharMapa(true); 
-    if(appId === 'tab-personagem') window.renderizarMochila();
-    if(appId === 'tab-casa') window.drawCasaBoard();
-    if(appId === 'tab-panteao') window.renderizarPanteao();
-    
-    if(appId === 'tab-igamble') {
-        setTimeout(() => {
-            let chatBox = document.getElementById("chatMessages");
-            if(chatBox) chatBox.scrollTop = chatBox.scrollHeight;
-        }, 50); 
-    }
+    window.fecharCelular(); window.setElDisplay("gameContainer", "block"); window.setElDisplay("btnHomeApp", "flex");
+    if(appId === 'tab-igamble') window.setElDisplay("btnBackIgamble", "flex"); else window.setElDisplay("btnBackIgamble", "none");
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); let a = document.getElementById(appId); if(a) a.classList.add('active');
+    if(appId === 'tab-mapa') window.desenharMapa(true); if(appId === 'tab-personagem') window.renderizarMochila(); if(appId === 'tab-casa') window.drawCasaBoard(); if(appId === 'tab-panteao') window.renderizarPanteao();
+    if(appId === 'tab-igamble') { setTimeout(() => { let chatBox = document.getElementById("chatMessages"); if(chatBox) chatBox.scrollTop = chatBox.scrollHeight; }, 50); }
 };
 
-window.fecharApp = function() {
-    window.setElDisplay("gameContainer", "none");
-    window.setElDisplay("btnHomeApp", "none");
-    window.setElDisplay("btnBackIgamble", "none");
-};
-
-window.abrirModal = function() {
-    window.setElDisplay("loginModal", "flex");
-    if(window.jogadorAtual) { window.setElDisplay("loginScreen", "none"); window.setElDisplay("profileScreen", "block"); }
-    else { window.setElDisplay("loginScreen", "block"); window.setElDisplay("profileScreen", "none"); }
-};
+window.fecharApp = function() { window.setElDisplay("gameContainer", "none"); window.setElDisplay("btnHomeApp", "none"); window.setElDisplay("btnBackIgamble", "none"); };
+window.abrirModal = function() { window.setElDisplay("loginModal", "flex"); if(window.jogadorAtual) { window.setElDisplay("loginScreen", "none"); window.setElDisplay("profileScreen", "block"); } else { window.setElDisplay("loginScreen", "block"); window.setElDisplay("profileScreen", "none"); } };
 window.fecharModal = function() { window.setElDisplay("loginModal", "none"); };
-
 window.toggleDesktopSidebar = function() { let s = document.getElementById("sidebarAgents"); if(s) s.classList.toggle("minimized"); };
-
-window.salvarPerfil = function(campo, valor) {
-    if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/perfil/${campo}`).set(valor);
-};
+window.salvarPerfil = function(campo, valor) { if(window.jogadorAtual) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/perfil/${campo}`).set(valor); };
 
 window.renderizarFicha = function() {
     if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
-    let u = window.usersGlobais[window.jogadorAtual]; 
-    let r = window.getSafeRpg(u); 
-    let mInteg = window.calcularMaxInteg(u); 
-    let buffs = window.calcularBuffsMoveis(u); 
-    let def = window.calcularDefesa(u);
-    
-    if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual);
-    if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
+    let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let mInteg = window.calcularMaxInteg(u); let buffs = window.calcularBuffsMoveis(u); let def = window.calcularDefesa(u);
+    if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual); if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
     let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
     if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
-    if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || "");
-    if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
-    
-    window.setElText("lblDef", def); 
-    if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres;
-    window.setElText("lblPts", r.pontosLivres);
+    if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || ""); if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
+    window.setElText("lblDef", def); if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres; window.setElText("lblPts", r.pontosLivres);
     window.setElText("valFor", r.for + buffs.for); window.setElText("valAgi", r.agi + buffs.agi); window.setElText("valMan", r.man + buffs.man); window.setElText("valVig", r.vig + buffs.vig); window.setElText("valInt", r.int + buffs.int);
     window.setElText("lblIntegMax", mInteg); window.setElText("lblIntegVal", r.integridade + "%");
-    
     let hpInp = document.getElementById("hpInput"); if(hpInp && document.activeElement !== hpInp) hpInp.value = r.hp;
     let bar = document.getElementById("integrityBar"); if(bar) { let pct = (r.integridade / mInteg) * 100; bar.style.width = Math.min(pct,100) + "%"; bar.style.background = r.integridade < 30 ? "#ff0000" : "#00ff00"; }
-    
-    let temCel = u.numero ? true : false;
-    let temCasa = (u.casa && Object.keys(u.casa).length > 0) ? true : false;
-    
-    if (u.mochila) {
-        Object.values(u.mochila).forEach(i => {
-            let nomeItem = (i.nome || "").toLowerCase();
-            let tipoItem = (i.tipo || "").toLowerCase();
-            if (tipoItem === 'tecnologia' || nomeItem.includes('celular') || nomeItem.includes('telefone') || nomeItem.includes('gamblenger')) temCel = true;
-            if (tipoItem === 'móvel' || tipoItem === 'movel') temCasa = true;
-        });
-    }
-    
-    if (temCel && !u.numero && window.jogadorAtual !== "MESTRE") {
-        let novoNumero = "9" + Math.floor(1000 + Math.random() * 9000).toString();
-        u.numero = novoNumero; 
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/numero`).set(novoNumero).then(() => {
-            window.showNeonToast(`📱 Celular Ativado! Seu novo número é: ${novoNumero}`);
-            if(document.getElementById("perfilTelefone")) window.setElText("perfilTelefone", novoNumero);
-        });
-    }
-    
+    let temCel = u.numero ? true : false; let temCasa = (u.casa && Object.keys(u.casa).length > 0) ? true : false;
+    if (u.mochila) { Object.values(u.mochila).forEach(i => { let nomeItem = (i.nome || "").toLowerCase(); let tipoItem = (i.tipo || "").toLowerCase(); if (tipoItem === 'tecnologia' || nomeItem.includes('celular') || nomeItem.includes('telefone') || nomeItem.includes('gamblenger')) temCel = true; if (tipoItem === 'móvel' || tipoItem === 'movel') temCasa = true; }); }
+    if (temCel && !u.numero && window.jogadorAtual !== "MESTRE") { let novoNumero = "9" + Math.floor(1000 + Math.random() * 9000).toString(); u.numero = novoNumero; window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/numero`).set(novoNumero).then(() => { window.showNeonToast(`📱 Celular Ativado! Seu novo número é: ${novoNumero}`); if(document.getElementById("perfilTelefone")) window.setElText("perfilTelefone", novoNumero); }); }
     if(document.getElementById("perfilTelefone")) window.setElText("perfilTelefone", u.numero || "Sem Sinal");
-
-    let iCel = document.getElementById('hb-celular'); 
-    if(iCel) { 
-        if(temCel || window.isMaster) { iCel.classList.remove('locked'); iCel.onclick = () => { window.abrirApp('tab-celular', false); window.carregarContatosSMS(); }; } 
-        else { iCel.classList.add('locked'); iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre um Celular."); } 
-    }
-    
-    let iCasa = document.getElementById('hb-casa'); 
-    if(iCasa) { 
-        if(temCasa || window.isMaster) { iCasa.classList.remove('locked'); iCasa.onclick = () => window.abrirApp('tab-casa', false); } 
-        else { iCasa.classList.add('locked'); iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); } 
-    }
+    let iCel = document.getElementById('hb-celular'); if(iCel) { if(temCel || window.isMaster) { iCel.classList.remove('locked'); iCel.onclick = () => { window.abrirApp('tab-celular', false); window.carregarContatosSMS(); }; } else { iCel.classList.add('locked'); iCel.onclick = () => window.abrirApp('none', true, "Gamblenger Fora do Ar! Compre um Celular."); } }
+    let iCasa = document.getElementById('hb-casa'); if(iCasa) { if(temCasa || window.isMaster) { iCasa.classList.remove('locked'); iCasa.onclick = () => window.abrirApp('tab-casa', false); } else { iCasa.classList.add('locked'); iCasa.onclick = () => window.abrirApp('none', true, "Gamble House Bloqueada! Compre um Imóvel."); } }
 };
 
 window.desenharListaUsuarios = function() {
     let b = document.getElementById("userLog"); if(!b) return; b.innerHTML = ""; let hideOff = document.getElementById("checkOnline")?.checked;
     let sortedUsers = Object.keys(window.usersGlobais).filter(n => n !== "MESTRE").sort((a, b) => { let aOn = window.presenceGlobal[a] === true && window.usersGlobais[a].status !== "morto"; let bOn = window.presenceGlobal[b] === true && window.usersGlobais[b].status !== "morto"; return (aOn === bOn) ? 0 : aOn ? -1 : 1; });
-    sortedUsers.forEach(n => { 
-        let u=window.usersGlobais[n]; let r = window.getSafeRpg(u); let isD=(u.status==="morto"); let isO=window.presenceGlobal[n]===true&&!isD; 
-        if(hideOff && !isO && !isD) return; 
-        b.innerHTML += `<div class="user-item" style="opacity:${isD?0.5:1};"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong style="color:${isO?'var(--accent-blue)':'#aaa'};">${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span><div class="hp-display">❤️ HP: ${r.hp}</div></div>`; 
-    });
+    sortedUsers.forEach(n => { let u=window.usersGlobais[n]; let r = window.getSafeRpg(u); let isD=(u.status==="morto"); let isO=window.presenceGlobal[n]===true&&!isD; if(hideOff && !isO && !isD) return; b.innerHTML += `<div class="user-item" style="opacity:${isD?0.5:1};"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong style="color:${isO?'var(--accent-blue)':'#aaa'};">${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span><div class="hp-display">❤️ HP: ${r.hp}</div></div>`; });
 };
 
-// === 5. SISTEMA RPG E DADOS ===
+// =========================================================
+// 5. SISTEMA RPG E DADOS
+// =========================================================
 window.renderizarPanteao = function() {
     let u = window.usersGlobais[window.jogadorAtual] || {}; let currentGod = u.deus || "Nenhum";
     let gachaC = document.getElementById("gachaDisplay"); if(gachaC) gachaC.innerHTML = `<h2 style="color:#555; margin:0;">[ SEU DEUS ]</h2><h3 class="neon-purple" style="font-size:28px; margin-top:10px;">${currentGod}</h3>`;
-    
-    let list = document.getElementById("allGodsList"); if(!list) return;
-    list.innerHTML = "";
-    window.deusesPanteao.forEach(g => {
-        let gNameClean = g.nome.split(" ")[0];
-        let isMine = (currentGod === g.nome || currentGod.includes(gNameClean));
-        list.innerHTML += `<div class="card ${isMine?'selected':''}" style="height:auto; min-height:80px; cursor:default; width:200px; padding:10px;">
-            <h3 style="margin:0 0 5px 0; font-size:14px; color:${isMine?'#0f0':'var(--accent-purple)'};">${g.nome}</h3>
-            <p style="font-size:11px; color:#aaa; margin:0; line-height:1.2;">${g.desc}</p>
-        </div>`;
-    });
+    let list = document.getElementById("allGodsList"); if(!list) return; list.innerHTML = "";
+    window.deusesPanteao.forEach(g => { let gNameClean = g.nome.split(" ")[0]; let isMine = (currentGod === g.nome || currentGod.includes(gNameClean)); list.innerHTML += `<div class="card ${isMine?'selected':''}" style="height:auto; min-height:80px; cursor:default; width:200px; padding:10px;"><h3 style="margin:0 0 5px 0; font-size:14px; color:${isMine?'#0f0':'var(--accent-purple)'};">${g.nome}</h3><p style="font-size:11px; color:#aaa; margin:0; line-height:1.2;">${g.desc}</p></div>`; });
 };
 
 window.girarRoletaPanteao = function() {
-    if(!window.jogadorAtual) return;
-    let u = window.usersGlobais[window.jogadorAtual];
-    if((u.carteira || 0) < 500) { alert("Você precisa de 500 ¥ para girar a Roleta Divina."); return; }
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(u.carteira - 500);
-    
-    let btn = document.getElementById("btnRoletaDeus"); if(btn) btn.disabled = true;
-    let display = document.getElementById("gachaDisplay"); if(!display) return; display.innerHTML = "";
-    
-    if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
-    if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
-    
+    if(!window.jogadorAtual) return; let u = window.usersGlobais[window.jogadorAtual]; if((u.carteira || 0) < 500) { alert("Você precisa de 500 ¥ para girar a Roleta Divina."); return; } window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(u.carteira - 500);
+    let btn = document.getElementById("btnRoletaDeus"); if(btn) btn.disabled = true; let display = document.getElementById("gachaDisplay"); if(!display) return; display.innerHTML = "";
+    if(window.currentSpinInterval) clearInterval(window.currentSpinInterval); if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
     let counter = 0;
-    window.currentSpinInterval = setInterval(() => {
-        let g1 = window.deusesPanteao[Math.floor(Math.random() * window.deusesPanteao.length)];
-        let g2 = window.deusesPanteao[Math.floor(Math.random() * window.deusesPanteao.length)];
-        display.innerHTML = `<div class="card spinning" style="width:140px; height:160px; padding:10px;"><h3 style="font-size:14px;margin:0;">${g1.nome}</h3></div><div class="card spinning" style="width:140px; height:160px; padding:10px;"><h3 style="font-size:14px;margin:0;">${g2.nome}</h3></div>`;
-        counter++;
-        if(counter > 15) {
-            clearInterval(window.currentSpinInterval);
-            let shuffled = [...window.deusesPanteao].sort(() => 0.5 - Math.random());
-            let op1 = shuffled[0]; let op2 = shuffled[1];
-            display.innerHTML = `
-                <div class="card" style="width:180px; height:auto; padding:15px; cursor:pointer;" onclick="window.escolherDeusFinal('${op1.nome}')">
-                    <h3 style="font-size:14px;">${op1.nome}</h3><p style="font-size:11px;color:#aaa;">${op1.desc}</p>
-                    <button class="action-btn" style="margin-top:10px;">Escolher</button>
-                </div>
-                <div class="card" style="width:180px; height:auto; padding:15px; cursor:pointer;" onclick="window.escolherDeusFinal('${op2.nome}')">
-                    <h3 style="font-size:14px;">${op2.nome}</h3><p style="font-size:11px;color:#aaa;">${op2.desc}</p>
-                    <button class="action-btn" style="margin-top:10px;">Escolher</button>
-                </div>
-            `;
-        }
+    window.currentSpinInterval = setInterval(() => { let g1 = window.deusesPanteao[Math.floor(Math.random() * window.deusesPanteao.length)]; let g2 = window.deusesPanteao[Math.floor(Math.random() * window.deusesPanteao.length)]; display.innerHTML = `<div class="card spinning" style="width:140px; height:160px; padding:10px;"><h3 style="font-size:14px;margin:0;">${g1.nome}</h3></div><div class="card spinning" style="width:140px; height:160px; padding:10px;"><h3 style="font-size:14px;margin:0;">${g2.nome}</h3></div>`; counter++;
+        if(counter > 15) { clearInterval(window.currentSpinInterval); let shuffled = [...window.deusesPanteao].sort(() => 0.5 - Math.random()); let op1 = shuffled[0]; let op2 = shuffled[1]; display.innerHTML = `<div class="card" style="width:180px; height:auto; padding:15px; cursor:pointer;" onclick="window.escolherDeusFinal('${op1.nome}')"><h3 style="font-size:14px;">${op1.nome}</h3><p style="font-size:11px;color:#aaa;">${op1.desc}</p><button class="action-btn" style="margin-top:10px;">Escolher</button></div><div class="card" style="width:180px; height:auto; padding:15px; cursor:pointer;" onclick="window.escolherDeusFinal('${op2.nome}')"><h3 style="font-size:14px;">${op2.nome}</h3><p style="font-size:11px;color:#aaa;">${op2.desc}</p><button class="action-btn" style="margin-top:10px;">Escolher</button></div>`; }
     }, 100);
 };
-window.escolherDeusFinal = function(n) { 
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/deus`).set(n); 
-    window.showNeonToast(`Patrono ${n} Escolhido!`); 
-    let b = document.getElementById("btnRoletaDeus"); if(b) b.disabled=false; 
-    let g = document.getElementById("gachaDisplay"); if(g) g.innerHTML = `<h2 style="color:#555; margin:0;">[ ROLETA DIVINA ]</h2>`;
-    window.renderizarPanteao(); window.desenharMapa(); 
-};
+
+window.escolherDeusFinal = function(n) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/deus`).set(n); window.showNeonToast(`Patrono ${n} Escolhido!`); let b = document.getElementById("btnRoletaDeus"); if(b) b.disabled=false; let g = document.getElementById("gachaDisplay"); if(g) g.innerHTML = `<h2 style="color:#555; margin:0;">[ ROLETA DIVINA ]</h2>`; window.renderizarPanteao(); window.desenharMapa(); };
 
 window.mostrarDadoOverlay = function(n, f, res, maxFaces = 20) {
     let ov = document.getElementById("globalDiceOverlay");
     if(document.getElementById("diceRollerName")) document.getElementById("diceRollerName").innerText = "Agente: " + n; 
     if(document.getElementById("diceFormulaLabel")) document.getElementById("diceFormulaLabel").innerText = "Ação: " + f;
-    
     let sp = document.getElementById("diceSpinners"); let dRes = document.getElementById("diceFinalResult");
     if(sp) { sp.style.display = "flex"; sp.innerHTML = ""; for(let i=0; i<res.length; i++) sp.innerHTML += `<div class="dice-number">?</div>`; }
     if(dRes) dRes.style.display = "none";
     if(ov) ov.style.display = "flex";
-    
-    if(window.currentSpinInterval) clearInterval(window.currentSpinInterval);
-    if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
-
+    if(window.currentSpinInterval) clearInterval(window.currentSpinInterval); if(window.currentSpinTimeout) clearTimeout(window.currentSpinTimeout);
     let sc = 0; window.currentSpinInterval = setInterval(() => {
         let temp = ""; for(let i=0; i<res.length; i++) temp += `<div class="dice-number">${Math.floor(Math.random()*maxFaces)+1}</div>`;
         if(sp) sp.innerHTML = temp; sc++;
-        if(sc > 15) {
-            clearInterval(window.currentSpinInterval); 
-            if(sp) sp.style.display = "none"; 
-            if(dRes) { dRes.style.display = "flex"; dRes.innerHTML = ""; res.forEach(v => { dRes.innerHTML += `<div class="dice-result-box">${v}</div>`; }); }
-            window.currentSpinTimeout = setTimeout(() => { if(ov) ov.style.display = "none"; }, 3000);
-        }
+        if(sc > 15) { clearInterval(window.currentSpinInterval); if(sp) sp.style.display = "none"; if(dRes) { dRes.style.display = "flex"; dRes.innerHTML = ""; res.forEach(v => { dRes.innerHTML += `<div class="dice-result-box">${v}</div>`; }); } window.currentSpinTimeout = setTimeout(() => { if(ov) ov.style.display = "none"; }, 3000); }
     }, 80);
 };
 
-window.lancarDadoCustom = function(t) {
-    if(!window.jogadorAtual) return;
-    let max = parseInt(t.replace('1d','')); let res = Math.floor(Math.random() * max) + 1;
-    window.mostrarDadoOverlay(window.jogadorAtual, t, [res], max);
-    window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Rolou ${t}: <span class="dice-result-box">${res}</span>` });
-    window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: t, results: [res], ts: Date.now() });
-};
-
-window.rolarAtributo = function(nome, key) {
-    if(!window.jogadorAtual) return; let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u);
-    let qtd = r[key] + buffs[key]; if(qtd < 1) qtd = 1;
-    let results = []; for(let i=0; i<qtd; i++) results.push(Math.floor(Math.random()*20)+1);
-    let formStr = `${nome} (${qtd}d20)`;
-    window.mostrarDadoOverlay(window.jogadorAtual, formStr, results, 20);
-    window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Rolou ${formStr}: <span class="dice-result-box">${results.join('</span> <span class="dice-result-box">')}</span>` });
-    window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: formStr, results: results, ts: Date.now() });
-};
-
+window.lancarDadoCustom = function(t) { if(!window.jogadorAtual) return; let max = parseInt(t.replace('1d','')); let res = Math.floor(Math.random() * max) + 1; window.mostrarDadoOverlay(window.jogadorAtual, t, [res], max); window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Rolou ${t}: <span class="dice-result-box">${res}</span>` }); window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: t, results: [res], ts: Date.now() }); };
+window.rolarAtributo = function(nome, key) { if(!window.jogadorAtual) return; let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let qtd = r[key] + buffs[key]; if(qtd < 1) qtd = 1; let results = []; for(let i=0; i<qtd; i++) results.push(Math.floor(Math.random()*20)+1); let formStr = `${nome} (${qtd}d20)`; window.mostrarDadoOverlay(window.jogadorAtual, formStr, results, 20); window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Rolou ${formStr}: <span class="dice-result-box">${results.join('</span> <span class="dice-result-box">')}</span>` }); window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: formStr, results: results, ts: Date.now() }); };
 window.rolarPericiaSelect = function() { let s = document.getElementById("comboPericias"); if(s) { let v=s.value.split('|'); window.rolarAtributo(v[0], v[1]); } };
 window.atualizarHP = function() { let hp = parseInt(document.getElementById("hpInput").value); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`).set(hp); };
 window.distribuirPonto = function(key) { let r = window.getSafeRpg(window.usersGlobais[window.jogadorAtual]); if(r.pontosLivres > 0) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/${key}`).set(r[key]+1); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/pontosLivres`).set(r.pontosLivres-1); } };
 
-// === MAPA GLOBAL E VTT ===
-// === MAPA GLOBAL E VTT ===
+// =========================================================
+// MAPA GLOBAL E VTT
+// =========================================================
 window.VTT_CELL_SIZE = 50; 
 window.dmPropsCache = window.dmPropsCache || [];
-window.submapasTraps = {}; // Banco de memória das Armadilhas
 
 let vttBootInterval = setInterval(() => {
     if (window.db && window.jogadorAtual) {
         clearInterval(vttBootInterval);
-        
-        let isMapOpen = () => {
-            let t = document.getElementById('tab-mapa');
-            return t && (t.style.display === 'block' || t.style.display === 'flex' || t.classList.contains('active'));
-        };
-
-        window.db.ref('tokyoRpg/submapConfig').on('value', s => { 
-            window.submapasConfig = s.val() || {}; 
-            if(window.currentSubMapKey && isMapOpen()) { window.initTacticalBoard(); window.updateTacticalBoard(); }
-        });
-        
-        window.db.ref('tokyoRpg/submapsBGs').on('value', s => { 
-            window.submapasBGs = s.val() || {}; 
-            if(window.currentSubMapKey) { 
-                let wrapper = document.getElementById("vttWorldWrapper"); 
-                if(wrapper && window.submapasBGs[window.currentSubMapKey]) wrapper.style.backgroundImage = `url("${window.submapasBGs[window.currentSubMapKey]}")`; 
-            }
-        });
-
-        window.db.ref('tokyoRpg/submaps').on('value', s => { 
-            window.submapasGlobais = s.val() || {}; 
-            if(isMapOpen()) window.updateTacticalBoard(); 
-        });
-
-        // ESCUTA AS ARMADILHAS EM TEMPO REAL
-        window.db.ref('tokyoRpg/submapsTraps').on('value', s => { 
-            window.submapasTraps = s.val() || {}; 
-            if(isMapOpen()) window.updateTacticalBoard(); 
-        });
-        
-        window.db.ref('tokyoRpg/turnosVTT').on('value', s => { 
-            let d = s.val()||{}; window.turnosVTTGlobal = d[window.currentSubMapKey]||null; 
-            if(isMapOpen()) window.updateTacticalBoard(); 
-        });
+        let isMapOpen = () => { let t = document.getElementById('tab-mapa'); return t && (t.style.display === 'block' || t.style.display === 'flex' || t.classList.contains('active')); };
+        window.db.ref('tokyoRpg/submapConfig').on('value', s => { window.submapasConfig = s.val() || {}; if(window.currentSubMapKey && isMapOpen()) { window.initTacticalBoard(); window.updateTacticalBoard(); } });
+        window.db.ref('tokyoRpg/submapsBGs').on('value', s => { window.submapasBGs = s.val() || {}; if(window.currentSubMapKey) { let wrapper = document.getElementById("vttWorldWrapper"); if(wrapper && window.submapasBGs[window.currentSubMapKey]) wrapper.style.backgroundImage = `url("${window.submapasBGs[window.currentSubMapKey]}")`; } });
+        window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; if(isMapOpen()) window.updateTacticalBoard(); });
+        window.db.ref('tokyoRpg/submapsTraps').on('value', s => { window.submapasTraps = s.val() || {}; if(isMapOpen()) window.updateTacticalBoard(); });
+        window.db.ref('tokyoRpg/turnosVTT').on('value', s => { let d = s.val()||{}; window.turnosVTTGlobal = d[window.currentSubMapKey]||null; if(isMapOpen()) window.updateTacticalBoard(); });
     }
 }, 1000);
 
 window.desenharMapa = function(forcarVisibilidade = false) {
-    let tabMapa = document.getElementById("tab-mapa");
-    if(tabMapa && forcarVisibilidade) tabMapa.style.display = "flex";
-
+    let tabMapa = document.getElementById("tab-mapa"); if(tabMapa && forcarVisibilidade) tabMapa.style.display = "flex";
     let mc = document.getElementById("mapCanvas"); let sc = document.getElementById("subMapCanvas"); 
     if(window.currentSubMapKey) { if(mc) mc.style.display = "none"; if(sc) sc.style.display = "flex"; } else { if(mc) mc.style.display = "block"; if(sc) sc.style.display = "none"; }
-    
     if(!mc) return; mc.innerHTML = "";
     
     let svg = `<svg style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:2;">`;
     window.conexoesMapa.forEach(c => { 
         let p1=window.locaisMapa[c.de]; let p2=window.locaisMapa[c.para]; 
-        if(p1&&p2) {
-            let p1x = p1.gx !== undefined ? p1.gx : p1.x; let p1y = p1.gy !== undefined ? p1.gy : p1.y; let p2x = p2.gx !== undefined ? p2.gx : p2.x; let p2y = p2.gy !== undefined ? p2.gy : p2.y;
-            svg += `<line x1="${p1x}%" y1="${p1y}%" x2="${p2x}%" y2="${p2y}%" stroke="var(--accent-blue)" stroke-width="2" opacity="0.6"/>`; 
-        }
+        if(p1&&p2) { let p1x = p1.gx !== undefined ? p1.gx : p1.x; let p1y = p1.gy !== undefined ? p1.gy : p1.y; let p2x = p2.gx !== undefined ? p2.gx : p2.x; let p2y = p2.gy !== undefined ? p2.gy : p2.y; svg += `<line x1="${p1x}%" y1="${p1y}%" x2="${p2x}%" y2="${p2y}%" stroke="var(--accent-blue)" stroke-width="2" opacity="0.6"/>`; }
     });
     
     let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus?.includes("Gaia"));
     if(isGaia || window.isMaster) {
         window.rotasSecretasGaia.forEach(c => { 
             let p1=window.locaisMapa[c.de]; let p2=window.locaisMapa[c.para]; 
-            if(p1&&p2) {
-                let p1x = p1.gx !== undefined ? p1.gx : p1.x; let p1y = p1.gy !== undefined ? p1.gy : p1.y; let p2x = p2.gx !== undefined ? p2.gx : p2.x; let p2y = p2.gy !== undefined ? p2.gy : p2.y;
-                svg += `<line x1="${p1x}%" y1="${p1y}%" x2="${p2x}%" y2="${p2y}%" stroke="#00ff00" stroke-width="2" stroke-dasharray="5,5" opacity="0.8"/>`; 
-            }
+            if(p1&&p2) { let p1x = p1.gx !== undefined ? p1.gx : p1.x; let p1y = p1.gy !== undefined ? p1.gy : p1.y; let p2x = p2.gx !== undefined ? p2.gx : p2.x; let p2y = p2.gy !== undefined ? p2.gy : p2.y; svg += `<line x1="${p1x}%" y1="${p1y}%" x2="${p2x}%" y2="${p2y}%" stroke="#00ff00" stroke-width="2" stroke-dasharray="5,5" opacity="0.8"/>`; }
         });
     }
     svg += `</svg>`; mc.innerHTML = svg;
     
-    Object.keys(window.locaisMapa).forEach(key => {
-        let loc = window.locaisMapa[key]; let node = document.createElement("div"); node.className = "map-node"; 
-        let nX = loc.gx !== undefined ? loc.gx : loc.x; let nY = loc.gy !== undefined ? loc.gy : loc.y;
-        node.style.left = nX + "%"; node.style.top = nY + "%"; node.innerHTML = `<span class="node-label">${loc.nome}</span>`; 
-        node.onclick = () => window.abrirSubMapa(key); mc.appendChild(node);
-    });
+    Object.keys(window.locaisMapa).forEach(key => { let loc = window.locaisMapa[key]; let node = document.createElement("div"); node.className = "map-node"; let nX = loc.gx !== undefined ? loc.gx : loc.x; let nY = loc.gy !== undefined ? loc.gy : loc.y; node.style.left = nX + "%"; node.style.top = nY + "%"; node.innerHTML = `<span class="node-label">${loc.nome}</span>`; node.onclick = () => window.abrirSubMapa(key); mc.appendChild(node); });
 };
 
 window.abrirSubMapa = function(localKey) {
-    window.currentSubMapKey = localKey;
-    let tabMapa = document.getElementById("tab-mapa"); if(tabMapa) tabMapa.style.display = "flex";
-    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none";
-    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
-    let loc = window.locaisMapa[localKey] || { nome: localKey.replace(/_/g, " ") };
-    let titleEl = document.getElementById("subMapTitle"); if(titleEl) titleEl.innerText = loc.nome;
-    let bgUrl = window.submapasBGs[localKey] || ""; let wrapper = document.getElementById("vttWorldWrapper");
-    if(wrapper) { wrapper.style.backgroundImage = bgUrl ? `url('${bgUrl}')` : "none"; }
-    
+    window.currentSubMapKey = localKey; let tabMapa = document.getElementById("tab-mapa"); if(tabMapa) tabMapa.style.display = "flex"; let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none"; let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
+    let loc = window.locaisMapa[localKey] || { nome: localKey.replace(/_/g, " ") }; let titleEl = document.getElementById("subMapTitle"); if(titleEl) titleEl.innerText = loc.nome;
+    let bgUrl = window.submapasBGs[localKey] || ""; let wrapper = document.getElementById("vttWorldWrapper"); if(wrapper) { wrapper.style.backgroundImage = bgUrl ? `url('${bgUrl}')` : "none"; }
     window.initTacticalBoard(); window.updateTacticalBoard(); window.listenCombatEvents();
-
-    if(window.jogadorAtual && window.db) {
-        window.db.ref(`tokyoRpg/submaps/${localKey}`).once('value', s => {
-            let currentGrid = s.val() || {};
-            if(!Object.values(currentGrid).includes(window.jogadorAtual)) window.db.ref(`tokyoRpg/submaps/${localKey}/0_0`).set(window.jogadorAtual);
-        });
-    }
+    if(window.jogadorAtual && window.db) { window.db.ref(`tokyoRpg/submaps/${localKey}`).once('value', s => { let currentGrid = s.val() || {}; if(!Object.values(currentGrid).includes(window.jogadorAtual)) window.db.ref(`tokyoRpg/submaps/${localKey}/0_0`).set(window.jogadorAtual); }); }
 };
 
 window.fecharSubMapa = function() { window.currentSubMapKey = ""; let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "block"; let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "none"; };
 window.mudarBgSubMapa = function() { let url = document.getElementById("vttBgInp").value; if(window.db && window.currentSubMapKey) { window.db.ref(`tokyoRpg/submapsBGs/${window.currentSubMapKey}`).set(url); window.showNeonToast("Fundo Salvo!"); } };
-window.salvarFormatoMapa = function() {
-    if(!window.isMaster || !window.currentSubMapKey) return;
-    let cols = parseInt(document.getElementById("vttColsInp").value) || 16; let rows = parseInt(document.getElementById("vttRowsInp").value) || 12; let shape = document.getElementById("vttShapeInp").value || "quadrado";
-    window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}`).update({ cols: cols, rows: rows, shape: shape }); window.showNeonToast(`Terreno alterado para ${cols}x${rows}!`);
-};
+window.salvarFormatoMapa = function() { if(!window.isMaster || !window.currentSubMapKey) return; let cols = parseInt(document.getElementById("vttColsInp").value) || 16; let rows = parseInt(document.getElementById("vttRowsInp").value) || 12; let shape = document.getElementById("vttShapeInp").value || "quadrado"; window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}`).update({ cols: cols, rows: rows, shape: shape }); window.showNeonToast(`Terreno alterado para ${cols}x${rows}!`); };
 
-window.highlightTargetCells = function(tx, ty, px, py, style, range) { window.clearHighlightTargetCells(); let affected = window.getAffectedCells(tx, ty, px, py, style, range); affected.forEach(cid => { let cell = document.getElementById(`cell_${cid}`); if(cell && !cell.classList.contains("hidden-vtt-cell")) cell.classList.add("target-hover"); }); };
-window.clearHighlightTargetCells = function() { document.querySelectorAll(".target-hover").forEach(c => c.classList.remove("target-hover")); };
-
-window.lastFocusTurnIndex = -1; window.lastFocusCid = "";
-
-window.iconesMercado = { "Arma": "🔫", "Munição": "🪫", "Roupa": "🦺", "Comida": "🍫", "Móvel": "🪑", "Tecnologia": "📱", "Acessório": "📿", "Mochila": "🎒" };
-
-window.termoBuscaLoja = "";
-window.buscarNaLoja = function(val) {
-    window.termoBuscaLoja = val.toLowerCase();
-    window.renderizarLojaUI();
-};
-
-window.renderizarLojaUI = function() {
-    let grid = document.getElementById("shopGrid"); if(!grid) return; grid.innerHTML = "";
-    let itens = window.lojaGlobal || {};
-    let painelMestre = document.getElementById("masterShopPanel");
-    if(painelMestre) { painelMestre.style.display = window.isMaster ? "block" : "none"; }
-
-    let chaves = Object.keys(itens); let count = 0;
-    chaves.forEach(k => {
-        let i = itens[k];
-        
-        // Filtro de Busca
-        if(window.termoBuscaLoja !== "") {
-            let sNome = (i.nome||"").toLowerCase(); let sDesc = (i.desc||"").toLowerCase();
-            if(!sNome.includes(window.termoBuscaLoja) && !sDesc.includes(window.termoBuscaLoja)) return;
-        } else {
-            // Filtro de Abas Normal
-            if(window.filtroLojaAtual !== "Tudo") { if(window.filtroLojaAtual === "Promoções" && !i.isPromo) return; if(window.filtroLojaAtual !== "Promoções" && i.tipo !== window.filtroLojaAtual) return; }
-        }
-        
-        if(i.wpnCode && i.wpnCode.trim() !== "" && !window.isMaster) return;
-
-        count++; let isM = window.isMaster;
-        let div = document.createElement("div"); div.className = "shop-item" + (isM ? " master-edit" : "");
-        let btnComprarText = i.preco + " ¥"; let promoTag = i.isPromo ? `<div class="shop-promo-tag">OFERTA</div>` : "";
-        let masterBtns = isM ? `<div style="display:flex;gap:5px;margin-top:10px;"><button class="action-btn" style="flex:1; border-color:#00e5ff; color:#00e5ff;" onclick="window.prepararEdicaoLoja('${k}')">Editar</button><button class="action-btn" style="flex:1; border-color:#f00; color:#f00;" onclick="window.db.ref('tokyoRpg/loja/${k}').remove()">X</button></div>` : "";
-        let icone = window.iconesMercado[i.tipo] || "📦";
-        
-        let atributosHtml = `<div style="font-size:10px; color:#00e5ff; margin-top:5px;">`;
-        if(i.poder) atributosHtml += `Poder: ${i.poder} | `;
-        if(i.tipo === 'Mochila') atributosHtml += `Espaço: +${i.extraW}x${i.extraH} | `; else atributosHtml += `Tamanho: ${i.w||1}x${i.h||1} | Peso: ${i.peso||1}kg | `;
-        if(i.cd) atributosHtml += `CD: ${i.cd}s`;
-        
-        if(i.isVTT && i.wpnStyle) {
-            atributosHtml += `<br><span style="color:#ff1a55;">Estilo: ${i.wpnStyle} | Dados: ${i.wpnDice||'N/A'} | Alcance: ${i.wpnRange||1} | Crítico: ${i.wpnCrit||'2x'}</span>`;
-            if(i.wpnEffect && i.wpnEffect !== "") atributosHtml += `<br><span style="color:#ffaa00;">Efeito: ${i.wpnEffect} (${i.wpnEffectVal||1})</span>`;
-        }
-        if(i.isConsumable) atributosHtml += `<br><span style="color:#00ff66; font-weight:bold;">⚠️ ITEM CONSUMÍVEL (Uso Único)</span>`;
-        if(i.wpnCode && isM) { atributosHtml += `<br><span style="color:var(--accent-purple);">Código Secreto: ${i.wpnCode}</span>`; }
-        atributosHtml += `</div>`;
-
-        div.innerHTML = `${promoTag}<div class="shop-item-content"><h3 style="color:${i.isPromo ? '#ffaa00' : 'var(--accent-blue)'};">${icone} ${i.nome}</h3><p>${i.desc}</p>${atributosHtml}</div><div class="shop-item-footer"><button class="action-btn" onclick="window.comprarItem('${k}', '${(i.nome||"").replace(/'/g, "\\'")}', ${i.preco}, '${i.tipo}', '${(i.desc||"").replace(/'/g, "\\'")}', ${i.poder||0}, '${i.buffType||""}', ${i.w||1}, ${i.h||1}, ${i.extraW||0}, ${i.extraH||0}, ${i.peso||1}, ${i.cd||2})">COMPRAR - ${btnComprarText}</button>${masterBtns}</div>`;
-        grid.appendChild(div);
-    });
-
-    if(count === 0) { grid.innerHTML = `<div style="width:100%; text-align:center; color:#555; padding:50px 0;">Nenhum item encontrado.</div>`; }
-};
-
-window.comprarItem = function(id, n, p, t, d, poder, buff, w, h, exW, exH, peso, cd, ev) {
-    if(ev) ev.stopPropagation(); if(!window.jogadorAtual || window.isMaster) return; 
-    
-    // NOVO: PERGUNTA A QUANTIDADE DE ITENS
-    let qtdStr = prompt(`Quantas unidades de [${n}] você deseja comprar?`, "1");
-    if(!qtdStr) return;
-    let qtd = parseInt(qtdStr);
-    if(isNaN(qtd) || qtd < 1) { window.showNeonToast("Quantidade inválida."); return; }
-
-    let c = window.usersGlobais[window.jogadorAtual].carteira||0; 
-    let totalCusto = p * qtd;
-    
-    if(c < totalCusto) {window.showNeonToast(`Sem Yenes! Total: ${totalCusto} ¥`); return;}
-    
-    let lojaItem = window.lojaGlobal[id]; 
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(c - totalCusto);
-    
-    let isCons = lojaItem ? (lojaItem.isConsumable || false) : false;
-    let isVttItem = lojaItem ? (lojaItem.isVTT === true || lojaItem.tipo === 'Arma' || lojaItem.tipo === 'Munição') : false;
-    let itemPayload = { id: id, nome: n, tipo: t, desc: d, poder: poder, buffType: buff, w:w, h:h, extraW:exW, extraH:exH, peso:peso, cd:cd, eq:false, isConsumable: isCons, isVTT: isVttItem };
-    
-    if(isVttItem && lojaItem && lojaItem.wpnStyle) { itemPayload.wpnStyle = lojaItem.wpnStyle; itemPayload.wpnRange = lojaItem.wpnRange || 1; itemPayload.wpnDice = lojaItem.wpnDice || '1d4'; itemPayload.wpnBonus = lojaItem.wpnBonus || 0; itemPayload.wpnCrit = lojaItem.wpnCrit || '2x'; itemPayload.wpnEffect = lojaItem.wpnEffect || ''; itemPayload.wpnEffectVal = lojaItem.wpnEffectVal || 1; }
-    
-    let updates = {};
-    for(let i = 0; i < qtd; i++) {
-        let newRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push();
-        updates[`tokyoRpg/users/${window.jogadorAtual}/mochila/${newRef.key}`] = itemPayload;
-    }
-    
-    window.db.ref().update(updates).then(() => {
-        window.showNeonToast(`${qtd}x ${n} Comprado(s)! (-${totalCusto} ¥)`);
-    });
-};
 window.initTacticalBoard = function() {
     try {
         let b = document.getElementById("gridCells"); if(!b) return; b.innerHTML = "";
         let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
         let conf = window.submapasConfig[window.currentSubMapKey] || {};
         let cols = conf.cols || 16; let rows = conf.rows || 12; let shape = conf.shape || 'quadrado'; let cellsData = conf.cells || {}; let cellSize = window.VTT_CELL_SIZE || 50; 
-
-        let wrapper = document.getElementById("vttWorldWrapper");
-        if(wrapper) { wrapper.style.width = (cols * cellSize) + "px"; wrapper.style.height = (rows * cellSize) + "px"; }
+        let wrapper = document.getElementById("vttWorldWrapper"); if(wrapper) { wrapper.style.width = (cols * cellSize) + "px"; wrapper.style.height = (rows * cellSize) + "px"; }
         b.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`; b.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 
         for(let y=0; y<rows; y++) {
             for(let x=0; x<cols; x++) {
                 let cid = `${x}_${y}`; let cData = cellsData[cid] || {}; let isObs = cData.obs || false; let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
-                
                 let isHidden = false;
                 if (shape === 'l_shape') { if (x >= Math.floor(cols/2) && y < Math.floor(rows/2)) isHidden = true; } 
                 else if (shape === 'u_shape') { if (x >= Math.floor(cols/4) && x < Math.floor(cols*0.75) && y < Math.floor(rows/2)) isHidden = true; } 
@@ -602,7 +231,6 @@ window.initTacticalBoard = function() {
                 let cell = document.createElement("div"); cell.id = `cell_${x}_${y}`; cell.className = `tactical-cell ${obsClass} ${isHidden ? "hidden-vtt-cell" : ""}`;
                 if (!isHidden) { 
                     if(window.isMaster) { cell.oncontextmenu = (e) => { if(e.target === cell) { e.preventDefault(); window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}/cells/${cid}/obs`).set(!isObs); window.showNeonToast(!isObs ? "Bloqueado!" : "Livre!"); } }; }
-                    // CORREÇÃO: O clique na célula agora é garantido, sem checagem estrita de elemento alvo!
                     cell.onclick = () => window.clicarGrid(x, y, isObs);
                 }
                 b.appendChild(cell);
@@ -613,40 +241,17 @@ window.initTacticalBoard = function() {
 
 window.getAffectedCells = function(tx, ty, px, py, style, range) {
     let cells = [];
-    if (!style) style = 'melee'; // Trava contra itens antigos
-
+    if (!style) style = 'melee'; 
     if (style === 'melee' || style === 'ranged' || style === 'teleport' || style === 'heal' || style === 'trap') { cells.push(`${tx}_${ty}`); } 
     else if (style === 'aoe') { for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) cells.push(`${tx+i}_${ty+j}`); } 
     else if (style === 'self_aoe') { for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) if(i!==0 || j!==0) cells.push(`${px+i}_${py+j}`); } 
     else if (style === 'cross') { cells.push(`${tx}_${ty}`, `${tx+1}_${ty}`, `${tx-1}_${ty}`, `${tx}_${ty+1}`, `${tx}_${ty-1}`); } 
-    else if (style === 'x_shape') { 
-        cells.push(`${tx}_${ty}`);
-        for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty+i}`, `${tx-i}_${ty-i}`, `${tx+i}_${ty-i}`, `${tx-i}_${ty+i}`); }
-    }
-    else if (style === 'big_cross') {
-        cells.push(`${tx}_${ty}`);
-        for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty}`, `${tx-i}_${ty}`, `${tx}_${ty+i}`, `${tx}_${ty-i}`); }
-    } else if (style === 'line') {
-        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
-        let xInc = dx / steps; let yInc = dy / steps;
-        for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
-    } else if (style === 'alternating_line') {
-        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
-        let xInc = dx / steps; let yInc = dy / steps;
-        for(let i=1; i<=steps; i+=2) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
-    } else if (style === 't_shape') {
-        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
-        let xInc = dx / steps; let yInc = dy / steps;
-        for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
-        let rx = Math.round(px + steps*xInc); let ry = Math.round(py + steps*yInc);
-        if (Math.abs(dx) > Math.abs(dy)) { cells.push(`${rx}_${ry+1}`, `${rx}_${ry-1}`); } else { cells.push(`${rx+1}_${ry}`, `${rx-1}_${ry}`); }
-    } else if (style === 'cone') {
-        let dx = tx - px; let dy = ty - py; let dirX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let dirY = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
-        for(let i=1; i<=range; i++) {
-            if (Math.abs(dx) > Math.abs(dy)) { for(let j=-i; j<=i; j++) cells.push(`${px + (dirX*i)}_${py + j}`); } 
-            else { for(let j=-i; j<=i; j++) cells.push(`${px + j}_${py + (dirY*i)}`); }
-        }
-    }
+    else if (style === 'x_shape') { cells.push(`${tx}_${ty}`); for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty+i}`, `${tx-i}_${ty-i}`, `${tx+i}_${ty-i}`, `${tx-i}_${ty+i}`); } }
+    else if (style === 'big_cross') { cells.push(`${tx}_${ty}`); for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty}`, `${tx-i}_${ty}`, `${tx}_${ty+i}`, `${tx}_${ty-i}`); } } 
+    else if (style === 'line') { let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`]; let xInc = dx / steps; let yInc = dy / steps; for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`); } 
+    else if (style === 'alternating_line') { let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`]; let xInc = dx / steps; let yInc = dy / steps; for(let i=1; i<=steps; i+=2) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`); } 
+    else if (style === 't_shape') { let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`]; let xInc = dx / steps; let yInc = dy / steps; for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`); let rx = Math.round(px + steps*xInc); let ry = Math.round(py + steps*yInc); if (Math.abs(dx) > Math.abs(dy)) { cells.push(`${rx}_${ry+1}`, `${rx}_${ry-1}`); } else { cells.push(`${rx+1}_${ry}`, `${rx-1}_${ry}`); } } 
+    else if (style === 'cone') { let dx = tx - px; let dy = ty - py; let dirX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let dirY = dy === 0 ? 0 : (dy > 0 ? 1 : -1); for(let i=1; i<=range; i++) { if (Math.abs(dx) > Math.abs(dy)) { for(let j=-i; j<=i; j++) cells.push(`${px + (dirX*i)}_${py + j}`); } else { for(let j=-i; j<=i; j++) cells.push(`${px + j}_${py + (dirY*i)}`); } } }
     return cells;
 };
 
@@ -682,7 +287,6 @@ window.updateTacticalBoard = function() {
             }
         }
 
-        // Renderiza as Armadilhas
         let traps = window.submapasTraps ? window.submapasTraps[window.currentSubMapKey] || {} : {};
         document.querySelectorAll(".trap-icon-visual").forEach(e => e.remove());
         Object.keys(traps).forEach(tId => {
@@ -730,7 +334,6 @@ window.updateTacticalBoard = function() {
         let currentFocusCid = `${focarX}_${focarY}`; let turnIndex = isTurnoAtivo ? window.turnosVTTGlobal.atual : -1;
         if (focarX !== -1 && focarY !== -1) { if (window.lastFocusTurnIndex !== turnIndex || window.lastFocusCid !== currentFocusCid) { setTimeout(() => window.focarCameraVTT(focarX, focarY), 100); window.lastFocusTurnIndex = turnIndex; window.lastFocusCid = currentFocusCid; } }
         
-        // Exibição dos Botões
         let tBar = document.getElementById("turnOrderUI"); let btnP = document.getElementById("btnPassTurno");
         let btnAtk = document.getElementById("btnAtacar"); let btnMover = document.getElementById("btnMoverVTT"); let btnLevantar = document.getElementById("btnLevantarVTT");
         
@@ -760,11 +363,7 @@ window.updateTacticalBoard = function() {
 
 window.clicarGrid = function(x,y, isObs) {
     if(!window.jogadorAtual) return;
-    
-    if(window.combatState && window.combatState.active) {
-        window.executarAtaque(x, y);
-        return;
-    }
+    if(window.combatState && window.combatState.active) { window.executarAtaque(x, y); return; }
 
     let u = window.usersGlobais[window.jogadorAtual]; let isGaia = (u.deus && u.deus.includes("Gaia"));
     if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
@@ -844,6 +443,10 @@ window.passarTurnoVTT = function() {
     if(eu === window.jogadorAtual) { window.movimentosRestantes = 0; window.setElText("movRestantes", "Passos Livres: 0"); }
 };
 
+// =========================================================
+// SISTEMA DE COMBATE VTT & CLASH 
+// =========================================================
+
 window.iniciarAtaqueVTT = function() {
     if(!window.currentSubMapKey) { window.showNeonToast("Não está no mapa!"); return; }
     if(!window.isMaster && window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual) { window.showNeonToast("Espere seu turno!"); return; }
@@ -906,8 +509,6 @@ window.executarAtaque = function(tx, ty) {
         if (arma.wpnStyle === 'trap') {
             let dest = `${tx}_${ty}`; if (grid[dest]) { window.showNeonToast("Local ocupado! Armadilhas devem ir no chão."); return; }
             let d20Atk = Math.floor(Math.random() * 20) + 1; let isCrit = (d20Atk === 20);
-            
-            // NOVO: Animação de dado para a Armadilha
             window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Plantou Armadilha`, results: [d20Atk], ts: Date.now() });
 
             let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice = 1; if(isNaN(sides)) sides = 4;
@@ -933,10 +534,7 @@ window.executarAtaque = function(tx, ty) {
         let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let attrMod = arma.wpnStyle === 'melee' ? (r.for + buffs.for) : (r.man + buffs.man);
         let d20Atk = Math.floor(Math.random() * 20) + 1; let totalAtk = d20Atk + attrMod; let isCrit = (d20Atk === 20);
         
-        // NOVO: FORÇA A ANIMAÇÃO DO DADO GLOBAL DO ATAQUE PARA TODOS!
-        if(!isHeal) {
-            window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Ataque: ${arma.nome}`, results: [d20Atk], ts: Date.now() });
-        }
+        if(!isHeal) { window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Ataque: ${arma.nome}`, results: [d20Atk], ts: Date.now() }); }
 
         let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice = 1; if(isNaN(sides)) sides = 4;
         let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalDmg = dmgRoll + (parseInt(arma.wpnBonus) || 0);
@@ -953,11 +551,35 @@ window.executarAtaque = function(tx, ty) {
         if(invKeyToDel) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${invKeyToDel}`).remove(); window.showNeonToast(`${nomeDaArmaUsada} foi consumido!`); }
         if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT();
         
-    } catch (err) {
-        console.error("Erro critico no combate:", err);
-        window.showNeonToast("Ação cancelada (Erro Interno)");
-        window.cancelarAtaqueVTT();
-    }
+    } catch (err) { console.error("Erro critico no combate:", err); window.showNeonToast("Ação cancelada (Erro Interno)"); window.cancelarAtaqueVTT(); }
+};
+
+window.focarCameraVTT = function(x, y) {
+    let board = document.getElementById("tacticalBoard"); if(!board) return;
+    let cellSize = window.VTT_CELL_SIZE || 50; let leftPx = (x * cellSize); let topPx = (y * cellSize); let vW = board.clientWidth; let vH = board.clientHeight;
+    let targetL = leftPx - (vW / 2) + (cellSize / 2); let targetT = topPx - (vH / 2) + (cellSize / 2);
+    targetL = Math.max(0, Math.min(targetL, board.scrollWidth - vW)); targetT = Math.max(0, Math.min(targetT, board.scrollHeight - vH));
+    board.scrollTo({ left: targetL, top: targetT, behavior: 'smooth' });
+};
+
+window.listenCombatEvents = function() {
+    if(!window.db) return;
+    if(window.currentCombatListener && window._lastCombatMap === window.currentSubMapKey) return;
+    if(window.currentCombatListener && window._lastCombatMap) { window.db.ref(`tokyoRpg/submapsCombat/${window._lastCombatMap}`).off('child_added', window.currentCombatListener); }
+    window._lastCombatMap = window.currentSubMapKey;
+    window.currentCombatListener = window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}`).on('child_added', snap => {
+        let atk = snap.val(); let atkId = snap.key; if(!atk) return;
+        if(Date.now() - atk.timestamp > 60000) return; 
+        if(atk.targets && atk.targets.includes(window.jogadorAtual)) { window.mostrarUIReacao(atkId, atk); }
+    });
+};
+
+window.mostrarUIReacao = function(atkId, atkData) {
+    window.pendingAttack = { id: atkId, data: atkData };
+    if (atkData.isHeal) { window.reagirAtaque('aceitar'); return; }
+    let info = document.getElementById("reactionInfo");
+    if(info) { info.innerHTML = `<strong style="color:var(--accent-blue);">${atkData.attacker}</strong> atacou você com <strong>${atkData.weaponName}</strong>!<br>Poder de Ataque: <span class="neon-red" style="font-size:18px;">${atkData.atkRoll}</span>`; }
+    document.getElementById("reactionModal").style.display = "flex";
 };
 
 window.reagirAtaque = function(tipo) {
@@ -969,25 +591,18 @@ window.reagirAtaque = function(tipo) {
         reactionText = `Recebeu cura / efeito benéfico.`; resultText = `+${finalDmg} HP RESTAURADO!`; winnerId = 'heal'; 
     } else if(tipo === 'esquiva') {
         let d20 = Math.floor(Math.random() * 20) + 1; 
-        // NOVO: Animação Global do dado da Esquiva!
         window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Tentativa de Esquiva`, results: [d20], ts: Date.now() });
-
         let agiTotal = r.agi + buffs.agi; defRollVal = d20 + agiTotal;
         if (d20 === 1) { finalDmg = atk.dmgRoll || 0; winnerId = 'atk'; reactionText = `Tentou Esquivar (<span class="neon-blue">1</span>). Tomou <span class="neon-red">${finalDmg}</span> de dano crítico.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
         else if(defRollVal > atk.atkRoll) { finalDmg = 0; winnerId = 'def'; reactionText = `Rolou Esquiva (<span class="neon-green">${defRollVal}</span>) e evitou!`; resultText = "ESQUIVOU COM SUCESSO!"; } 
         else { reactionText = `Tentou Esquivar (<span class="neon-red">${defRollVal}</span>) mas falhou! Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `SOFREU ${finalDmg} DE DANO!`; }
     } else if(tipo === 'defender') {
         let d20 = Math.floor(Math.random() * 20) + 1; 
-        // NOVO: Animação Global do dado da Defesa!
         window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Tentativa de Defesa`, results: [d20], ts: Date.now() });
-
         let vigTotal = r.vig + buffs.vig; let defArmor = window.calcularDefesa(u); defRollVal = d20 + vigTotal;
         if (d20 === 1) { finalDmg = atk.dmgRoll || 0; winnerId = 'atk'; reactionText = `Rolou Defesa (<span class="neon-blue">1</span>). Armadura ignorada. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
         else if (defRollVal > atk.atkRoll) { finalDmg = 0; winnerId = 'def'; reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>) e superou o ataque. Tomou 0.`; resultText = `DEFESA PERFEITA!`; } 
-        else {
-            finalDmg = Math.max(0, (atk.dmgRoll || 0) - defArmor); reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>). Reduziu com Armadura (${defArmor}). Tomou <span class="neon-red">${finalDmg}</span> de dano.`;
-            if (finalDmg === 0) { winnerId = 'def'; resultText = `A ARMADURA ABSORVEU TUDO!`; } else { resultText = `DEFESA QUEBRADA! SOFREU ${finalDmg} DE DANO!`; }
-        }
+        else { finalDmg = Math.max(0, (atk.dmgRoll || 0) - defArmor); reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>). Reduziu com Armadura (${defArmor}). Tomou <span class="neon-red">${finalDmg}</span> de dano.`; if (finalDmg === 0) { winnerId = 'def'; resultText = `A ARMADURA ABSORVEU TUDO!`; } else { resultText = `DEFESA QUEBRADA! SOFREU ${finalDmg} DE DANO!`; } }
     } else { defRollVal = 0; reactionText = `Aceitou o golpe. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `SOFREU ${finalDmg} DE DANO CRÍTICO!`; }
 
     if(atk.isCrit && finalDmg > 0 && !atk.isHeal) resultText = "ATAQUE CRÍTICO! " + resultText;
@@ -995,20 +610,11 @@ window.reagirAtaque = function(tipo) {
 
     window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Reação contra ${atk.attacker}: ${reactionText}` });
     let atkUser = window.usersGlobais[atk.attacker];
-    let clashPayload = {
-        ts: Date.now(), atkName: atk.attacker || "Desconhecido", atkAv: atkUser?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${atk.attacker}`,
-        atkAction: `${atk.isHeal ? 'Usou' : 'Ataque'} c/ ${atk.weaponName || 'Arma'}`, atkRoll: atk.atkRoll || 0, defName: window.jogadorAtual, defAv: u?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`,
-        defAction: atk.isHeal ? 'RECEBEU' : tipo.toUpperCase(), defRoll: defRollVal || 0, dmg: finalDmg || 0, winner: winnerId, resultText: resultText,
-        effect: atk.wpnEffect || "", effectVal: atk.wpnEffectVal || 1, atkX: atk.atkX !== undefined ? atk.atkX : -1, atkY: atk.atkY !== undefined ? atk.atkY : -1, isHeal: atk.isHeal || false
-    };
+    let clashPayload = { ts: Date.now(), atkName: atk.attacker || "Desconhecido", atkAv: atkUser?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${atk.attacker}`, atkAction: `${atk.isHeal ? 'Usou' : 'Ataque'} c/ ${atk.weaponName || 'Arma'}`, atkRoll: atk.atkRoll || 0, defName: window.jogadorAtual, defAv: u?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`, defAction: atk.isHeal ? 'RECEBEU' : tipo.toUpperCase(), defRoll: defRollVal || 0, dmg: finalDmg || 0, winner: winnerId, resultText: resultText, effect: atk.wpnEffect || "", effectVal: atk.wpnEffectVal || 1, atkX: atk.atkX !== undefined ? atk.atkX : -1, atkY: atk.atkY !== undefined ? atk.atkY : -1, isHeal: atk.isHeal || false };
 
-    // Fechar Modal. Se teve dado, espera 2.5 segundos para a animação do dado da defesa rodar, e SÓ ENTÃO abre a tela de CLASH!
     document.getElementById("reactionModal").style.display = "none";
-    if(tipo !== 'aceitar' && !atk.isHeal) {
-        setTimeout(() => { window.db.ref('tokyoRpg/currentClash').set(clashPayload); }, 2500);
-    } else {
-        window.db.ref('tokyoRpg/currentClash').set(clashPayload);
-    }
+    if(tipo !== 'aceitar' && !atk.isHeal) { setTimeout(() => { window.db.ref('tokyoRpg/currentClash').set(clashPayload); }, 2500); } 
+    else { window.db.ref('tokyoRpg/currentClash').set(clashPayload); }
     
     if(window.currentSubMapKey && window.pendingAttack.id) window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${window.pendingAttack.id}`).remove().catch(()=>{});
     window.pendingAttack = null;
@@ -1038,6 +644,7 @@ window.processClashQueue = function() {
             setTimeout(() => {
                 ov.style.display = "none"; window.isClashing = false;
                 let grid = window.submapasGlobais[window.currentSubMapKey] || {}; let defCid = Object.keys(grid).find(key => grid[key] === c.defName);
+                
                 if(defCid) {
                     let cellEl = document.getElementById(`cell_${defCid}`);
                     if(cellEl) {
@@ -1049,10 +656,8 @@ window.processClashQueue = function() {
                     }
                     let tId = `token_${c.defName}`; let tEl = document.getElementById(tId);
                     if(tEl) {
-                        let popTxt = c.isHeal ? `+${c.dmg}` : (c.dmg > 0 ? `-${c.dmg}` : "MISS");
-                        let popColor = c.isHeal ? "#00ff66" : (c.dmg > 0 ? "#ff1a55" : "#aaa");
-                        let dmgPop = document.createElement("div"); dmgPop.className = "damage-popup"; dmgPop.innerText = popTxt;
-                        dmgPop.style.color = popColor; dmgPop.style.textShadow = `0 0 10px #000, 0 0 5px ${popColor}`;
+                        let popTxt = c.isHeal ? `+${c.dmg}` : (c.dmg > 0 ? `-${c.dmg}` : "MISS"); let popColor = c.isHeal ? "#00ff66" : (c.dmg > 0 ? "#ff1a55" : "#aaa");
+                        let dmgPop = document.createElement("div"); dmgPop.className = "damage-popup"; dmgPop.innerText = popTxt; dmgPop.style.color = popColor; dmgPop.style.textShadow = `0 0 10px #000, 0 0 5px ${popColor}`;
                         tEl.appendChild(dmgPop); setTimeout(() => dmgPop.remove(), 1500);
                     }
                 }
@@ -1060,36 +665,22 @@ window.processClashQueue = function() {
                 if(c.defName === window.jogadorAtual) {
                     if(c.dmg > 0 && !c.isHeal) { let board = document.getElementById("tacticalBoard"); if(board) { board.classList.add("shake-camera"); setTimeout(() => board.classList.remove("shake-camera"), 500); } }
 
-                    let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let updates = {};
-                    let conf = window.submapasConfig[window.currentSubMapKey] || {};
-                    let safeDmg = parseInt(c.dmg) || 0;
+                    let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let updates = {}; let conf = window.submapasConfig[window.currentSubMapKey] || {}; let safeDmg = parseInt(c.dmg) || 0;
 
-                    if (c.isHeal) {
-                        updates[`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`] = Math.min(r.hpMax || 100, r.hp + safeDmg);
-                    } else if (safeDmg > 0) {
+                    if (c.isHeal) { updates[`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`] = Math.min(r.hpMax || 100, r.hp + safeDmg); } 
+                    else if (safeDmg > 0) {
                         updates[`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`] = Math.max(0, r.hp - safeDmg);
 
                         if(c.effect === "Empurrão" && c.atkX !== -1 && c.atkY !== -1 && defCid) {
                             let [defX, defY] = defCid.split("_").map(Number); let dx = defX - c.atkX; let dy = defY - c.atkY;
-                            let pushX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let pushY = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
-                            let power = c.effectVal || 1; let finalX = defX, finalY = defY; 
-                            for(let step=1; step<=power; step++) {
-                                let testX = defX + (pushX * step); let testY = defY + (pushY * step);
-                                let isObs = conf.cells && conf.cells[`${testX}_${testY}`] ? conf.cells[`${testX}_${testY}`].obs : false;
-                                if(!grid[`${testX}_${testY}`] && !isObs && testX >= 0 && testY >= 0 && testX < (conf.cols||16) && testY < (conf.rows||12)) { finalX = testX; finalY = testY; } else { break; }
-                            }
+                            let pushX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let pushY = dy === 0 ? 0 : (dy > 0 ? 1 : -1); let power = c.effectVal || 1; let finalX = defX, finalY = defY; 
+                            for(let step=1; step<=power; step++) { let testX = defX + (pushX * step); let testY = defY + (pushY * step); let isObs = conf.cells && conf.cells[`${testX}_${testY}`] ? conf.cells[`${testX}_${testY}`].obs : false; if(!grid[`${testX}_${testY}`] && !isObs && testX >= 0 && testY >= 0 && testX < (conf.cols||16) && testY < (conf.rows||12)) { finalX = testX; finalY = testY; } else { break; } }
                             if(finalX !== defX || finalY !== defY) { updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${defCid}`] = null; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${finalX}_${finalY}`] = c.defName; }
                         }
                         else if(c.effect === "Puxão" && c.atkX !== -1 && c.atkY !== -1 && defCid) {
                             let [defX, defY] = defCid.split("_").map(Number); let dx = c.atkX - defX; let dy = c.atkY - defY;
-                            let pullX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let pullY = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
-                            let power = c.effectVal || 1; let finalX = defX, finalY = defY; 
-                            for(let step=1; step<=power; step++) {
-                                let testX = defX + (pullX * step); let testY = defY + (pullY * step);
-                                if(testX === c.atkX && testY === c.atkY) break;
-                                let isObs = conf.cells && conf.cells[`${testX}_${testY}`] ? conf.cells[`${testX}_${testY}`].obs : false;
-                                if(!grid[`${testX}_${testY}`] && !isObs) { finalX = testX; finalY = testY; } else { break; }
-                            }
+                            let pullX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let pullY = dy === 0 ? 0 : (dy > 0 ? 1 : -1); let power = c.effectVal || 1; let finalX = defX, finalY = defY; 
+                            for(let step=1; step<=power; step++) { let testX = defX + (pullX * step); let testY = defY + (pullY * step); if(testX === c.atkX && testY === c.atkY) break; let isObs = conf.cells && conf.cells[`${testX}_${testY}`] ? conf.cells[`${testX}_${testY}`].obs : false; if(!grid[`${testX}_${testY}`] && !isObs) { finalX = testX; finalY = testY; } else { break; } }
                             if(finalX !== defX || finalY !== defY) { updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${defCid}`] = null; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${finalX}_${finalY}`] = c.defName; }
                         }
                         else if(c.effect === "Troca" && c.atkX !== -1 && c.atkY !== -1 && defCid) { updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${defCid}`] = c.atkName; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${c.atkX}_${c.atkY}`] = c.defName; }
@@ -1101,10 +692,11 @@ window.processClashQueue = function() {
                     if(Object.keys(updates).length > 0) window.db.ref().update(updates);
                 }
                 window.processClashQueue();
-            }, 900); 
+            }, 3000); 
         }, 600); 
-    }, 1000); 
+    }, 1500); 
 };
+
 // =========================================================
 // SISTEMA DE TETRIS INVENTÁRIO 
 // =========================================================
@@ -1134,29 +726,22 @@ window.renderizarMochila = function() {
     if(Object.keys(drop).length > 0) { window.db.ref().update(drop); return; } 
 
     Object.keys(itens).forEach(k => {
-        let i = itens[k]; 
-        if (i.tipo === 'Móvel') return;
-
+        let i = itens[k]; if (i.tipo === 'Móvel') return;
         let w = parseInt(i.w) || 1; let h = parseInt(i.h) || 1;
         let el = document.createElement('div'); el.className = `item-tetris ${i.tipo || 'Arma'}`; el.setAttribute('data-key', k); el.setAttribute('data-w', w); el.setAttribute('data-h', h);
         el.style.width = `${(w * window.CELL_SIZE) + ((w-1) * window.GRID_GAP)}px`; el.style.height = `${(h * window.CELL_SIZE) + ((h-1) * window.GRID_GAP)}px`;
         
-        let btnText = i.eq ? '▼' : '✖'; 
-        let btnTitle = i.eq ? 'Guardar na Mochila' : 'Descartar'; 
-        let btnClass = i.eq ? 'btn-excluir-item' : 'btn-excluir-item discard';
+        let btnText = i.eq ? '▼' : '✖'; let btnTitle = i.eq ? 'Guardar na Mochila' : 'Descartar'; let btnClass = i.eq ? 'btn-excluir-item' : 'btn-excluir-item discard';
         let btnRotate = `<button class="btn-rotate-item" title="Rotacionar" onpointerdown="window.girarItemMochila('${k}', ${w}, ${h}, ${i.eq}, event)">↻</button>`;
-        
         el.innerHTML = `${btnRotate}<span>${window.iconesMercado[i.tipo]||''} ${i.nome}</span>${i.tipo === 'Comida' ? `<button onclick="window.consumirComida('${k}', ${i.poder||0}, ${i.cd||2}, event)" style="font-size:8px; padding:2px; margin-top:2px; background:#000; color:#0f0; border:1px solid #0f0; border-radius:2px; cursor:pointer; position:relative; z-index:5;">Comer</button>` : ''}<button class="${btnClass}" title="${btnTitle}" onpointerdown="window.removerItemMochila('${k}', event)">${btnText}</button>`;
 
         if(i.eq === true && i.c !== undefined && i.r !== undefined && parseInt(i.c) < window.GRID_COLS && parseInt(i.r) < window.GRID_ROWS) {
             let ic = parseInt(i.c); let ir = parseInt(i.r);
-            el.style.left = `${ic * window.REAL_CELL_SIZE}px`; el.style.top = `${ir * window.REAL_CELL_SIZE}px`;
-            el.setAttribute('data-c', ic); el.setAttribute('data-r', ir);
+            el.style.left = `${ic * window.REAL_CELL_SIZE}px`; el.style.top = `${ir * window.REAL_CELL_SIZE}px`; el.setAttribute('data-c', ic); el.setAttribute('data-r', ir);
             for(let row=ir; row<ir+h; row++) for(let col=ic; col<ic+w; col++) window.tetrisMatrix[row][col] = 1; 
             g.appendChild(el);
         } else {
-            el.style.position = 'relative'; el.style.left = 'auto'; el.style.top = 'auto';
-            l.appendChild(el);
+            el.style.position = 'relative'; el.style.left = 'auto'; el.style.top = 'auto'; l.appendChild(el);
         }
         el.addEventListener('pointerdown', window.iniciarArrasteTetris);
     });
@@ -1166,126 +751,69 @@ window.renderizarMochila = function() {
 window.iniciarArrasteTetris = function(e) {
     if(e.target.closest('.btn-excluir-item') || e.target.closest('.btn-rotate-item') || e.target.tagName.toLowerCase() === 'button') return;
     e.preventDefault(); window.itemArrastado = e.currentTarget; window.arrastandoKey = window.itemArrastado.getAttribute('data-key');
-    let gridEl = document.getElementById("grid-personagem");
-    let rectOrig = window.itemArrastado.getBoundingClientRect();
+    let gridEl = document.getElementById("grid-personagem"); let rectOrig = window.itemArrastado.getBoundingClientRect();
 
     if (window.itemArrastado.parentElement === gridEl) {
         window.origin = 'grid'; window.initPos = {c: parseInt(window.itemArrastado.getAttribute('data-c')), r: parseInt(window.itemArrastado.getAttribute('data-r'))};
         let w = parseInt(window.itemArrastado.getAttribute('data-w')); let h = parseInt(window.itemArrastado.getAttribute('data-h'));
         for(let row=window.initPos.r; row<window.initPos.r+h; row++) for(let col=window.initPos.c; col<window.initPos.c+w; col++) window.tetrisMatrix[row][col] = 0; 
     } else { 
-        window.origin = 'inv'; 
-        let gridRect = gridEl.getBoundingClientRect();
-        window.itemArrastado.style.margin = "0";
-        window.itemArrastado.style.left = (rectOrig.left - gridRect.left) + 'px';
-        window.itemArrastado.style.top = (rectOrig.top - gridRect.top) + 'px';
+        window.origin = 'inv'; let gridRect = gridEl.getBoundingClientRect();
+        window.itemArrastado.style.margin = "0"; window.itemArrastado.style.left = (rectOrig.left - gridRect.left) + 'px'; window.itemArrastado.style.top = (rectOrig.top - gridRect.top) + 'px';
         gridEl.appendChild(window.itemArrastado); 
     }
     
     window.itemArrastado.classList.add('dragging'); window.itemArrastado.style.position = 'absolute'; 
-    let newRect = window.itemArrastado.getBoundingClientRect();
-    window.offsetX = e.clientX - newRect.left; window.offsetY = e.clientY - newRect.top;
-
+    let newRect = window.itemArrastado.getBoundingClientRect(); window.offsetX = e.clientX - newRect.left; window.offsetY = e.clientY - newRect.top;
     document.addEventListener('pointermove', window.arrastarTetris); document.addEventListener('pointerup', window.soltarTetris);
 };
+
 window.arrastarTetris = function(e) { e.preventDefault(); window.moverTetris(e); };
-window.moverTetris = function(e) {
-    if(!window.itemArrastado) return; const gridRect = document.getElementById("grid-personagem").getBoundingClientRect();
-    window.itemArrastado.style.left = `${e.clientX - gridRect.left - window.offsetX}px`; window.itemArrastado.style.top = `${e.clientY - gridRect.top - window.offsetY}px`;
-};
+window.moverTetris = function(e) { if(!window.itemArrastado) return; const gridRect = document.getElementById("grid-personagem").getBoundingClientRect(); window.itemArrastado.style.left = `${e.clientX - gridRect.left - window.offsetX}px`; window.itemArrastado.style.top = `${e.clientY - gridRect.top - window.offsetY}px`; };
 window.soltarTetris = function(e) {
     document.removeEventListener('pointermove', window.arrastarTetris); document.removeEventListener('pointerup', window.soltarTetris);
     if(!window.itemArrastado) return; window.itemArrastado.classList.remove('dragging');
     const w = parseInt(window.itemArrastado.getAttribute('data-w')), h = parseInt(window.itemArrastado.getAttribute('data-h'));
-    
     let rawLeft = parseFloat(window.itemArrastado.style.left || 0); let rawTop = parseFloat(window.itemArrastado.style.top || 0);
     let tC = Math.round(rawLeft / window.REAL_CELL_SIZE); let tR = Math.round(rawTop / window.REAL_CELL_SIZE);
 
-    if (tC < 0 || tC + w > window.GRID_COLS || tR < 0 || tR + h > window.GRID_ROWS) {
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: false, c: null, r: null});
-    } else {
-        let livre = true;
-        for(let r=tR; r<tR+h; r++) for(let c=tC; c<tC+w; c++) if(window.tetrisMatrix[r][c] === 1) livre = false;
+    if (tC < 0 || tC + w > window.GRID_COLS || tR < 0 || tR + h > window.GRID_ROWS) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: false, c: null, r: null}); } else {
+        let livre = true; for(let r=tR; r<tR+h; r++) for(let c=tC; c<tC+w; c++) if(window.tetrisMatrix[r][c] === 1) livre = false;
         if(livre) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: true, c: tC, r: tR});
-        else {
-            if(window.origin === 'grid') window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: true, c: window.initPos.c, r: window.initPos.r});
-            else window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: false, c: null, r: null});
-        }
+        else { if(window.origin === 'grid') window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: true, c: window.initPos.c, r: window.initPos.r}); else window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${window.arrastandoKey}`).update({eq: false, c: null, r: null}); }
     }
     window.arrastandoKey = null; window.itemArrastado = null; window.renderizarMochila();
 };
 
 window.consumirComida = function(k, poder, cd, ev) { 
-    if(ev) ev.stopPropagation(); 
-    let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill");
-    if(!ov || !fill) return;
+    if(ev) ev.stopPropagation(); let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill"); if(!ov || !fill) return;
     ov.style.display="flex"; fill.style.width="0%"; void fill.offsetWidth;
     setTimeout(()=>{ fill.style.transition=`width ${cd}s linear`; fill.style.width="100%"; }, 50);
     setTimeout(()=>{
-        ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]);
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+parseInt(poder)));
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove();
-        window.showNeonToast(`Nutrição +${poder}% restaurada.`);
+        ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+parseInt(poder))); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove(); window.showNeonToast(`Nutrição +${poder}% restaurada.`);
     }, cd*1000); 
 };
 
 window.removerItemMochila = function(k, ev) { 
     if(ev) ev.stopPropagation(); let item = window.usersGlobais[window.jogadorAtual]?.mochila?.[k];
-    if(item && item.eq) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).update({eq: false, c: null, r: null}); } 
-    else { if(confirm("Descartar item permanentemente?")) window.db.ref('tokyoRpg/users/' + window.jogadorAtual + '/mochila/' + k).remove(); }
+    if(item && item.eq) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).update({eq: false, c: null, r: null}); } else { if(confirm("Descartar item permanentemente?")) window.db.ref('tokyoRpg/users/' + window.jogadorAtual + '/mochila/' + k).remove(); }
 };
 
 window.girarItemMochila = function(k, w, h, eq, ev) {
-    if(ev) ev.stopPropagation(); 
-    let newW = parseInt(h); let newH = parseInt(w); let up = {};
+    if(ev) ev.stopPropagation(); let newW = parseInt(h); let newH = parseInt(w); let up = {};
     if(eq) {
-        let itens = window.usersGlobais[window.jogadorAtual]?.mochila || {};
-        let tempMatrix = Array(window.GRID_ROWS).fill(null).map(()=>Array(window.GRID_COLS).fill(0));
-        Object.keys(itens).forEach(ik => {
-            if(ik !== k && itens[ik].eq) {
-                let iW = parseInt(itens[ik].w)||1, iH = parseInt(itens[ik].h)||1;
-                let iC = parseInt(itens[ik].c), iR = parseInt(itens[ik].r);
-                if(!isNaN(iC) && !isNaN(iR)) {
-                    for(let row=iR; row<iR+iH; row++) {
-                        for(let col=iC; col<iC+iW; col++) { if(row<window.GRID_ROWS && col<window.GRID_COLS) tempMatrix[row][col] = 1; }
-                    }
-                }
-            }
-        });
-        let startC = parseInt(itens[k].c); let startR = parseInt(itens[k].r);
-        let targetC = startC; let targetR = startR; let found = false;
-        let cabeNoLugar = true;
-        if(startC + newW > window.GRID_COLS || startR + newH > window.GRID_ROWS) { cabeNoLugar = false; } else {
-            for(let row=startR; row<startR+newH; row++) {
-                for(let col=startC; col<startC+newW; col++) { if(tempMatrix[row][col] === 1) cabeNoLugar = false; }
-            }
-        }
+        let itens = window.usersGlobais[window.jogadorAtual]?.mochila || {}; let tempMatrix = Array(window.GRID_ROWS).fill(null).map(()=>Array(window.GRID_COLS).fill(0));
+        Object.keys(itens).forEach(ik => { if(ik !== k && itens[ik].eq) { let iW = parseInt(itens[ik].w)||1, iH = parseInt(itens[ik].h)||1; let iC = parseInt(itens[ik].c), iR = parseInt(itens[ik].r); if(!isNaN(iC) && !isNaN(iR)) { for(let row=iR; row<iR+iH; row++) { for(let col=iC; col<iC+iW; col++) { if(row<window.GRID_ROWS && col<window.GRID_COLS) tempMatrix[row][col] = 1; } } } } });
+        let startC = parseInt(itens[k].c); let startR = parseInt(itens[k].r); let targetC = startC; let targetR = startR; let found = false; let cabeNoLugar = true;
+        if(startC + newW > window.GRID_COLS || startR + newH > window.GRID_ROWS) { cabeNoLugar = false; } else { for(let row=startR; row<startR+newH; row++) { for(let col=startC; col<startC+newW; col++) { if(tempMatrix[row][col] === 1) cabeNoLugar = false; } } }
         if(cabeNoLugar) { found = true; } else {
-            let offsets = [];
-            for(let dy = -window.GRID_ROWS; dy <= window.GRID_ROWS; dy++) {
-                for(let dx = -window.GRID_COLS; dx <= window.GRID_COLS; dx++) { offsets.push({dx: dx, dy: dy, dist: Math.abs(dx) + Math.abs(dy)}); }
-            }
+            let offsets = []; for(let dy = -window.GRID_ROWS; dy <= window.GRID_ROWS; dy++) { for(let dx = -window.GRID_COLS; dx <= window.GRID_COLS; dx++) { offsets.push({dx: dx, dy: dy, dist: Math.abs(dx) + Math.abs(dy)}); } }
             offsets.sort((a,b) => a.dist - b.dist);
-            for(let off of offsets) {
-                let nc = startC + off.dx; let nr = startR + off.dy;
-                if(nc >= 0 && nc + newW <= window.GRID_COLS && nr >= 0 && nr + newH <= window.GRID_ROWS) {
-                    let livre = true;
-                    for(let row=nr; row<nr+newH; row++) {
-                        for(let col=nc; col<nc+newW; col++) { if(tempMatrix[row][col] === 1) livre = false; }
-                    }
-                    if(livre) { found = true; targetC = nc; targetR = nr; break; }
-                }
-            }
+            for(let off of offsets) { let nc = startC + off.dx; let nr = startR + off.dy; if(nc >= 0 && nc + newW <= window.GRID_COLS && nr >= 0 && nr + newH <= window.GRID_ROWS) { let livre = true; for(let row=nr; row<nr+newH; row++) { for(let col=nc; col<nc+newW; col++) { if(tempMatrix[row][col] === 1) livre = false; } } if(livre) { found = true; targetC = nc; targetR = nr; break; } } }
         }
-        if(found) {
-            let el = document.querySelector(`.item-tetris[data-key='${k}']`);
-            if(el) { el.style.transition = "transform 0.2s ease-in-out"; el.style.transform = "rotate(90deg) scale(0.9)"; el.style.zIndex = "999"; }
-            setTimeout(() => { up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/w`] = newW; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/h`] = newH; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/c`] = targetC; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/r`] = targetR; window.db.ref().update(up); }, 200);
-        } else { window.showNeonToast("Sem espaço no grid!"); }
+        if(found) { let el = document.querySelector(`.item-tetris[data-key='${k}']`); if(el) { el.style.transition = "transform 0.2s ease-in-out"; el.style.transform = "rotate(90deg) scale(0.9)"; el.style.zIndex = "999"; } setTimeout(() => { up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/w`] = newW; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/h`] = newH; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/c`] = targetC; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/r`] = targetR; window.db.ref().update(up); }, 200); } else { window.showNeonToast("Sem espaço no grid!"); }
     } else {
-        let el = document.querySelector(`.item-tetris[data-key='${k}']`);
-        if(el) { el.style.transition = "transform 0.2s ease-in-out"; el.style.transform = "rotate(90deg) scale(0.9)"; }
-        setTimeout(() => { up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/w`] = newW; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/h`] = newH; window.db.ref().update(up); }, 200);
+        let el = document.querySelector(`.item-tetris[data-key='${k}']`); if(el) { el.style.transition = "transform 0.2s ease-in-out"; el.style.transform = "rotate(90deg) scale(0.9)"; } setTimeout(() => { up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/w`] = newW; up[`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}/h`] = newH; window.db.ref().update(up); }, 200);
     }
 };
 
@@ -1296,146 +824,172 @@ window.renderVttFoodActions = function() {
 };
 
 window.consumirComidaVTT = function(k, p, cd) {
-    let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill");
-    if(!ov || !fill) return;
+    let ov = document.getElementById("eatingOverlay"); let fill = document.getElementById("eatingFill"); if(!ov || !fill) return;
     ov.style.display="flex"; fill.style.width="0%"; void fill.offsetWidth; 
     setTimeout(()=>{ fill.style.transition=`width ${cd}s linear`; fill.style.width="100%"; }, 50);
     setTimeout(()=>{
-        ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]);
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+p));
-        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove();
-        window.renderVttFoodActions(); window.showNeonToast(`Nutrição +${p}% restaurada.`);
+        ov.style.display="none"; let r=window.getSafeRpg(window.usersGlobais[window.jogadorAtual]); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.min(100, r.integridade+p)); window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${k}`).remove(); window.renderVttFoodActions(); window.showNeonToast(`Nutrição +${p}% restaurada.`);
     }, cd*1000);
 };
 
 // =========================================================
-// MERCADO NEGRO
+// MERCADO NEGRO E CARRINHO DE COMPRAS
 // =========================================================
-
-// =========================================================
-// MERCADO NEGRO
-// =========================================================
-
 window.toggleMasterShopPanel = function() {
-    let content = document.getElementById("masterShopContent");
-    let icon = document.getElementById("masterShopToggleIcon");
-    if(!content || !icon) return;
-    if (content.style.display === "none") { content.style.display = "block"; icon.innerText = "▼ Ocultar"; } 
-    else { content.style.display = "none"; icon.innerText = "▶ Expandir"; }
+    let content = document.getElementById("masterShopContent"); let icon = document.getElementById("masterShopToggleIcon"); if(!content || !icon) return;
+    if (content.style.display === "none") { content.style.display = "block"; icon.innerText = "▼ Ocultar"; } else { content.style.display = "none"; icon.innerText = "▶ Expandir"; }
 };
 
 window.atualizarPlaceholdersLoja = function(tipo) {
     let exW = document.getElementById("niExW"); let exH = document.getElementById("niExH"); 
-    if(exW && exH) {
-        if(tipo === 'Mochila') { exW.style.display="inline-block"; exH.style.display="inline-block"; }
-        else { exW.style.display="none"; exH.style.display="none"; }
-    }
+    if(exW && exH) { if(tipo === 'Mochila') { exW.style.display="inline-block"; exH.style.display="inline-block"; } else { exW.style.display="none"; exH.style.display="none"; } }
 };
 
 window.toggleVttFields = function() {
-    let isVtt = document.getElementById("niIsVTT") ? document.getElementById("niIsVTT").checked : false;
-    let wpnF = document.getElementById("weaponExtraFields");
-    if(wpnF) { wpnF.style.display = isVtt ? "grid" : "none"; }
+    let isVtt = document.getElementById("niIsVTT") ? document.getElementById("niIsVTT").checked : false; let wpnF = document.getElementById("weaponExtraFields"); if(wpnF) { wpnF.style.display = isVtt ? "grid" : "none"; }
+};
+
+window.buscarNaLoja = function(val) { window.termoBuscaLoja = val.toLowerCase(); window.renderizarLojaUI(); };
+
+window.filtrarLoja = function(cat, btnEl) {
+    window.filtroLojaAtual = cat; window.termoBuscaLoja = "";
+    let searchInp = document.getElementById("shopSearchInp"); if(searchInp) searchInp.value = "";
+    let botoes = document.querySelectorAll(".shop-tab-btn"); botoes.forEach(b => b.classList.remove("active")); if(btnEl) btnEl.classList.add("active");
+    window.renderizarLojaUI();
+};
+
+window.navegarLoja = function(dir) {
+    let grid = document.getElementById("shopGrid");
+    if(grid) { let scrollAmount = grid.clientWidth * 0.8 * dir; grid.scrollBy({ left: scrollAmount, behavior: 'smooth' }); }
+};
+
+window.renderizarLojaUI = function() {
+    let grid = document.getElementById("shopGrid"); if(!grid) return; grid.innerHTML = "";
+    let itens = window.lojaGlobal || {}; let painelMestre = document.getElementById("masterShopPanel"); if(painelMestre) { painelMestre.style.display = window.isMaster ? "block" : "none"; }
+    let chaves = Object.keys(itens); let count = 0;
+    chaves.forEach(k => {
+        let i = itens[k];
+        if(window.termoBuscaLoja !== "") { let sNome = (i.nome||"").toLowerCase(); let sDesc = (i.desc||"").toLowerCase(); if(!sNome.includes(window.termoBuscaLoja) && !sDesc.includes(window.termoBuscaLoja)) return; } 
+        else { if(window.filtroLojaAtual !== "Tudo") { if(window.filtroLojaAtual === "Promoções" && !i.isPromo) return; if(window.filtroLojaAtual !== "Promoções" && i.tipo !== window.filtroLojaAtual) return; } }
+        
+        if(i.wpnCode && i.wpnCode.trim() !== "" && !window.isMaster) return;
+
+        count++; let isM = window.isMaster; let div = document.createElement("div"); div.className = "shop-item" + (isM ? " master-edit" : "");
+        let btnComprarText = i.preco + " ¥"; let promoTag = i.isPromo ? `<div class="shop-promo-tag">OFERTA</div>` : "";
+        let masterBtns = isM ? `<div style="display:flex;gap:5px;margin-top:10px;"><button class="action-btn" style="flex:1; border-color:#00e5ff; color:#00e5ff;" onclick="window.prepararEdicaoLoja('${k}')">Editar</button><button class="action-btn" style="flex:1; border-color:#f00; color:#f00;" onclick="window.db.ref('tokyoRpg/loja/${k}').remove()">X</button></div>` : "";
+        let icone = window.iconesMercado[i.tipo] || "📦";
+        
+        let atributosHtml = `<div style="font-size:10px; color:#00e5ff; margin-top:5px;">`;
+        if(i.poder) atributosHtml += `Poder: ${i.poder} | `;
+        if(i.tipo === 'Mochila') atributosHtml += `Espaço: +${i.extraW}x${i.extraH} | `; else atributosHtml += `Tamanho: ${i.w||1}x${i.h||1} | Peso: ${i.peso||1}kg | `;
+        if(i.cd) atributosHtml += `CD: ${i.cd}s`;
+        if(i.isVTT && i.wpnStyle) { atributosHtml += `<br><span style="color:#ff1a55;">Estilo: ${i.wpnStyle} | Dados: ${i.wpnDice||'N/A'} | Alcance: ${i.wpnRange||1} | Crítico: ${i.wpnCrit||'2x'}</span>`; if(i.wpnEffect && i.wpnEffect !== "") atributosHtml += `<br><span style="color:#ffaa00;">Efeito: ${i.wpnEffect} (${i.wpnEffectVal||1})</span>`; }
+        if(i.isConsumable) atributosHtml += `<br><span style="color:#00ff66; font-weight:bold;">⚠️ ITEM CONSUMÍVEL (Uso Único)</span>`;
+        if(i.wpnCode && isM) { atributosHtml += `<br><span style="color:var(--accent-purple);">Código Secreto: ${i.wpnCode}</span>`; }
+        atributosHtml += `</div>`;
+
+        div.innerHTML = `${promoTag}<div class="shop-item-content"><h3 style="color:${i.isPromo ? '#ffaa00' : 'var(--accent-blue)'};">${icone} ${i.nome}</h3><p>${i.desc}</p>${atributosHtml}</div><div class="shop-item-footer"><button class="action-btn" onclick="window.comprarItem('${k}', '${(i.nome||"").replace(/'/g, "\\'")}', ${i.preco}, '${i.tipo}', '${(i.desc||"").replace(/'/g, "\\'")}', ${i.poder||0}, '${i.buffType||""}', ${i.w||1}, ${i.h||1}, ${i.extraW||0}, ${i.extraH||0}, ${i.peso||1}, ${i.cd||2}, event)">COMPRAR - ${btnComprarText}</button>${masterBtns}</div>`;
+        grid.appendChild(div);
+    });
+    if(count === 0) { grid.innerHTML = `<div style="width:100%; text-align:center; color:#555; padding:50px 0;">Nenhum item encontrado.</div>`; }
+};
+
+window.itemCompraAtual = null;
+
+window.comprarItem = function(id, n, p, t, d, poder, buff, w, h, exW, exH, peso, cd, ev) {
+    if(ev) ev.stopPropagation(); if(!window.jogadorAtual || window.isMaster) return; 
+    let c = window.usersGlobais[window.jogadorAtual].carteira || 0; 
+    window.itemCompraAtual = { id: id, n: n, p: p, t: t, d: d, poder: poder, buff: buff, w: w, h: h, exW: exW, exH: exH, peso: peso, cd: cd };
+    let buyModal = document.getElementById("buyModal");
+    if(!buyModal) { // Fallback se não tiver modal no HTML
+        let qtdStr = prompt(`Quantas unidades de [${n}] você deseja comprar?`, "1"); if(!qtdStr) return;
+        let qtd = parseInt(qtdStr); if(isNaN(qtd) || qtd < 1) { window.showNeonToast("Quantidade inválida."); return; }
+        document.getElementById("buyQtdInput").value = qtd;
+        window.confirmarCompraModal();
+    } else {
+        document.getElementById("buyItemName").innerText = n; document.getElementById("buyQtdInput").value = 1; document.getElementById("buyCurrentBalance").innerText = c + " ¥";
+        window.atualizarTotalCompra(); buyModal.style.display = "flex";
+    }
+};
+
+window.fecharBuyModal = function() { let m = document.getElementById("buyModal"); if(m) m.style.display = "none"; window.itemCompraAtual = null; };
+window.alterarQtdCompra = function(delta) { let inp = document.getElementById("buyQtdInput"); let val = parseInt(inp.value) + delta; if(isNaN(val) || val < 1) val = 1; inp.value = val; window.atualizarTotalCompra(); };
+
+window.atualizarTotalCompra = function() {
+    if(!window.itemCompraAtual) return;
+    let inp = document.getElementById("buyQtdInput"); let qtd = parseInt(inp.value); if(isNaN(qtd) || qtd < 1) { qtd = 1; inp.value = 1; }
+    let saldoAtual = window.usersGlobais[window.jogadorAtual].carteira || 0; let custoTotal = window.itemCompraAtual.p * qtd; let saldoFinal = saldoAtual - custoTotal;
+    let costEl = document.getElementById("buyTotalCost"); if(costEl) costEl.innerText = custoTotal + " ¥";
+    let btn = document.getElementById("btnConfirmBuy"); let spanFinal = document.getElementById("buyFinalBalance");
+    if(spanFinal) spanFinal.innerText = saldoFinal + " ¥";
+    if(btn && spanFinal) {
+        if(saldoFinal < 0) { spanFinal.style.color = "#ff1a55"; btn.disabled = true; btn.style.opacity = "0.5"; btn.style.cursor = "not-allowed"; btn.innerText = "SEM FUNDOS"; } 
+        else { spanFinal.style.color = "var(--accent-blue)"; btn.disabled = false; btn.style.opacity = "1"; btn.style.cursor = "pointer"; btn.innerText = "FINALIZAR"; }
+    }
+};
+
+window.confirmarCompraModal = function() {
+    if(!window.itemCompraAtual) return; let qtdInput = document.getElementById("buyQtdInput");
+    let qtd = qtdInput ? parseInt(qtdInput.value) : 1; if(isNaN(qtd) || qtd < 1) qtd = 1;
+    let saldoAtual = window.usersGlobais[window.jogadorAtual].carteira || 0; let totalCusto = window.itemCompraAtual.p * qtd;
+    if(saldoAtual < totalCusto) { window.showNeonToast(`Sem Yenes suficientes!`); return; }
+    let i = window.itemCompraAtual; let lojaItem = window.lojaGlobal[i.id]; 
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/carteira`).set(saldoAtual - totalCusto);
+    let isCons = lojaItem ? (lojaItem.isConsumable || false) : false; let isVttItem = lojaItem ? (lojaItem.isVTT === true || lojaItem.tipo === 'Arma' || lojaItem.tipo === 'Munição') : false;
+    let itemPayload = { id: i.id, nome: i.n, tipo: i.t, desc: i.d, poder: i.poder, buffType: i.buff, w: i.w, h: i.h, extraW: i.exW, extraH: i.exH, peso: i.peso, cd: i.cd, eq: false, isConsumable: isCons, isVTT: isVttItem };
+    if(isVttItem && lojaItem && lojaItem.wpnStyle) { itemPayload.wpnStyle = lojaItem.wpnStyle; itemPayload.wpnRange = lojaItem.wpnRange || 1; itemPayload.wpnDice = lojaItem.wpnDice || '1d4'; itemPayload.wpnBonus = lojaItem.wpnBonus || 0; itemPayload.wpnCrit = lojaItem.wpnCrit || '2x'; itemPayload.wpnEffect = lojaItem.wpnEffect || ''; itemPayload.wpnEffectVal = lojaItem.wpnEffectVal || 1; }
+    let updates = {}; for(let idx = 0; idx < qtd; idx++) { let newRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push(); updates[`tokyoRpg/users/${window.jogadorAtual}/mochila/${newRef.key}`] = itemPayload; }
+    window.db.ref().update(updates).then(() => { window.showNeonToast(`${qtd}x [${i.n}] Adquirido!`); window.fecharBuyModal(); });
+};
+
+window.resgatarCodigoLoja = function() {
+    let codeInp = document.getElementById("playerPromoCode"); if(!codeInp) return; let code = codeInp.value.trim().toUpperCase(); if(code === "") return;
+    let achou = false;
+    Object.keys(window.lojaGlobal).forEach(k => { let i = window.lojaGlobal[k]; if(i.wpnCode && i.wpnCode.toUpperCase() === code) { achou = true; window.comprarItem(k, i.nome, i.preco, i.tipo, i.desc, i.poder||0, i.buffType||'', i.w||1, i.h||1, i.extraW||0, i.extraH||0, i.peso||1, i.cd||2, null); codeInp.value = ""; } });
+    if(!achou) { window.showNeonToast("Código Inválido ou Inexistente."); }
 };
 
 window.prepararEdicaoLoja = function(id) {
     try {
-        if(!window.isMaster) return; 
-        let i = window.lojaGlobal[id]; 
-        if(!i) return; 
-        window.editandoItemId = id;
-        
-        window.setElVal("niType", i.tipo || "Arma"); 
-        if(typeof window.atualizarPlaceholdersLoja === "function") window.atualizarPlaceholdersLoja(i.tipo || "Arma");
-        
-        window.setElVal("niName", i.nome || ""); 
-        window.setElVal("niDesc", i.desc || ""); 
-        window.setElVal("niBuffType", i.buffType || ""); 
-        window.setElVal("niPoder", i.poder || ""); 
-        window.setElVal("niW", i.w || ""); 
-        window.setElVal("niH", i.h || ""); 
-        window.setElVal("niPrice", i.preco || ""); 
-        window.setElVal("niExW", i.extraW || ""); 
-        window.setElVal("niExH", i.extraH || ""); 
-        window.setElVal("niPeso", i.peso || ""); 
-        window.setElVal("niCD", i.cd || "");
-        
+        if(!window.isMaster) return; let i = window.lojaGlobal[id]; if(!i) return; window.editandoItemId = id;
+        window.setElVal("niType", i.tipo || "Arma"); if(typeof window.atualizarPlaceholdersLoja === "function") window.atualizarPlaceholdersLoja(i.tipo || "Arma");
+        window.setElVal("niName", i.nome || ""); window.setElVal("niDesc", i.desc || ""); window.setElVal("niBuffType", i.buffType || ""); window.setElVal("niPoder", i.poder || ""); window.setElVal("niW", i.w || ""); window.setElVal("niH", i.h || ""); window.setElVal("niPrice", i.preco || ""); window.setElVal("niExW", i.extraW || ""); window.setElVal("niExH", i.extraH || ""); window.setElVal("niPeso", i.peso || ""); window.setElVal("niCD", i.cd || "");
         let chkPromo = document.getElementById("niPromo"); if(chkPromo) chkPromo.checked = (i.isPromo === true);
         let chkCons = document.getElementById("niConsumable"); if(chkCons) chkCons.checked = (i.isConsumable === true);
-        
-        // Garante que não trave se for item antigo
         let isVttItem = (i.isVTT === true || i.tipo === 'Arma' || i.tipo === 'Munição'); 
-        let chkVTT = document.getElementById("niIsVTT"); 
-        if(chkVTT) { chkVTT.checked = isVttItem; window.toggleVttFields(); }
-
+        let chkVTT = document.getElementById("niIsVTT"); if(chkVTT) { chkVTT.checked = isVttItem; window.toggleVttFields(); }
         if(isVttItem) {
-            window.setElVal("niWpnStyle", i.wpnStyle || 'melee'); 
-            window.setElVal("niWpnRange", i.wpnRange || ""); 
-            window.setElVal("niWpnDice", i.wpnDice || ""); 
-            window.setElVal("niWpnBonus", i.wpnBonus || ""); 
-            window.setElVal("niWpnCrit", i.wpnCrit || "2x"); 
-            window.setElVal("niWpnEffect", i.wpnEffect || ""); 
-            window.setElVal("niWpnEffectVal", i.wpnEffectVal || ""); 
-            window.setElVal("niWpnCode", i.wpnCode || "");
+            window.setElVal("niWpnStyle", i.wpnStyle || 'melee'); window.setElVal("niWpnRange", i.wpnRange || ""); window.setElVal("niWpnDice", i.wpnDice || ""); window.setElVal("niWpnBonus", i.wpnBonus || ""); window.setElVal("niWpnCrit", i.wpnCrit || "2x"); window.setElVal("niWpnEffect", i.wpnEffect || ""); window.setElVal("niWpnEffectVal", i.wpnEffectVal || ""); window.setElVal("niWpnCode", i.wpnCode || "");
         }
-        
-        if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Salvar Alterações";
-        window.setElDisplay("btnCancelarEdicao", "inline-block"); 
-        
+        if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Salvar Alterações"; window.setElDisplay("btnCancelarEdicao", "inline-block"); 
         let content = document.getElementById("masterShopContent"); let icon = document.getElementById("masterShopToggleIcon");
         if(content && content.style.display === "none") { content.style.display = "block"; icon.innerText = "▼ Ocultar"; }
         let p = document.getElementById("masterShopPanel"); if(p) p.scrollIntoView({behavior: "smooth"});
-        
-    } catch(err) {
-        console.error("Erro ao editar:", err);
-        window.showNeonToast("Erro na edição! Sistema auto-corrigido.");
-    }
+    } catch(err) { console.error("Erro ao editar:", err); window.showNeonToast("Erro na edição! Sistema auto-corrigido."); }
 };
 
 window.cancelarEdicaoLoja = function() { 
-    window.editandoItemId = null; 
-    window.setElVal("niName", ""); window.setElVal("niDesc", ""); window.setElVal("niPrice", ""); window.setElVal("niPoder", ""); window.setElVal("niExW", ""); window.setElVal("niExH", ""); window.setElVal("niPeso", ""); window.setElVal("niCD", ""); 
-    
+    window.editandoItemId = null; window.setElVal("niName", ""); window.setElVal("niDesc", ""); window.setElVal("niPrice", ""); window.setElVal("niPoder", ""); window.setElVal("niExW", ""); window.setElVal("niExH", ""); window.setElVal("niPeso", ""); window.setElVal("niCD", ""); 
     let chkPromo = document.getElementById("niPromo"); if(chkPromo) chkPromo.checked = false;
     let chkCons = document.getElementById("niConsumable"); if(chkCons) chkCons.checked = false;
     let chkVTT = document.getElementById("niIsVTT"); if(chkVTT) { chkVTT.checked = false; window.toggleVttFields(); }
-    
-    window.setElVal("niType", "Arma"); 
-    if(typeof window.atualizarPlaceholdersLoja === "function") window.atualizarPlaceholdersLoja("Arma");
-    
+    window.setElVal("niType", "Arma"); if(typeof window.atualizarPlaceholdersLoja === "function") window.atualizarPlaceholdersLoja("Arma");
     window.setElVal("niWpnStyle", "melee"); window.setElVal("niWpnRange", ""); window.setElVal("niWpnDice", ""); window.setElVal("niWpnBonus", ""); window.setElVal("niWpnCrit", "2x"); window.setElVal("niWpnEffect", ""); window.setElVal("niWpnEffectVal", ""); window.setElVal("niWpnCode", "");
-
-    if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Publicar no Mercado"; 
-    window.setElDisplay("btnCancelarEdicao", "none"); 
+    if(document.getElementById("btnSalvarLoja")) document.getElementById("btnSalvarLoja").innerText = "Publicar no Mercado"; window.setElDisplay("btnCancelarEdicao", "none"); 
 };
 
 window.criarItemLoja = function() {
     if(!window.isMaster) return; 
-    let nomeVal = document.getElementById("niName").value.trim();
-    let precoVal = document.getElementById("niPrice").value;
-
-    if(!nomeVal || precoVal === "") { window.showNeonToast("ERRO: Preencha o Nome e o Preço (pode ser 0)."); return; }
-
+    let nomeVal = document.getElementById("niName").value.trim(); let precoVal = document.getElementById("niPrice").value;
+    if(!nomeVal || precoVal === "") { window.showNeonToast("ERRO: Preencha o Nome e o Preço."); return; }
     let isP = document.getElementById("niPromo") ? document.getElementById("niPromo").checked : false;
     let isCons = document.getElementById("niConsumable") ? document.getElementById("niConsumable").checked : false;
     let isVttCheck = document.getElementById("niIsVTT") ? document.getElementById("niIsVTT").checked : false;
+    let payload = { tipo: document.getElementById("niType").value, nome: nomeVal, desc: document.getElementById("niDesc").value.trim(), buffType: document.getElementById("niBuffType").value, poder: parseInt(document.getElementById("niPoder").value||"0"), w: parseInt(document.getElementById("niW").value||"1"), h: parseInt(document.getElementById("niH").value||"1"), preco: parseInt(precoVal||"0"), extraW: parseInt(document.getElementById("niExW").value||"0"), extraH: parseInt(document.getElementById("niExH").value||"0"), peso: parseInt(document.getElementById("niPeso").value||"1"), cd: parseInt(document.getElementById("niCD").value||"2"), isPromo: isP, isConsumable: isCons, isVTT: isVttCheck };
     
-    let payload = { 
-        tipo: document.getElementById("niType").value, nome: nomeVal, desc: document.getElementById("niDesc").value.trim(), buffType: document.getElementById("niBuffType").value, poder: parseInt(document.getElementById("niPoder").value||"0"), w: parseInt(document.getElementById("niW").value||"1"), h: parseInt(document.getElementById("niH").value||"1"), preco: parseInt(precoVal||"0"), extraW: parseInt(document.getElementById("niExW").value||"0"), extraH: parseInt(document.getElementById("niExH").value||"0"), peso: parseInt(document.getElementById("niPeso").value||"1"), cd: parseInt(document.getElementById("niCD").value||"2"), isPromo: isP, isConsumable: isCons, isVTT: isVttCheck
-    };
-
     if(isVttCheck) {
-        payload.wpnStyle = document.getElementById("niWpnStyle") ? document.getElementById("niWpnStyle").value : "melee"; 
-        payload.wpnRange = document.getElementById("niWpnRange") ? parseInt(document.getElementById("niWpnRange").value || "1") : 1; 
-        payload.wpnDice = document.getElementById("niWpnDice") ? (document.getElementById("niWpnDice").value || "1d4") : "1d4"; 
-        payload.wpnBonus = document.getElementById("niWpnBonus") ? parseInt(document.getElementById("niWpnBonus").value || "0") : 0; 
-        payload.wpnCrit = document.getElementById("niWpnCrit") ? (document.getElementById("niWpnCrit").value || "2x") : "2x"; 
-        payload.wpnEffect = document.getElementById("niWpnEffect") ? (document.getElementById("niWpnEffect").value || "") : ""; 
-        payload.wpnEffectVal = document.getElementById("niWpnEffectVal") ? parseInt(document.getElementById("niWpnEffectVal").value || "1") : 1; 
-        payload.wpnCode = document.getElementById("niWpnCode") ? document.getElementById("niWpnCode").value.trim().toUpperCase() : "";
-    } else {
-        payload.wpnStyle = null; 
-    }
+        payload.wpnStyle = document.getElementById("niWpnStyle") ? document.getElementById("niWpnStyle").value : "melee"; payload.wpnRange = document.getElementById("niWpnRange") ? parseInt(document.getElementById("niWpnRange").value || "1") : 1; payload.wpnDice = document.getElementById("niWpnDice") ? (document.getElementById("niWpnDice").value || "1d4") : "1d4"; payload.wpnBonus = document.getElementById("niWpnBonus") ? parseInt(document.getElementById("niWpnBonus").value || "0") : 0; payload.wpnCrit = document.getElementById("niWpnCrit") ? (document.getElementById("niWpnCrit").value || "2x") : "2x"; payload.wpnEffect = document.getElementById("niWpnEffect") ? (document.getElementById("niWpnEffect").value || "") : ""; payload.wpnEffectVal = document.getElementById("niWpnEffectVal") ? parseInt(document.getElementById("niWpnEffectVal").value || "1") : 1; payload.wpnCode = document.getElementById("niWpnCode") ? document.getElementById("niWpnCode").value.trim().toUpperCase() : "";
+    } else { payload.wpnStyle = null; }
 
     if(window.editandoItemId) {
         window.db.ref('tokyoRpg/loja/' + window.editandoItemId).update(payload).then(() => {
@@ -1448,15 +1002,52 @@ window.criarItemLoja = function() {
         window.showNeonToast("Item Atualizado!"); window.cancelarEdicaoLoja();
     } else { window.db.ref('tokyoRpg/loja').push(payload); window.showNeonToast("Publicado!"); window.cancelarEdicaoLoja(); }
 };
+
 // =========================================================
-// AVATARES E IGAMBLE (INALTERADOS MAS PRESENTES)
+// SISTEMA DERRUBADO (CARA OU COROA)
+// =========================================================
+window.abrirModalCaraCoroa = function() {
+    document.getElementById("coinFlipModal").style.display = "flex";
+    document.getElementById("coinAnimationArea").innerHTML = "🪙";
+    document.getElementById("coinChoiceButtons").style.display = "flex";
+};
+
+window.jogarCaraOuCoroa = function(escolha) {
+    document.getElementById("coinChoiceButtons").style.display = "none";
+    let coinArea = document.getElementById("coinAnimationArea");
+    let flips = 0; let flipInterval = setInterval(() => { coinArea.innerHTML = flips % 2 === 0 ? "🙂" : "👑"; flips++; }, 100);
+
+    setTimeout(() => {
+        clearInterval(flipInterval);
+        let resultado = Math.random() < 0.5 ? "Cara" : "Coroa";
+        let emoji = resultado === "Cara" ? "🙂" : "👑";
+        let isWinner = (escolha === resultado);
+        
+        coinArea.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:10px;"><span style="font-size:60px;">${emoji}</span><span style="font-size:22px; font-weight:900; color:${isWinner ? '#00ff66' : '#ff1a55'}; text-shadow: 0 0 10px ${isWinner ? '#00ff66' : '#ff1a55'};">${resultado.toUpperCase()}!</span></div>`;
+
+        setTimeout(() => {
+            document.getElementById("coinFlipModal").style.display = "none";
+            if(isWinner) {
+                window.showNeonToast("SUCESSO! Você conseguiu levantar.");
+                window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Tirou ${resultado} no Cara ou Coroa e <span class="neon-green">se levantou!</span>` });
+                window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${window.jogadorAtual}/Derrubado`).remove();
+            } else {
+                window.showNeonToast("FALHOU! Continua no chão.");
+                window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Tirou ${resultado} no Cara ou Coroa e <span class="neon-red">continua caído.</span> Perdeu a vez!` });
+                window.passarTurnoVTT();
+            }
+        }, 2500);
+    }, 1500);
+};
+
+// =========================================================
+// AVATARES E IGAMBLE
 // =========================================================
 window.carregarAvatares = function() {
     let g = document.getElementById("avatarGridDisplay"); if(!g) return; g.innerHTML = "";
     let hs = ["Jack", "Leo", "Felix", "Sam", "Arthur", "Ryan", "Oliver", "Caleb", "Zane", "Eli", "Noah", "Luke", "Gabe", "Max", "Ivan", "Finn", "Hugo", "Ezra", "Milo", "Levi", "Owen", "Asher", "Silas", "Theo"];
     let ms = ["Ane", "Lucy", "Jude", "Mia", "Zoe", "Lily", "Eva", "Ruby", "Cleo", "Nora", "Iris", "Lia", "Fay", "Gia", "Ivy", "Luna", "Mila", "Aria", "Ella", "Chloe", "Maya", "Kira", "Sia", "Nina"];
     let bs = ["Bot1", "Bot2", "Bot3", "Bot4", "Bot5", "Bot6", "Bot7", "Bot8", "Bot9", "Bot10", "Bot11", "Bot12", "Bot13", "Bot14", "Bot15"];
-    
     hs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/adventurer/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/adventurer/svg?seed=${s}')">`; });
     ms.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/adventurer/svg?seed=${s}Female" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/adventurer/svg?seed=${s}Female')">`; });
     bs.forEach(s => { g.innerHTML += `<img src="https://api.dicebear.com/9.x/bottts/svg?seed=${s}" class="av-thumb" onclick="window.selecionarAvatarLoja(this, 'https://api.dicebear.com/9.x/bottts/svg?seed=${s}')">`; });
@@ -1494,78 +1085,19 @@ window.logarComSerialFinal = function(s) { if(s === window.MASTER_SERIAL) { wind
 
 window.logarSucesso = function(n, s) {
     window.jogadorAtual = n; window.serialAtual = s; window.isMaster = (s === window.MASTER_SERIAL); 
-    
     if(window.isMaster) { let sel = document.getElementById("embLocal"); if(sel) {sel.innerHTML = "<option value=''>Selecione...</option>"; Object.keys(window.locaisMapa).forEach(k => { sel.innerHTML += `<option value="${k}">${window.locaisMapa[k].nome}</option>`; });} }
-    
     window.setElDisplay("loginModal", "none"); window.setElDisplay("base-desktop", "flex"); window.setElDisplay("gameContainer", "none");
-
     window.renderizarFicha(); window.renderizarMochila(); window.renderizarLojaUI(); window.desenharMapa(true); window.renderizarPanteao();
     if(typeof window.escutarNotificacoes === 'function') window.escutarNotificacoes(); 
-    
     if(window.db && window.jogadorAtual) { window.db.ref('.info/connected').on('value', function(s) { if (s.val() === true) { window.connectionRef = window.db.ref('tokyoRpg/presence/' + window.jogadorAtual); window.connectionRef.onDisconnect().set(false).then(() => { window.connectionRef.set(true); }); }}); }
 };
 
 window.deslogar = function() { if(window.connectionRef) window.connectionRef.set(false); window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.setElVal("loginName", ""); window.setElVal("loginPass", ""); window.setElVal("loginSerial", ""); window.fecharCelular(); window.setElDisplay('gameContainer', 'none'); window.setElDisplay('base-desktop', 'none'); window.abrirModal(); window.desenharMapa(true); };
 
-// === 10. INICIALIZAÇÃO ONLOAD ===
-window.onload = function() {
-    if (window.db) {
-        window.carregarTitulos(); window.carregarAvatares(); 
-        
-        window.db.ref('tokyoRpg/users').on('value', s => { 
-            window.usersGlobais = s.val()||{}; 
-            // CORREÇÃO: Checks de segurança para impedir erro invisível de travar a interface!
-            if(typeof window.renderizarFicha === "function") window.renderizarFicha(); 
-            if(typeof window.renderizarMochila === "function") window.renderizarMochila(); 
-            if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); 
-            if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); 
-            if(typeof window.desenharListaUsuarios === "function") window.desenharListaUsuarios(); 
-            if(typeof window.renderizarPanteao === "function") window.renderizarPanteao(); 
-            if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard();
-        });
-        
-        window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); if(typeof window.desenharListaUsuarios === "function") window.desenharListaUsuarios(); });
-        window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); });
-        window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; if(typeof window.renderizarLojaUI === "function") window.renderizarLojaUI(); if(typeof window.renderizarFicha === "function") window.renderizarFicha(); if(typeof window.renderizarMochila === "function") window.renderizarMochila(); if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); }); 
-        window.db.ref('tokyoRpg/casasGrid').on('value', s => { window.casaGlobais = s.val() || {}; if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); });
-        window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
-        
-        window.db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { if(typeof window.mostrarDadoOverlay === "function") window.mostrarDadoOverlay(d.nome, d.form, d.results); } });
-        window.db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div style="margin-bottom:5px;"><strong class="neon-blue">${x.nome}:</strong> ${x.texto}</div>`); b.scrollTop = b.scrollHeight; }});
-        
-        window.db.ref('tokyoRpg/currentClash').on('value', s => {
-            let d = s.val();
-            if(d && d.ts > Date.now() - 15000 && window.lastClashTs !== d.ts) {
-                window.lastClashTs = d.ts;
-                window.clashQueue.push(d);
-                if(typeof window.processClashQueue === "function") window.processClashQueue();
-            }
-        });
-
-        window.db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
-            try {
-                let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
-                if(d){ Object.keys(d).forEach(k => { 
-                    let m = d[k]; let rCount = m.reacoes || {}; let uData = window.usersGlobais[m.nome] || {}; 
-                    let curAv = uData.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${m.nome}`; let curTit = uData.tituloChat || m.titulo; 
-                    let reactHtml = `<button class="react-add" onclick="window.abrirEmojiReacao('${k}', event)">+</button>${rCount['🔥']?`<button class="react-btn">🔥 ${rCount['🔥']}</button>`:''}${rCount['💀']?`<button class="react-btn">💀 ${rCount['💀']}</button>`:''}${rCount['😂']?`<button class="react-btn">😂 ${rCount['😂']}</button>`:''}${rCount['👀']?`<button class="react-btn">👀 ${rCount['👀']}</button>`:''}${rCount['💯']?`<button class="react-btn">💯 ${rCount['💯']}</button>`:''}${rCount['🤡']?`<button class="react-btn">🤡 ${rCount['🤡']}</button>`:''}${rCount['💔']?`<button class="react-btn">💔 ${rCount['💔']}</button>`:''}${rCount['💰']?`<button class="react-btn">💰 ${rCount['💰']}</button>`:''}`;
-                    b.innerHTML += `<div class="msg-box"><div class="msg-avatar-container"><span style="font-size:10px; color:#ff2a5f;">${uData.carteira||0}¥</span><img src="${curAv}" class="msg-avatar"></div><div class="msg-content"><div style="display:flex; flex-direction:column; margin-bottom:5px;">${curTit?`<div class="title-tag ${curTit.raridade}" style="display:inline-block; width:fit-content; margin-bottom:2px;">${curTit.txt||curTit}</div>`:''}<strong style="color:var(--accent-blue); font-size:14px;">${m.nome} <span style="color:#555;font-size:10px; margin-left:5px;">${m.data}</span></strong></div><p style="font-size:13px; line-height:1.4; margin-top:2px;">${(m.texto||"").replace(/@([\w_]+)/g, function(match, nomeMention) { return `<span style="color:var(--accent-blue); font-weight:bold;">@${nomeMention.replace(/_/g, ' ')}</span>`; })}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}<div style="margin-top:5px; display:flex; flex-wrap:wrap; gap:5px;">${reactHtml}</div></div></div>`; 
-                }); b.scrollTop = b.scrollHeight; }
-            } catch (err) { console.error("Erro ao renderizar chat:", err); }
-        });
-    }
-    if(typeof window.abrirModal === "function") window.abrirModal();
-};
-
 window.postAudioMuted = true;
 window.toggleGambleMute = function() {
-    window.postAudioMuted = !window.postAudioMuted;
-    let btn = document.getElementById("btnToggleMute");
-    if(btn) {
-        btn.innerText = window.postAudioMuted ? "🔇 Áudio Bloqueado" : "🔊 Áudio Liberado";
-        btn.style.borderColor = window.postAudioMuted ? "#aaa" : "#0f0";
-        btn.style.color = window.postAudioMuted ? "#aaa" : "#0f0";
-    }
+    window.postAudioMuted = !window.postAudioMuted; let btn = document.getElementById("btnToggleMute");
+    if(btn) { btn.innerText = window.postAudioMuted ? "🔇 Áudio Bloqueado" : "🔊 Áudio Liberado"; btn.style.borderColor = window.postAudioMuted ? "#aaa" : "#0f0"; btn.style.color = window.postAudioMuted ? "#aaa" : "#0f0"; }
     if(window.postAudioMuted) { document.querySelectorAll('audio.post-audio').forEach(a => a.pause()); return; }
     document.querySelectorAll('audio.post-audio').forEach(a => { let rect = a.getBoundingClientRect(); if(rect.top >= 0 && rect.bottom <= window.innerHeight) a.play().catch(()=>{}); });
 };
@@ -1575,31 +1107,17 @@ window.togglePostCreator = function() { let bx = document.getElementById("postCr
 window.enviarPost = function() {
     if(!window.jogadorAtual && !window.isMaster) { window.showNeonToast("Faça login!"); return; }
     if(!window.db) return;
-
-    let txt = (document.getElementById("postText")?.value || "").trim();
-    let imgUrl = (document.getElementById("postImgUrl")?.value || "").trim();
-    let imgFile = document.getElementById("postImgFile")?.files?.[0] || null;
-    let audio = (document.getElementById("postAudioUrl")?.value || "").trim();
-
-    let cAv = document.getElementById("postCustomAvatar") ? document.getElementById("postCustomAvatar").value.trim() : "";
-    let cName = document.getElementById("postCustomName") ? document.getElementById("postCustomName").value.trim() : "";
-    let isAd = document.getElementById("postIsAd") ? document.getElementById("postIsAd").checked : false;
+    let txt = (document.getElementById("postText")?.value || "").trim(); let imgUrl = (document.getElementById("postImgUrl")?.value || "").trim(); let imgFile = document.getElementById("postImgFile")?.files?.[0] || null; let audio = (document.getElementById("postAudioUrl")?.value || "").trim();
+    let cAv = document.getElementById("postCustomAvatar") ? document.getElementById("postCustomAvatar").value.trim() : ""; let cName = document.getElementById("postCustomName") ? document.getElementById("postCustomName").value.trim() : ""; let isAd = document.getElementById("postIsAd") ? document.getElementById("postIsAd").checked : false;
 
     if(!txt && !imgUrl && !imgFile && !audio) { window.showNeonToast("O post está vazio!"); return; }
 
        let postarNoBanco = function(n, a, idAutor, finalImg) {
         let payload = { autor: n, autorId: idAutor, avatar: a, texto: txt, imagem: finalImg || "", audio: audio, timestamp: Date.now(), isAd: (window.isMaster && isAd), likes: 0, reposts: 0, likers: {}, reposters: {}, comentarios: {} };
-
         let newPostRef = window.db.ref('tokyoRpg/posts').push();
         newPostRef.set(payload).then(() => {
             if(typeof window.dispatchMentions === "function") { window.dispatchMentions({ from: idAutor !== "MESTRE" ? window.jogadorAtual : "SISTEMA", contextType: "gpost", contextId: newPostRef.key, text: txt }); }
-
-            if(document.getElementById("postText")) document.getElementById("postText").value = "";
-            if(document.getElementById("postImgUrl")) document.getElementById("postImgUrl").value = "";
-            if(document.getElementById("postAudioUrl")) document.getElementById("postAudioUrl").value = "";
-            if(document.getElementById("postImgFile")) document.getElementById("postImgFile").value = "";
-            let bx = document.getElementById("postCreatorBox"); if(bx) bx.style.display = "none";
-            window.showNeonToast("Publicado!");
+            if(document.getElementById("postText")) document.getElementById("postText").value = ""; if(document.getElementById("postImgUrl")) document.getElementById("postImgUrl").value = ""; if(document.getElementById("postAudioUrl")) document.getElementById("postAudioUrl").value = ""; if(document.getElementById("postImgFile")) document.getElementById("postImgFile").value = ""; let bx = document.getElementById("postCreatorBox"); if(bx) bx.style.display = "none"; window.showNeonToast("Publicado!");
         });
     };
 
@@ -1615,71 +1133,35 @@ window.enviarPost = function() {
 };
 
 window.curtirPost = function(id) {
-    if(!window.jogadorAtual) return;
-    let ref = window.db.ref(`tokyoRpg/posts/${id}`);
-    ref.once('value').then(snap => {
-        let p = snap.val(); if(!p) return;
-        let likers = p.likers || {};
-        if(likers[window.jogadorAtual]) { delete likers[window.jogadorAtual]; ref.update({ likes: Math.max(0, (p.likes||1) - 1), likers }); } 
-        else { likers[window.jogadorAtual] = true; ref.update({ likes: (p.likes||0) + 1, likers }); }
-    });
+    if(!window.jogadorAtual) return; let ref = window.db.ref(`tokyoRpg/posts/${id}`);
+    ref.once('value').then(snap => { let p = snap.val(); if(!p) return; let likers = p.likers || {}; if(likers[window.jogadorAtual]) { delete likers[window.jogadorAtual]; ref.update({ likes: Math.max(0, (p.likes||1) - 1), likers }); } else { likers[window.jogadorAtual] = true; ref.update({ likes: (p.likes||0) + 1, likers }); } });
 };
 
 window.repostarPost = function(id) {
-    if(!window.jogadorAtual) return;
-    let ref = window.db.ref(`tokyoRpg/posts/${id}`);
-    ref.once('value').then(snap => {
-        let p = snap.val(); if(!p) return;
-        let rps = p.reposters || {};
-        if(!rps[window.jogadorAtual]) { rps[window.jogadorAtual] = true; ref.update({ reposts: (p.reposters||0) + 1, reposters: rps }); window.showNeonToast("Compartilhado!"); }
-    });
+    if(!window.jogadorAtual) return; let ref = window.db.ref(`tokyoRpg/posts/${id}`);
+    ref.once('value').then(snap => { let p = snap.val(); if(!p) return; let rps = p.reposters || {}; if(!rps[window.jogadorAtual]) { rps[window.jogadorAtual] = true; ref.update({ reposts: (p.reposters||0) + 1, reposters: rps }); window.showNeonToast("Compartilhado!"); } });
 };
 
-window.postObserver = window.postObserver || new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        let audioEl = entry.target.querySelector('audio.post-audio');
-        if(!audioEl) return;
-        if(entry.isIntersecting) { if(!window.postAudioMuted) { audioEl.currentTime = 0; audioEl.play().catch(()=>{}); } } else { audioEl.pause(); }
-    });
-}, { threshold: 0.6 });
+window.postObserver = window.postObserver || new IntersectionObserver((entries) => { entries.forEach(entry => { let audioEl = entry.target.querySelector('audio.post-audio'); if(!audioEl) return; if(entry.isIntersecting) { if(!window.postAudioMuted) { audioEl.currentTime = 0; audioEl.play().catch(()=>{}); } } else { audioEl.pause(); } }); }, { threshold: 0.6 });
 
 window.switchIGambleTab = function(tabId, btnEl) {
-  document.querySelectorAll(".igamble-tab-btn").forEach(b => b.classList.remove("active"));
-  if(btnEl) btnEl.classList.add("active");
-
+  document.querySelectorAll(".igamble-tab-btn").forEach(b => b.classList.remove("active")); if(btnEl) btnEl.classList.add("active");
   if(typeof window.marcarNotificacoesComoLidas === "function") window.marcarNotificacoesComoLidas(tabId);
-
   document.querySelectorAll(".igamble-view").forEach(v => v.classList.remove("active"));
-  const target = document.getElementById("igamble-view-" + tabId);
-  if(target) target.classList.add("active");
-
+  const target = document.getElementById("igamble-view-" + tabId); if(target) target.classList.add("active");
   if(tabId === "chat") { setTimeout(() => { const cb = document.getElementById("chatMessages"); if(cb) cb.scrollTop = cb.scrollHeight; }, 50); }
-
   if(tabId === "embates") {
-    const mPanel = document.getElementById("masterEmbatePanel");
-    if(mPanel) mPanel.style.display = window.isMaster ? "block" : "none";
-    if(window.isMaster && window.db) {
-      window.db.ref("tokyoRpg/users").once("value").then(snap => {
-        const dl = document.getElementById("listaJogadoresDatalist");
-        if(!dl) return; dl.innerHTML = "";
-        const data = snap.val(); if(!data) return;
-        Object.keys(data).forEach(k => { const u = data[k] || {}; const nome = u.nome || k; const av = u.avatarUrl || u.avatar || ""; dl.innerHTML += `<option value="${nome}" data-av="${av}"></option>`; });
-      });
-    }
+    const mPanel = document.getElementById("masterEmbatePanel"); if(mPanel) mPanel.style.display = window.isMaster ? "block" : "none";
+    if(window.isMaster && window.db) { window.db.ref("tokyoRpg/users").once("value").then(snap => { const dl = document.getElementById("listaJogadoresDatalist"); if(!dl) return; dl.innerHTML = ""; const data = snap.val(); if(!data) return; Object.keys(data).forEach(k => { const u = data[k] || {}; const nome = u.nome || k; const av = u.avatarUrl || u.avatar || ""; dl.innerHTML += `<option value="${nome}" data-av="${av}"></option>`; }); }); }
   }
-
   if(tabId === "posts") {
-    const isAdmin = !!window.isMaster;
-    const cn = document.getElementById("postCustomName"); const ca = document.getElementById("postCustomAvatar"); const la = document.getElementById("lblAd");
+    const isAdmin = !!window.isMaster; const cn = document.getElementById("postCustomName"); const ca = document.getElementById("postCustomAvatar"); const la = document.getElementById("lblAd");
     if(cn) cn.style.display = isAdmin ? "block" : "none"; if(ca) ca.style.display = isAdmin ? "block" : "none"; if(la) la.style.display = isAdmin ? "inline-block" : "none";
     if(!window._postsListenerStarted && typeof window.iniciarListenersIgamble === "function") { window._postsListenerStarted = true; window.iniciarListenersIgamble(); }
   }
 };
 
-window.excluirPost = function(postId) {
-  if (!window.db || !postId) return;
-  window.db.ref(`tokyoRpg/posts/${postId}`).remove().then(() => { window.showNeonToast("Post excluído!"); });
-};
+window.excluirPost = function(postId) { if (!window.db || !postId) return; window.db.ref(`tokyoRpg/posts/${postId}`).remove().then(() => { window.showNeonToast("Post excluído!"); }); };
 
 window.criarEmbate = function() {
   if (!window.isMaster || !window.db) return;
@@ -1699,27 +1181,22 @@ window.canDeletePost = function(post) {
   if (!post) return false; if (window.isMaster) return true; if (!window.jogadorAtual) return false;
   const myUser = window.usersGlobais?.[window.jogadorAtual] || {}; const myName = (myUser.nome || window.jogadorAtual || "").toString();
   if (post.autorId && post.autorId === window.jogadorAtual) return true;
-  const autor = (post.autor || "").toString();
-  if (autor && (autor === myName || autor === window.jogadorAtual)) return true;
+  const autor = (post.autor || "").toString(); if (autor && (autor === myName || autor === window.jogadorAtual)) return true;
   return false;
 };
 
 window.iniciarListenersIgamble = function() {
   if (!window.db) return; if (window._igambleListenersStarted) return; window._igambleListenersStarted = true;
-
   window.db.ref("tokyoRpg/posts").on("value", snap => {
     const feed = document.getElementById("igamblePostsFeed"); if(!feed) return; feed.innerHTML = "";
     const data = snap.val(); if(!data) return;
     const postsArray = Object.keys(data).map(id => ({ id, ...data[id] })).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
-
     postsArray.forEach(p => {
       const d = new Date(p.timestamp || Date.now()); const timeStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} - ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
       const hasBg = p.imagem ? `<img src="${p.imagem}" class="post-media-bg">` : ""; const hasImg = p.imagem ? `<img src="${p.imagem}" class="post-media">` : ""; const hasAudio = p.audio ? `<audio class="post-audio" loop src="${p.audio}"></audio>` : "";
       const iLiked = (p.likers && window.jogadorAtual && p.likers[window.jogadorAtual]) ? "liked" : ""; const iReposted = (p.reposters && window.jogadorAtual && p.reposters[window.jogadorAtual]) ? "reposted" : ""; const numComents = p.comentarios ? Object.keys(p.comentarios).length : 0;
       const delBtn = window.canDeletePost(p) ? `<button class="post-del-btn" onclick="window.excluirPost('${p.id}')">EXCLUIR</button>` : ""; const adTag = p.isAd ? `<span class="post-ad-tag">⭐ PATROCINADO</span>` : "";
-
       let followBtnHtml = typeof window.getFollowButtonHtml === "function" ? window.getFollowButtonHtml(p.autor) : "";
-
       feed.innerHTML += `<div class="post-card" id="post-${p.id}">${hasBg}${hasImg}${hasAudio}<div class="post-overlay"><div class="post-header"><div class="post-header-left"><div class="avatar-wrapper"><img src="${p.avatar || "https://api.dicebear.com/9.x/adventurer/svg?seed=Anon"}" class="post-avatar">${followBtnHtml}</div><div><div class="post-name">${p.autor || "---"} ${adTag}</div><div style="font-size:10px; color:#aaa;">${timeStr}</div></div></div>${delBtn}</div><div class="post-body"><div class="post-caption">${p.texto || ""}</div><div class="post-sidebar"><button class="post-btn-vert ${iLiked}" onclick="window.curtirPost('${p.id}')">❤ <span>${p.likes||0}</span></button><button class="post-btn-vert" onclick="window.abrirComentarios('${p.id}')">💬 <span>${numComents}</span></button><button class="post-btn-vert ${iReposted}" onclick="window.repostarPost('${p.id}')">🔄 <span>${p.reposts||0}</span></button></div></div></div></div>`;
     });
     try { if (window.postObserver) { document.querySelectorAll(".post-card").forEach(card => { window.postObserver.unobserve(card); window.postObserver.observe(card); }); } } catch(e) {}
@@ -1729,7 +1206,6 @@ window.iniciarListenersIgamble = function() {
     const lista = document.getElementById("listaEmbates"); if(!lista) return; lista.innerHTML = "";
     const data = snap.val(); if(!data) return;
     const embatesArray = Object.keys(data).map(id => ({ id, ...data[id] })).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
-
     embatesArray.forEach(e => {
       let statusHtml = "", masterBtn = "", winnerHtml = "";
       if(e.status === "ativo" || !e.status) {
@@ -1761,149 +1237,73 @@ window.toggleFollow = function(alvo, event) {
     let me = window.usersGlobais[window.jogadorAtual] || {}; let target = window.usersGlobais[alvo] || {};
     let isFollowing = me.seguindo && me.seguindo[alvo]; let theyFollow = target.seguindo && target.seguindo[window.jogadorAtual];
     let updates = {};
-    if (isFollowing) {
-        updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = null; updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = null;
-        window.showNeonToast(`Você deixou de seguir ${alvo}`);
-    } else {
-        updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = true; updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = true;
-        if(typeof window.enviarNotificacao === "function") window.enviarNotificacao(alvo, 'gpost', window.jogadorAtual, "começou a seguir você!", "follow");
-        window.showNeonToast(`Você agora segue ${alvo}`);
-    }
+    if (isFollowing) { updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = null; updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = null; window.showNeonToast(`Você deixou de seguir ${alvo}`); } 
+    else { updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = true; updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = true; if(typeof window.enviarNotificacao === "function") window.enviarNotificacao(alvo, 'gpost', window.jogadorAtual, "começou a seguir você!", "follow"); window.showNeonToast(`Você agora segue ${alvo}`); }
     window.db.ref().update(updates);
     
     let safeClass = alvo.replace(/[^a-zA-Z0-9]/g, '');
     document.querySelectorAll(`.follow-btn-${safeClass}`).forEach(btn => {
         if (isFollowing) { btn.className = `follow-badge-btn follow-btn-${safeClass}`; btn.innerHTML = "+"; } 
-        else { 
-            if(theyFollow) { btn.className = `follow-badge-btn friends follow-btn-${safeClass}`; btn.innerHTML = "✓✓ Amigos"; } 
-            else { btn.className = `follow-badge-btn following follow-btn-${safeClass}`; btn.innerHTML = "✓"; }
-        }
+        else { if(theyFollow) { btn.className = `follow-badge-btn friends follow-btn-${safeClass}`; btn.innerHTML = "✓✓ Amigos"; } else { btn.className = `follow-badge-btn following follow-btn-${safeClass}`; btn.innerHTML = "✓"; } }
     });
 };
 
 window.enviarMsgGamble = function() {
     try {
         if (!window.db || !window.jogadorAtual) return;
-        const inp = document.getElementById("chatInputMsg");
-        const txt = (inp.value || "").trim(); 
-        if (!txt) return;
-
+        const inp = document.getElementById("chatInputMsg"); const txt = (inp.value || "").trim(); if (!txt) return;
         let msgData = { nome: window.jogadorAtual, texto: txt, data: new Date().toLocaleTimeString(), ts: Date.now() };
-
         if (window.mensagemEmResposta) { msgData.replyTo = window.mensagemEmResposta.nome; msgData.replyText = window.mensagemEmResposta.texto; }
-
-        window.db.ref("tokyoRpg/chat").push(msgData).then(() => {
-            if(typeof window.dispatchMentions === "function") window.dispatchMentions({ from: window.jogadorAtual, contextType: "gchat", contextId: "", text: txt });
-        });
-        
-        inp.value = "";
-        if(typeof window.cancelarResposta === "function") window.cancelarResposta();
+        window.db.ref("tokyoRpg/chat").push(msgData).then(() => { if(typeof window.dispatchMentions === "function") window.dispatchMentions({ from: window.jogadorAtual, contextType: "gchat", contextId: "", text: txt }); });
+        inp.value = ""; if(typeof window.cancelarResposta === "function") window.cancelarResposta();
     } catch (e) { console.error("Erro ao enviar.", e); }
 };
 
 window.mensagemEmResposta = null; 
 window.responderMensagem = function(nome, texto) {
     window.mensagemEmResposta = { nome, texto };
-    document.getElementById("replyToName").innerText = nome;
-    document.getElementById("replyToText").innerText = texto;
-    document.getElementById("replyPreview").style.display = "flex";
-    document.getElementById("chatInputMsg").focus();
+    document.getElementById("replyToName").innerText = nome; document.getElementById("replyToText").innerText = texto; document.getElementById("replyPreview").style.display = "flex"; document.getElementById("chatInputMsg").focus();
 };
-
-window.cancelReply = function() {
-    window.mensagemEmResposta = null;
-    document.getElementById("replyPreview").style.display = "none";
-};
-
-// =========================================================
-// MENÇÕES, COMENTÁRIOS E NOTIFICAÇÕES (INSTA HUD)
-// =========================================================
+window.cancelReply = function() { window.mensagemEmResposta = null; document.getElementById("replyPreview").style.display = "none"; };
 
 window._mentionRuntime = { active: false, inputEl: null, startPos: 0 };
-
 window.handleMention = function(e, inputEl) {
-    let val = inputEl.value; let cursorPos = inputEl.selectionStart;
-    let textBeforeCursor = val.substring(0, cursorPos);
-    let atIndex = textBeforeCursor.lastIndexOf('@');
-
+    let val = inputEl.value; let cursorPos = inputEl.selectionStart; let textBeforeCursor = val.substring(0, cursorPos); let atIndex = textBeforeCursor.lastIndexOf('@');
     if (atIndex !== -1 && (atIndex === 0 || textBeforeCursor[atIndex - 1] === ' ' || textBeforeCursor[atIndex - 1] === '\n')) {
         let query = textBeforeCursor.substring(atIndex + 1);
-        if (!query.includes(' ') && !query.includes('\n')) {
-            window._mentionRuntime = { active: true, inputEl: inputEl, startPos: atIndex, query: query };
-            window.showMentionDropdown(inputEl, query);
-            return;
-        }
+        if (!query.includes(' ') && !query.includes('\n')) { window._mentionRuntime = { active: true, inputEl: inputEl, startPos: atIndex, query: query }; window.showMentionDropdown(inputEl, query); return; }
     }
     window.closeMentionDropdown();
 };
-
 window.showMentionDropdown = function(inputEl, query) {
     let drop = document.getElementById("mentionDropdown"); if (!drop) return;
-    let rect = inputEl.getBoundingClientRect();
-    drop.style.left = rect.left + "px"; drop.style.top = (rect.top - 160) + "px"; 
-    drop.style.display = "block";
-
-    let users = Object.values(window.usersGlobais || {});
-    let filtered = users.filter(u => u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
-
+    let rect = inputEl.getBoundingClientRect(); drop.style.left = rect.left + "px"; drop.style.top = (rect.top - 160) + "px"; drop.style.display = "block";
+    let users = Object.values(window.usersGlobais || {}); let filtered = users.filter(u => u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
     if (filtered.length === 0) { drop.style.display = "none"; return; }
-
-    drop.innerHTML = filtered.map(u => {
-        let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
-        return `<div class="mention-item" onclick="window.selectMention('${u.nome}')"><img src="${av}" class="mention-avatar"><span>${u.nome}</span></div>`;
-    }).join('');
+    drop.innerHTML = filtered.map(u => { let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`; return `<div class="mention-item" onclick="window.selectMention('${u.nome}')"><img src="${av}" class="mention-avatar"><span>${u.nome}</span></div>`; }).join('');
 };
-
 window.selectMention = function(nome) {
     let s = window._mentionRuntime; if (!s || !s.active || !s.inputEl) return;
-
-    const inputEl = s.inputEl; const val = inputEl.value || "";
-    const cursorPos = inputEl.selectionStart || val.length;
-
-    const before = val.substring(0, s.startPos);
-    const after = val.substring(cursorPos);
-    const nomeLimpo = nome.replace(/\s+/g, "_");
-
-    inputEl.value = before + "@" + nomeLimpo + " " + after;
-    inputEl.focus();
-    window.closeMentionDropdown();
+    const inputEl = s.inputEl; const val = inputEl.value || ""; const cursorPos = inputEl.selectionStart || val.length;
+    const before = val.substring(0, s.startPos); const after = val.substring(cursorPos); const nomeLimpo = nome.replace(/\s+/g, "_");
+    inputEl.value = before + "@" + nomeLimpo + " " + after; inputEl.focus(); window.closeMentionDropdown();
 };
-
-window.closeMentionDropdown = function(){
-  window._mentionRuntime.active = false;
-  const drop = document.getElementById("mentionDropdown");
-  if(drop) drop.style.display = "none";
-};
+window.closeMentionDropdown = function(){ window._mentionRuntime.active = false; const drop = document.getElementById("mentionDropdown"); if(drop) drop.style.display = "none"; };
 
 window.dispatchMentions = function({ from, contextType, contextId, text }) {
     try {
-        if (!window.db || !text) return;
-        let matches = text.match(/@([\w_]+)/g); if (!matches) return;
+        if (!window.db || !text) return; let matches = text.match(/@([\w_]+)/g); if (!matches) return;
         let users = Object.keys(window.usersGlobais || {}); let mencionados = new Set();
-
-        matches.forEach(m => {
-            let nomeMencionadoComUnderline = m.substring(1); 
-            let nomeMencionadoOriginal = nomeMencionadoComUnderline.replace(/_/g, ' '); 
-            let usuarioReal = users.find(u => u.toLowerCase() === nomeMencionadoOriginal.toLowerCase());
-            if (usuarioReal && usuarioReal !== from) { mencionados.add(usuarioReal); }
-        });
-
-        mencionados.forEach(alvo => {
-            window.db.ref(`tokyoRpg/users/${alvo}/notificacoes`).push({ from: from, contextType: contextType, contextId: contextId, texto: text, lida: false, ts: Date.now() });
-        });
+        matches.forEach(m => { let nomeMencionadoComUnderline = m.substring(1); let nomeMencionadoOriginal = nomeMencionadoComUnderline.replace(/_/g, ' '); let usuarioReal = users.find(u => u.toLowerCase() === nomeMencionadoOriginal.toLowerCase()); if (usuarioReal && usuarioReal !== from) { mencionados.add(usuarioReal); } });
+        mencionados.forEach(alvo => { window.db.ref(`tokyoRpg/users/${alvo}/notificacoes`).push({ from: from, contextType: contextType, contextId: contextId, texto: text, lida: false, ts: Date.now() }); });
     } catch(e) {}
 };
 
 window.mostrarNotificacaoHUD = function(from, type, text) {
     let stack = document.getElementById("mentionNotifyStack"); if (!stack) return;
-    let u = window.usersGlobais[from] || {};
-    let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${from}`;
-    let appTitle = type === "gchat" ? "G-Chat" : (type === "gpost" ? "G-Post" : "Arena");
-
-    let div = document.createElement("div"); div.className = "mention-notify";
-    div.innerHTML = `<img src="${avatar}"><div class="mn-texts"><div class="mn-title">${from} marcou você em ${appTitle}</div><div class="mn-sub">${text}</div></div>`;
-    stack.appendChild(div);
-    setTimeout(() => { div.classList.add("out"); setTimeout(() => div.remove(), 400); }, 5000);
+    let u = window.usersGlobais[from] || {}; let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${from}`; let appTitle = type === "gchat" ? "G-Chat" : (type === "gpost" ? "G-Post" : "Arena");
+    let div = document.createElement("div"); div.className = "mention-notify"; div.innerHTML = `<img src="${avatar}"><div class="mn-texts"><div class="mn-title">${from} marcou você em ${appTitle}</div><div class="mn-sub">${text}</div></div>`;
+    stack.appendChild(div); setTimeout(() => { div.classList.add("out"); setTimeout(() => div.remove(), 400); }, 5000);
 };
 
 window.atualizarBadgesHUD = function(chat, post, challenger) {
@@ -1917,17 +1317,14 @@ window.atualizarBadgesHUD = function(chat, post, challenger) {
 window.escutarNotificacoes = function() {
     if (!window.jogadorAtual || !window.db) return;
     let notifRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/notificacoes`);
-
     notifRef.on('value', snap => {
         let data = snap.val() || {}; let nGchat = 0, nGpost = 0, nGchallenger = 0;
         Object.values(data).forEach(n => { if (!n.lida) { if (n.contextType === "gchat") nGchat++; if (n.contextType === "gpost") nGpost++; if (n.contextType === "embates") nGchallenger++; } });
         window.atualizarBadgesHUD(nGchat, nGpost, nGchallenger);
     });
-
     let readyToNotify = false;
     notifRef.limitToLast(1).on('child_added', snap => {
-        if (!readyToNotify) return; 
-        let n = snap.val(); if (!n || n.lida) return;
+        if (!readyToNotify) return; let n = snap.val(); if (!n || n.lida) return;
         if(typeof window.mostrarNotificacaoHUD === "function") { window.mostrarNotificacaoHUD(n.from, n.contextType, n.texto); }
     });
     setTimeout(() => { readyToNotify = true; }, 2000);
@@ -1937,44 +1334,25 @@ window.marcarNotificacoesComoLidas = function(tabId) {
     if (!window.jogadorAtual || !window.db) return;
     let cType = tabId === "chat" ? "gchat" : (tabId === "posts" ? "gpost" : "embates");
     let notifRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/notificacoes`);
-
     notifRef.once('value', snap => {
-        let data = snap.val(); if(!data) return;
-        let updates = {};
+        let data = snap.val(); if(!data) return; let updates = {};
         Object.keys(data).forEach(k => { if (data[k].contextType === cType && !data[k].lida) updates[`${k}/lida`] = true; });
         if (Object.keys(updates).length > 0) notifRef.update(updates);
     });
 };
 
-window.abrirComentarios = function(postId) {
-    window.currentPostIdForComment = postId;
-    document.getElementById("commentsOverlay").style.display = "flex";
-    window.carregarComentarios(postId);
-};
-
-window.fecharComentarios = function() {
-    window.currentPostIdForComment = null;
-    document.getElementById("commentsOverlay").style.display = "none";
-    document.getElementById("commentsList").innerHTML = ""; 
-};
+window.abrirComentarios = function(postId) { window.currentPostIdForComment = postId; document.getElementById("commentsOverlay").style.display = "flex"; window.carregarComentarios(postId); };
+window.fecharComentarios = function() { window.currentPostIdForComment = null; document.getElementById("commentsOverlay").style.display = "none"; document.getElementById("commentsList").innerHTML = ""; };
 
 window.carregarComentarios = function(postId) {
-    let list = document.getElementById("commentsList"); if(!list) return;
-    list.innerHTML = "<div style='text-align:center; color:#aaa; margin-top:20px;'>Carregando...</div>";
-    
+    let list = document.getElementById("commentsList"); if(!list) return; list.innerHTML = "<div style='text-align:center; color:#aaa; margin-top:20px;'>Carregando...</div>";
     window.db.ref(`tokyoRpg/posts/${postId}/comentarios`).on('value', snap => {
-        if(window.currentPostIdForComment !== postId) return; 
-        
-        let data = snap.val();
+        if(window.currentPostIdForComment !== postId) return; let data = snap.val();
         if(!data) { list.innerHTML = "<div style='text-align:center; color:#555; margin-top:20px;'>Seja o primeiro a comentar!</div>"; return; }
-        
         let html = ""; let sortedKeys = Object.keys(data).sort((a,b) => data[a].timestamp - data[b].timestamp);
-
         sortedKeys.forEach(k => {
-            let c = data[k]; let u = window.usersGlobais[c.autor] || {};
-            let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${c.autor}`; let nome = u.nome || c.autor;
+            let c = data[k]; let u = window.usersGlobais[c.autor] || {}; let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${c.autor}`; let nome = u.nome || c.autor;
             let textoBonito = (c.texto||"").replace(/@([\w_]+)/g, function(match, nomeMention) { return `<span style="color:var(--accent-blue); font-weight:bold;">@${nomeMention.replace(/_/g, ' ')}</span>`; });
-
             html += `<div class="comment-item"><img src="${avatar}" class="comment-avatar"><div class="comment-content"><div class="comment-name">${nome}</div><div>${textoBonito}</div></div></div>`;
         });
         list.innerHTML = html; setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
@@ -1984,62 +1362,14 @@ window.carregarComentarios = function(postId) {
 window.enviarComentario = function() {
     if(!window.currentPostIdForComment || !window.jogadorAtual) return;
     let inp = document.getElementById("commentInput"); let txt = inp.value.trim(); if(!txt) return;
-    
     window.db.ref(`tokyoRpg/posts/${window.currentPostIdForComment}/comentarios`).push({ autor: window.jogadorAtual, texto: txt, timestamp: Date.now() }).then(() => {
         inp.value = ""; window.closeMentionDropdown();
         if(typeof window.dispatchMentions === "function") { window.dispatchMentions({ from: window.jogadorAtual, contextType: "gpost", contextId: window.currentPostIdForComment, text: txt }); }
     });
 };
-// CCOIN FLIP 
-//======================================================
-window.abrirModalCaraCoroa = function() {
-    document.getElementById("coinFlipModal").style.display = "flex";
-    document.getElementById("coinAnimationArea").innerHTML = "🪙";
-    document.getElementById("coinChoiceButtons").style.display = "flex";
-};
 
-window.jogarCaraOuCoroa = function(escolha) {
-    document.getElementById("coinChoiceButtons").style.display = "none";
-    let coinArea = document.getElementById("coinAnimationArea");
-    
-    // Efeito Visual Girando
-    let flips = 0;
-    let flipInterval = setInterval(() => {
-        coinArea.innerHTML = flips % 2 === 0 ? "🙂" : "👑";
-        flips++;
-    }, 100);
-
-    setTimeout(() => {
-        clearInterval(flipInterval);
-        
-        let resultado = Math.random() < 0.5 ? "Cara" : "Coroa";
-        let emoji = resultado === "Cara" ? "🙂" : "👑";
-        let isWinner = (escolha === resultado);
-        
-        coinArea.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; gap:10px;">
-            <span style="font-size:60px;">${emoji}</span>
-            <span style="font-size:22px; font-weight:900; color:${isWinner ? '#00ff66' : '#ff1a55'}; text-shadow: 0 0 10px ${isWinner ? '#00ff66' : '#ff1a55'};">${resultado.toUpperCase()}!</span>
-        </div>`;
-
-        setTimeout(() => {
-            document.getElementById("coinFlipModal").style.display = "none";
-            if(isWinner) {
-                window.showNeonToast("SUCESSO! Você conseguiu levantar.");
-                window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Tirou ${resultado} no Cara ou Coroa e <span class="neon-green">se levantou!</span>` });
-                // Remove o status de derrubado do banco
-                window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${window.jogadorAtual}/Derrubado`).remove();
-            } else {
-                window.showNeonToast("FALHOU! Continua no chão.");
-                window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Tirou ${resultado} no Cara ou Coroa e <span class="neon-red">continua caído.</span> Perdeu a vez!` });
-                // Encerra o turno na hora
-                window.passarTurnoVTT();
-            }
-        }, 2500);
-
-    }, 1500);
-};
 // =========================================================
-// GAMBLENGER (CELULAR) 
+// GAMBLENGER (CELULAR SMS)
 // =========================================================
 window.contatoSmsAtual = null; window._smsListener = null; window._lastChatId = null;
 
@@ -2048,53 +1378,37 @@ window.adicionarContato = function() {
     let me = window.usersGlobais[window.jogadorAtual];
     if(!me.numero && !window.isMaster) { window.showNeonToast("Registre seu próprio Número no perfil primeiro!"); return; }
     if(num === me.numero) { window.showNeonToast("Este é o seu próprio número!"); return; }
-
     let alvo = null; Object.keys(window.usersGlobais).forEach(k => { if(window.usersGlobais[k].numero === num) alvo = k; });
     if(!alvo) { window.showNeonToast("Número inexistente ou fora de área."); return; }
-
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/contatos/${alvo}`).set(true).then(() => {
-        window.showNeonToast(`Contato [${alvo}] salvo!`); document.getElementById("novoContatoNum").value = ""; window.carregarContatosSMS();
-    });
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/contatos/${alvo}`).set(true).then(() => { window.showNeonToast(`Contato [${alvo}] salvo!`); document.getElementById("novoContatoNum").value = ""; window.carregarContatosSMS(); });
 };
 
 window.carregarContatosSMS = function() {
     let lista = document.getElementById("listaContatosSMS"); if(!lista || !window.usersGlobais || !window.jogadorAtual) return;
-    lista.innerHTML = ""; let meusContatos = window.usersGlobais[window.jogadorAtual]?.contatos || {};
-    let contatosArray = Object.keys(meusContatos);
-
+    lista.innerHTML = ""; let meusContatos = window.usersGlobais[window.jogadorAtual]?.contatos || {}; let contatosArray = Object.keys(meusContatos);
     if(window.isMaster) contatosArray = Object.keys(window.usersGlobais).filter(n => n !== "MESTRE" && n !== window.jogadorAtual);
     if(contatosArray.length === 0) { lista.innerHTML = `<div style="text-align:center; color:#555; font-size:10px; margin-top:20px;">Sua agenda está vazia.</div>`; return; }
 
     contatosArray.forEach(n => {
-        let u = window.usersGlobais[n]; if(!u) return;
-        let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
+        let u = window.usersGlobais[n]; if(!u) return; let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
         let isSel = (window.contatoSmsAtual === n) ? "background:rgba(0, 229, 255, 0.2); border-left:3px solid var(--accent-blue);" : "background:#111; border-left:3px solid #333;";
         lista.innerHTML += `<div style="display:flex; align-items:center; gap:10px; padding:10px; cursor:pointer; border-radius:4px; margin-bottom:5px; ${isSel}" onclick="window.abrirChatSMS('${n}')"><img src="${av}" style="width:35px; height:35px; border-radius:50%; object-fit:cover; border:1px solid #555;"><div style="color:#fff; font-weight:bold; font-size:12px; overflow:hidden; text-overflow:ellipsis;">${n}</div></div>`;
     });
 };
 
-window.abrirChatSMS = function(contato) {
-    window.contatoSmsAtual = contato;
-    let headerName = document.getElementById("smsChatName"); let callBtn = document.getElementById("btnCallUI");
-    if(headerName) headerName.innerText = "Criptografado: " + contato; if(callBtn) callBtn.style.display = "block"; 
-    window.carregarContatosSMS(); window.renderizarSMSLog(); 
-};
+window.abrirChatSMS = function(contato) { window.contatoSmsAtual = contato; let headerName = document.getElementById("smsChatName"); let callBtn = document.getElementById("btnCallUI"); if(headerName) headerName.innerText = "Criptografado: " + contato; if(callBtn) callBtn.style.display = "block"; window.carregarContatosSMS(); window.renderizarSMSLog(); };
 
 window.renderizarSMSLog = function() {
     if(!window.jogadorAtual || !window.contatoSmsAtual) return;
     let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
-    
     if(window._smsListener && window._lastChatId) window.db.ref('tokyoRpg/smsChats/' + window._lastChatId).off('value', window._smsListener);
     window._lastChatId = chatId;
     
     window._smsListener = window.db.ref('tokyoRpg/smsChats/' + chatId).on('value', snap => {
         let log = document.getElementById("smsLog"); if(!log) return; log.innerHTML = ""; 
-        let data = snap.val();
-        if(!data) { log.innerHTML = `<div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura. Envie a primeira mensagem.</div>`; return; }
-        
+        let data = snap.val(); if(!data) { log.innerHTML = `<div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura. Envie a primeira mensagem.</div>`; return; }
         Object.keys(data).forEach(k => {
-            let m = data[k]; let isMe = (m.de === window.jogadorAtual);
-            let align = isMe ? "flex-end" : "flex-start"; let bg = isMe ? "var(--accent-blue)" : "#222";
+            let m = data[k]; let isMe = (m.de === window.jogadorAtual); let align = isMe ? "flex-end" : "flex-start"; let bg = isMe ? "var(--accent-blue)" : "#222";
             let color = isMe ? "#000" : "#fff"; let radius = isMe ? "12px 12px 0 12px" : "12px 12px 12px 0";
             log.innerHTML += `<div style="display:flex; flex-direction:column; align-items:${align}; margin-bottom:10px; width:100%;"><div style="background:${bg}; color:${color}; padding:10px; border-radius:${radius}; max-width:80%; font-size:13px; font-family:monospace; font-weight:bold; word-wrap:break-word;">${m.msg}</div><div style="font-size:10px; color:#666; margin-top:3px;">${m.data || ""}</div></div>`;
         });
@@ -2105,16 +1419,58 @@ window.renderizarSMSLog = function() {
 window.enviarSMS = function() {
     if(!window.jogadorAtual || !window.contatoSmsAtual) { window.showNeonToast("Selecione um contato na agenda primeiro!"); return; }
     let inputEl = document.getElementById("smsTexto"); let txt = inputEl.value.trim(); if(!txt) return;
-    
-    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
-    let payload = { de: window.jogadorAtual, para: window.contatoSmsAtual, msg: txt, data: new Date().toLocaleTimeString().substring(0, 5), ts: Date.now() };
-    
-    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push(payload);
-    inputEl.value = ""; inputEl.focus();    
+    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_"); let payload = { de: window.jogadorAtual, para: window.contatoSmsAtual, msg: txt, data: new Date().toLocaleTimeString().substring(0, 5), ts: Date.now() };
+    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push(payload); inputEl.value = ""; inputEl.focus();    
 };
+window.iniciarLigacao = function() { if(!window.contatoSmsAtual) return; window.showNeonToast(`📞 Conectando com ${window.contatoSmsAtual}...`); };
 
-window.iniciarLigacao = function() {
-    if(!window.contatoSmsAtual) return;
-    window.showNeonToast(`📞 Conectando com ${window.contatoSmsAtual}...`);
+// =========================================================
+// FIREBASE ONLOAD (MOTOR INICIAL)
+// =========================================================
+window.onload = function() {
+    if (window.db) {
+        window.carregarTitulos(); window.carregarAvatares(); 
+        
+        window.db.ref('tokyoRpg/users').on('value', s => { 
+            window.usersGlobais = s.val()||{}; 
+            if(typeof window.renderizarFicha === "function") window.renderizarFicha(); 
+            if(typeof window.renderizarMochila === "function") window.renderizarMochila(); 
+            if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); 
+            if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); 
+            if(typeof window.desenharListaUsuarios === "function") window.desenharListaUsuarios(); 
+            if(typeof window.renderizarPanteao === "function") window.renderizarPanteao(); 
+            if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard();
+        });
+        
+        window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); if(typeof window.desenharListaUsuarios === "function") window.desenharListaUsuarios(); });
+        window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); });
+        window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; if(typeof window.renderizarLojaUI === "function") window.renderizarLojaUI(); if(typeof window.renderizarFicha === "function") window.renderizarFicha(); if(typeof window.renderizarMochila === "function") window.renderizarMochila(); if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); }); 
+        window.db.ref('tokyoRpg/casasGrid').on('value', s => { window.casaGlobais = s.val() || {}; if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); });
+        
+        window.db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { if(typeof window.mostrarDadoOverlay === "function") window.mostrarDadoOverlay(d.nome, d.form, d.results); } });
+        window.db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div style="margin-bottom:5px;"><strong class="neon-blue">${x.nome}:</strong> ${x.texto}</div>`); b.scrollTop = b.scrollHeight; }});
+        
+        // MOTOR DE FILA DO CLASH (CORRIGIDO PARA CHAMAR A ANIMAÇÃO CORRETAMENTE)
+        window.db.ref('tokyoRpg/currentClash').on('value', s => {
+            let d = s.val();
+            if(d && d.ts > window.lastClashTs) {
+                window.lastClashTs = d.ts;
+                window.clashQueue.push(d);
+                if(typeof window.processClashQueue === "function") window.processClashQueue();
+            }
+        });
+
+        window.db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
+            try {
+                let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
+                if(d){ Object.keys(d).forEach(k => { 
+                    let m = d[k]; let rCount = m.reacoes || {}; let uData = window.usersGlobais[m.nome] || {}; 
+                    let curAv = uData.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${m.nome}`; let curTit = uData.tituloChat || m.titulo; 
+                    let reactHtml = `<button class="react-add" onclick="window.abrirEmojiReacao('${k}', event)">+</button>${rCount['🔥']?`<button class="react-btn">🔥 ${rCount['🔥']}</button>`:''}${rCount['💀']?`<button class="react-btn">💀 ${rCount['💀']}</button>`:''}${rCount['😂']?`<button class="react-btn">😂 ${rCount['😂']}</button>`:''}${rCount['👀']?`<button class="react-btn">👀 ${rCount['👀']}</button>`:''}${rCount['💯']?`<button class="react-btn">💯 ${rCount['💯']}</button>`:''}${rCount['🤡']?`<button class="react-btn">🤡 ${rCount['🤡']}</button>`:''}${rCount['💔']?`<button class="react-btn">💔 ${rCount['💔']}</button>`:''}${rCount['💰']?`<button class="react-btn">💰 ${rCount['💰']}</button>`:''}`;
+                    b.innerHTML += `<div class="msg-box"><div class="msg-avatar-container"><span style="font-size:10px; color:#ff2a5f;">${uData.carteira||0}¥</span><img src="${curAv}" class="msg-avatar"></div><div class="msg-content"><div style="display:flex; flex-direction:column; margin-bottom:5px;">${curTit?`<div class="title-tag ${curTit.raridade}" style="display:inline-block; width:fit-content; margin-bottom:2px;">${curTit.txt||curTit}</div>`:''}<strong style="color:var(--accent-blue); font-size:14px;">${m.nome} <span style="color:#555;font-size:10px; margin-left:5px;">${m.data}</span></strong></div><p style="font-size:13px; line-height:1.4; margin-top:2px;">${(m.texto||"").replace(/@([\w_]+)/g, function(match, nomeMention) { return `<span style="color:var(--accent-blue); font-weight:bold;">@${nomeMention.replace(/_/g, ' ')}</span>`; })}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}<div style="margin-top:5px; display:flex; flex-wrap:wrap; gap:5px;">${reactHtml}</div></div></div>`; 
+                }); b.scrollTop = b.scrollHeight; }
+            } catch (err) { console.error("Erro ao renderizar chat:", err); }
+        });
+    }
+    if(typeof window.abrirModal === "function") window.abrirModal();
 };
-
