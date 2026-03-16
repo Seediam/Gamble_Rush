@@ -6,6 +6,7 @@ window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", aut
 window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
 window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.movimentosRestantes = 0; window.connectionRef = null;
 window.MASTER_SERIAL = "4053-DC1";
+window.allTurnosVTT = {}; // Cache global de iniciativas
 
 // === VARIÁVEIS DE COMBATE VTT E FILA DE ANIMAÇÕES ===
 window.combatState = { active: false, weapon: null };
@@ -39,7 +40,6 @@ window.tetrisMatrix = []; window.arrastandoKey = null; window.itemArrastado = nu
 
 window.titulosExtensos = [ "Novato|com|0", "Alvo Fácil|com|500", "Rato de Beco|com|800", "Corredor|com|1000", "Sobrevivente|com|1200", "Apostador|com|1500", "Lutador|inc|2000", "Atirador|inc|2500", "Sombra|inc|3000", "Estrategista|rar|6000", "Investigador|rar|7000", "O Hacker|epi|12000", "Ceifador|epi|30000", "Demônio de Neon|leg|40000", "Deus das Apostas|leg|45000", "A Lenda Viva|leg|60000", "Líder Supremo|leg|100000" ];
 
-// INICIALIZAÇÃO FIREBASE
 try { firebase.initializeApp(window.firebaseConfig); window.db = firebase.database(); } catch (e) { console.error("Firebase falhou:", e); }
 
 window.setElText = function(id, t) { let e = document.getElementById(id); if(e) e.innerText = t; };
@@ -79,7 +79,10 @@ window.abrirApp = function(appId, isLocked, lockMsg) {
     if(appId === 'tab-igamble') { setTimeout(() => { let chatBox = document.getElementById("chatMessages"); if(chatBox) chatBox.scrollTop = chatBox.scrollHeight; }, 50); }
 };
 
-window.fecharApp = function() { window.setElDisplay("gameContainer", "none"); window.setElDisplay("btnHomeApp", "none"); window.setElDisplay("btnBackIgamble", "none"); };
+window.fecharApp = function() { 
+    window.removerDoVttLocal();
+    window.setElDisplay("gameContainer", "none"); window.setElDisplay("btnHomeApp", "none"); window.setElDisplay("btnBackIgamble", "none"); 
+};
 window.abrirModal = function() { window.setElDisplay("loginModal", "flex"); if(window.jogadorAtual) { window.setElDisplay("loginScreen", "none"); window.setElDisplay("profileScreen", "block"); } else { window.setElDisplay("loginScreen", "block"); window.setElDisplay("profileScreen", "none"); } };
 window.fecharModal = function() { window.setElDisplay("loginModal", "none"); };
 window.toggleDesktopSidebar = function() { let s = document.getElementById("sidebarAgents"); if(s) s.classList.toggle("minimized"); };
@@ -88,9 +91,31 @@ window.salvarPerfil = function(campo, valor) { if(window.jogadorAtual) window.db
 window.renderizarFicha = function() {
     if(!window.jogadorAtual || !window.usersGlobais[window.jogadorAtual]) return;
     let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let mInteg = window.calcularMaxInteg(u); let buffs = window.calcularBuffsMoveis(u); let def = window.calcularDefesa(u);
-    if(document.getElementById("fichaNome")) window.setElText("fichaNome", u.nome || window.jogadorAtual); if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
-    let avURL = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
+    
+    // --- LÓGICA DA ESTRELA NO PERFIL (GLOBAL) ---
+    let popTierKey = u.popTier || "branca";
+    let tData = window.popularityTiers ? (window.popularityTiers[popTierKey] || window.popularityTiers["branca"]) : {cor:"#fff", icone:"⭐"};
+    let nomeDisplay = u.nome || window.jogadorAtual;
+    
+    if(window.isMaster) {
+        let selectTier = `<select onchange="window.mudarPopTier('${window.jogadorAtual}', this.value)" style="margin-left:10px; background:#000; color:${tData.cor}; border:1px solid ${tData.cor}; border-radius:4px; font-size:12px; outline:none; cursor:pointer; width: 130px; display: inline-block;">
+            <option value="branca" ${popTierKey==="branca"?"selected":""}>⭐ Branca</option>
+            <option value="verde" ${popTierKey==="verde"?"selected":""}>🌟 Verde</option>
+            <option value="azul" ${popTierKey==="azul"?"selected":""}>💫 Azul</option>
+            <option value="dourado" ${popTierKey==="dourado"?"selected":""}>✨ Dourado</option>
+            <option value="roxo" ${popTierKey==="roxo"?"selected":""}>🌠 Roxo</option>
+        </select>`;
+        window.setElHTML("fichaNome", nomeDisplay + selectTier);
+    } else {
+        window.setElHTML("fichaNome", nomeDisplay + ` <span style="color:${tData.cor}; text-shadow:0 0 10px ${tData.cor};" title="Classe de Fama atual">${tData.icone}</span>`);
+    }
+    // --------------------------------------------
+
+    if(document.getElementById("fichaSerial")) window.setElText("fichaSerial", u.serial || "----");
+    
+    let avURL = u.charImgUrl || u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
     if(document.getElementById("myAvatarImg")) document.getElementById("myAvatarImg").src = avURL;
+    
     if(document.getElementById("perfilSobrenome")) window.setElVal("perfilSobrenome", u.perfil?.sobrenome || ""); if(document.getElementById("perfilIdade")) window.setElVal("perfilIdade", u.perfil?.idade || "");
     window.setElText("lblDef", def); if(document.getElementById("lblPtsOS")) document.getElementById("lblPtsOS").innerText = r.pontosLivres; window.setElText("lblPts", r.pontosLivres);
     window.setElText("valFor", r.for + buffs.for); window.setElText("valAgi", r.agi + buffs.agi); window.setElText("valMan", r.man + buffs.man); window.setElText("valVig", r.vig + buffs.vig); window.setElText("valInt", r.int + buffs.int);
@@ -108,7 +133,29 @@ window.renderizarFicha = function() {
 window.desenharListaUsuarios = function() {
     let b = document.getElementById("userLog"); if(!b) return; b.innerHTML = ""; let hideOff = document.getElementById("checkOnline")?.checked;
     let sortedUsers = Object.keys(window.usersGlobais).filter(n => n !== "MESTRE").sort((a, b) => { let aOn = window.presenceGlobal[a] === true && window.usersGlobais[a].status !== "morto"; let bOn = window.presenceGlobal[b] === true && window.usersGlobais[b].status !== "morto"; return (aOn === bOn) ? 0 : aOn ? -1 : 1; });
-    sortedUsers.forEach(n => { let u=window.usersGlobais[n]; let r = window.getSafeRpg(u); let isD=(u.status==="morto"); let isO=window.presenceGlobal[n]===true&&!isD; if(hideOff && !isO && !isD) return; b.innerHTML += `<div class="user-item" style="opacity:${isD?0.5:1};"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong style="color:${isO?'var(--accent-blue)':'#aaa'};">${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span><div class="hp-display">❤️ HP: ${r.hp}</div></div>`; });
+    
+    sortedUsers.forEach(n => { 
+        let u = window.usersGlobais[n]; let r = window.getSafeRpg(u); let isD = (u.status==="morto"); let isO = window.presenceGlobal[n]===true&&!isD; 
+        if(hideOff && !isO && !isD) return; 
+
+        let masterTools = "";
+        if(window.isMaster) {
+            let pTier = u.popTier || "branca";
+            masterTools = `
+            <div style="margin-top:8px; border-top: 1px dashed #333; padding-top: 8px;">
+                <span style="font-size:10px; color:#aaa; font-weight:bold;">Mudar Fama:</span>
+                <select onchange="window.mudarPopTier('${n}', this.value)" style="background:#000; color:#fff; font-size:11px; padding:4px; border:1px solid var(--accent-blue); border-radius:4px; width: 100%; margin-top:3px;">
+                    <option value="branca" ${pTier==="branca"?"selected":""}>⭐ Branca (Comum)</option>
+                    <option value="verde" ${pTier==="verde"?"selected":""}>🌟 Verde (Épico)</option>
+                    <option value="azul" ${pTier==="azul"?"selected":""}>💫 Azul (Raro)</option>
+                    <option value="dourado" ${pTier==="dourado"?"selected":""}>✨ Dourado (Astro)</option>
+                    <option value="roxo" ${pTier==="roxo"?"selected":""}>🌠 Roxo (SuperStar)</option>
+                </select>
+            </div>`;
+        }
+
+        b.innerHTML += `<div class="user-item" style="opacity:${isD?0.5:1};"><span class="status-dot ${isD?'dead':(isO?'online':'offline')}"></span><strong style="color:${isO?'var(--accent-blue)':'#aaa'};">${n}</strong><br><span style="font-size:11px;color:#ff2a5f">${u.carteira||0}¥</span><div class="hp-display">❤️ HP: ${r.hp}</div>${masterTools}</div>`; 
+    });
 };
 
 // =========================================================
@@ -164,12 +211,44 @@ window.dmPropsCache = window.dmPropsCache || [];
 let vttBootInterval = setInterval(() => {
     if (window.db && window.jogadorAtual) {
         clearInterval(vttBootInterval);
-        let isMapOpen = () => { let t = document.getElementById('tab-mapa'); return t && (t.style.display === 'block' || t.style.display === 'flex' || t.classList.contains('active')); };
-        window.db.ref('tokyoRpg/submapConfig').on('value', s => { window.submapasConfig = s.val() || {}; if(window.currentSubMapKey && isMapOpen()) { window.initTacticalBoard(); window.updateTacticalBoard(); } });
-        window.db.ref('tokyoRpg/submapsBGs').on('value', s => { window.submapasBGs = s.val() || {}; if(window.currentSubMapKey) { let wrapper = document.getElementById("vttWorldWrapper"); if(wrapper && window.submapasBGs[window.currentSubMapKey]) wrapper.style.backgroundImage = `url("${window.submapasBGs[window.currentSubMapKey]}")`; } });
-        window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; if(isMapOpen()) window.updateTacticalBoard(); });
-        window.db.ref('tokyoRpg/submapsTraps').on('value', s => { window.submapasTraps = s.val() || {}; if(isMapOpen()) window.updateTacticalBoard(); });
-        window.db.ref('tokyoRpg/turnosVTT').on('value', s => { let d = s.val()||{}; window.turnosVTTGlobal = d[window.currentSubMapKey]||null; if(isMapOpen()) window.updateTacticalBoard(); });
+        
+        let isMapOpen = () => {
+            let t = document.getElementById('tab-mapa');
+            return t && (t.style.display === 'block' || t.style.display === 'flex' || t.classList.contains('active'));
+        };
+
+        window.db.ref('tokyoRpg/submapConfig').on('value', s => { 
+            window.submapasConfig = s.val() || {}; 
+            if(window.currentSubMapKey && isMapOpen()) { window.initTacticalBoard(); window.updateTacticalBoard(); }
+        });
+        
+        window.db.ref('tokyoRpg/submapsBGs').on('value', s => { 
+            window.submapasBGs = s.val() || {}; 
+            if(window.currentSubMapKey) { 
+                let wrapper = document.getElementById("vttWorldWrapper"); 
+                let bgUrl = window.submapasBGs[window.currentSubMapKey];
+                if(wrapper && bgUrl) {
+                    wrapper.style.backgroundImage = `url("${bgUrl}")`; 
+                    wrapper.style.backgroundSize = "cover";
+                    wrapper.style.backgroundPosition = "center";
+                }
+            }
+        });
+
+        window.db.ref('tokyoRpg/submaps').on('value', s => { 
+            window.submapasGlobais = s.val() || {}; 
+            if(isMapOpen()) window.updateTacticalBoard(); 
+        });
+
+        window.db.ref('tokyoRpg/submapsTraps').on('value', s => { 
+            window.submapasTraps = s.val() || {}; 
+            if(isMapOpen()) window.updateTacticalBoard(); 
+        });
+        
+        window.db.ref('tokyoRpg/turnosVTT').on('value', s => { 
+            window.allTurnosVTT = s.val() || {};
+            if(window.currentSubMapKey && isMapOpen()) window.updateTacticalBoard(); 
+        });
     }
 }, 1000);
 
@@ -194,18 +273,138 @@ window.desenharMapa = function(forcarVisibilidade = false) {
     }
     svg += `</svg>`; mc.innerHTML = svg;
     
-    Object.keys(window.locaisMapa).forEach(key => { let loc = window.locaisMapa[key]; let node = document.createElement("div"); node.className = "map-node"; let nX = loc.gx !== undefined ? loc.gx : loc.x; let nY = loc.gy !== undefined ? loc.gy : loc.y; node.style.left = nX + "%"; node.style.top = nY + "%"; node.innerHTML = `<span class="node-label">${loc.nome}</span>`; node.onclick = () => window.abrirSubMapa(key); mc.appendChild(node); });
+    Object.keys(window.locaisMapa).forEach(key => { let loc = window.locaisMapa[key]; let node = document.createElement("div"); node.className = "map-node"; let nX = loc.gx !== undefined ? loc.gx : loc.x; let nY = loc.gy !== undefined ? loc.gy : loc.y; node.style.left = nX + "%"; node.style.top = nY + "%"; node.innerHTML = `<span class="node-label">${loc.nome}</span>`; node.onclick = () => window.tentarViajar(key); mc.appendChild(node); });
+
+    Object.keys(window.usersGlobais).forEach(n => {
+        if(n === "MESTRE") return;
+        let u = window.usersGlobais[n];
+        if(u.status === "morto" || !window.presenceGlobal[n]) return;
+        let locKey = u.localAtual || "p1";
+        let pData = window.locaisMapa[locKey];
+        if(pData) {
+            let av = document.createElement("img");
+            // AQUI: Puxa a Imagem Customizada primeiro para o mapa do mundo
+            av.src = u.charImgUrl || u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
+            av.className = "avatar-on-map";
+            let rX = (Math.random() * 20) - 10; let rY = (Math.random() * 20) - 10;
+            av.style.left = `calc(${pData.gx || pData.x}% + ${rX}px)`; av.style.top = `calc(${pData.gy || pData.y}% + ${rY}px)`;
+            mc.appendChild(av);
+        }
+    });
+};
+
+window.tentarViajar = function(destinoKey) {
+    if(window.isMaster) {
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/localAtual`).set(destinoKey);
+        window.abrirSubMapa(destinoKey); return;
+    }
+
+    let u = window.usersGlobais[window.jogadorAtual];
+    let localAtual = u.localAtual || "p1";
+    
+    if(localAtual === destinoKey) { window.abrirSubMapa(destinoKey); return; }
+
+    let isConnected = window.conexoesMapa.some(c => (c.de === localAtual && c.para === destinoKey) || (c.para === localAtual && c.de === destinoKey));
+    let isGaia = u.deus && u.deus.includes("Gaia");
+    if(!isConnected && isGaia) { isConnected = window.rotasSecretasGaia.some(c => (c.de === localAtual && c.para === destinoKey) || (c.para === localAtual && c.de === destinoKey)); }
+
+    if(!isConnected) { window.showNeonToast("Muito longe! Viaje pelas rotas conectadas."); return; }
+
+    let r = window.getSafeRpg(u); let custoViagem = 10;
+    if(r.integridade < custoViagem) { window.showNeonToast(`Cansado! Requer ${custoViagem}% de Saturação para viajar.`); return; }
+
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/rpg/integridade`).set(Math.max(0, r.integridade - custoViagem));
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/localAtual`).set(destinoKey);
+    window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Viajou para <span class="neon-blue">${window.locaisMapa[destinoKey].nome}</span> (-${custoViagem}% Saturação)` });
+    window.abrirSubMapa(destinoKey);
+};
+
+window.atualizarBgFace = function(localKey) {
+    let faceImg = document.getElementById("charFaceDisplay");
+    if(!faceImg) return;
+    
+    // Se saiu do VTT e voltou pro Mapa Global, fica com fundo preto
+    if(!localKey) {
+        faceImg.style.backgroundImage = "none";
+        faceImg.style.boxShadow = "none";
+        return;
+    }
+
+    let loc = window.locaisMapa[localKey];
+    if(loc) {
+        // Pega o nome do mapa e troca os espaços por underline (Ex: "Ramen Fantasma" vira "Ramen_Fantasma")
+        let nomeArquivo = loc.nome.replace(/\s+/g, "_");
+        
+        // Injeta a foto atrás do seu personagem
+        faceImg.style.backgroundImage = `url('img/bg/${nomeArquivo}.png')`;
+        faceImg.style.backgroundSize = "cover";
+        faceImg.style.backgroundPosition = "center";
+        
+        // Adiciona uma sombra escura nas bordas para o rosto do personagem destacar mais
+        faceImg.style.boxShadow = "inset 0 0 40px rgba(0,0,0,0.8)";
+    }
 };
 
 window.abrirSubMapa = function(localKey) {
-    window.currentSubMapKey = localKey; let tabMapa = document.getElementById("tab-mapa"); if(tabMapa) tabMapa.style.display = "flex"; let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none"; let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
-    let loc = window.locaisMapa[localKey] || { nome: localKey.replace(/_/g, " ") }; let titleEl = document.getElementById("subMapTitle"); if(titleEl) titleEl.innerText = loc.nome;
-    let bgUrl = window.submapasBGs[localKey] || ""; let wrapper = document.getElementById("vttWorldWrapper"); if(wrapper) { wrapper.style.backgroundImage = bgUrl ? `url('${bgUrl}')` : "none"; }
+    window.currentSubMapKey = localKey; 
+    window.turnosVTTGlobal = window.allTurnosVTT ? (window.allTurnosVTT[localKey] || null) : null;
+
+    let tabMapa = document.getElementById("tab-mapa"); if(tabMapa) tabMapa.style.display = "flex"; 
+    let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none"; 
+    let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
+    
+    let loc = window.locaisMapa[localKey] || { nome: localKey.replace(/_/g, " ") }; 
+    let titleEl = document.getElementById("subMapTitle"); if(titleEl) titleEl.innerText = loc.nome;
+    
+    let bgUrl = window.submapasBGs[localKey] || ""; let wrapper = document.getElementById("vttWorldWrapper"); 
+    if(wrapper) { 
+        wrapper.style.backgroundImage = bgUrl ? `url('${bgUrl}')` : "none"; 
+        wrapper.style.backgroundSize = "cover";
+        wrapper.style.backgroundPosition = "center";
+    }
+    
+    // CHAMA A FUNÇÃO PARA MUDAR O FUNDO DO ROSTO
+    window.atualizarBgFace(localKey);
+    
     window.initTacticalBoard(); window.updateTacticalBoard(); window.listenCombatEvents();
     if(window.jogadorAtual && window.db) { window.db.ref(`tokyoRpg/submaps/${localKey}`).once('value', s => { let currentGrid = s.val() || {}; if(!Object.values(currentGrid).includes(window.jogadorAtual)) window.db.ref(`tokyoRpg/submaps/${localKey}/0_0`).set(window.jogadorAtual); }); }
 };
+window.removerDoVttLocal = function() {
+    // CORREÇÃO: Salva o nome do mapa atual numa variável segura ANTES do sistema apagar
+    let mapaParaSair = window.currentSubMapKey; 
+    
+    if(mapaParaSair && window.jogadorAtual && window.db) {
+        window.db.ref(`tokyoRpg/submaps/${mapaParaSair}`).once('value').then(s => {
+            let g = s.val() || {}; 
+            let k = Object.keys(g).find(key => g[key] === window.jogadorAtual);
+            if(k) window.db.ref(`tokyoRpg/submaps/${mapaParaSair}/${k}`).remove();
+        }).catch(e => console.error("Ignorando erro de sincronia:", e));
+    }
+};
+window.fecharSubMapa = function() { 
+    try {
+        window.removerDoVttLocal(); 
+        
+        // Limpa a chave da sala da memória
+        window.currentSubMapKey = ""; 
+        
+        // Força a troca de telas IMEDIATAMENTE antes de qualquer outra coisa
+        let sc = document.getElementById("subMapCanvas"); 
+        if(sc) sc.style.display = "none"; 
+        
+        let mc = document.getElementById("mapCanvas"); 
+        if(mc) mc.style.display = "block"; 
+        
+        // Limpa a foto de fundo e recarrega o mapa mundi
+        window.atualizarBgFace(null);
+        window.desenharMapa(true);
+        
+    } catch(err) {
+        console.error("Erro crítico ao fechar o mapa:", err);
+        window.showNeonToast("Erro forçado ao sair! Pressione F5.");
+    }
+};
 
-window.fecharSubMapa = function() { window.currentSubMapKey = ""; let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "block"; let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "none"; };
 window.mudarBgSubMapa = function() { let url = document.getElementById("vttBgInp").value; if(window.db && window.currentSubMapKey) { window.db.ref(`tokyoRpg/submapsBGs/${window.currentSubMapKey}`).set(url); window.showNeonToast("Fundo Salvo!"); } };
 window.salvarFormatoMapa = function() { if(!window.isMaster || !window.currentSubMapKey) return; let cols = parseInt(document.getElementById("vttColsInp").value) || 16; let rows = parseInt(document.getElementById("vttRowsInp").value) || 12; let shape = document.getElementById("vttShapeInp").value || "quadrado"; window.db.ref(`tokyoRpg/submapConfig/${window.currentSubMapKey}`).update({ cols: cols, rows: rows, shape: shape }); window.showNeonToast(`Terreno alterado para ${cols}x${rows}!`); };
 
@@ -215,12 +414,15 @@ window.initTacticalBoard = function() {
         let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia"));
         let conf = window.submapasConfig[window.currentSubMapKey] || {};
         let cols = conf.cols || 16; let rows = conf.rows || 12; let shape = conf.shape || 'quadrado'; let cellsData = conf.cells || {}; let cellSize = window.VTT_CELL_SIZE || 50; 
-        let wrapper = document.getElementById("vttWorldWrapper"); if(wrapper) { wrapper.style.width = (cols * cellSize) + "px"; wrapper.style.height = (rows * cellSize) + "px"; }
+
+        let wrapper = document.getElementById("vttWorldWrapper");
+        if(wrapper) { wrapper.style.width = (cols * cellSize) + "px"; wrapper.style.height = (rows * cellSize) + "px"; }
         b.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`; b.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
 
         for(let y=0; y<rows; y++) {
             for(let x=0; x<cols; x++) {
                 let cid = `${x}_${y}`; let cData = cellsData[cid] || {}; let isObs = cData.obs || false; let obsClass = isObs ? (isGaia ? "cell-obstacle-gaia" : "cell-obstacle") : "";
+                
                 let isHidden = false;
                 if (shape === 'l_shape') { if (x >= Math.floor(cols/2) && y < Math.floor(rows/2)) isHidden = true; } 
                 else if (shape === 'u_shape') { if (x >= Math.floor(cols/4) && x < Math.floor(cols*0.75) && y < Math.floor(rows/2)) isHidden = true; } 
@@ -242,16 +444,39 @@ window.initTacticalBoard = function() {
 window.getAffectedCells = function(tx, ty, px, py, style, range) {
     let cells = [];
     if (!style) style = 'melee'; 
+
     if (style === 'melee' || style === 'ranged' || style === 'teleport' || style === 'heal' || style === 'trap') { cells.push(`${tx}_${ty}`); } 
     else if (style === 'aoe') { for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) cells.push(`${tx+i}_${ty+j}`); } 
     else if (style === 'self_aoe') { for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) if(i!==0 || j!==0) cells.push(`${px+i}_${py+j}`); } 
     else if (style === 'cross') { cells.push(`${tx}_${ty}`, `${tx+1}_${ty}`, `${tx-1}_${ty}`, `${tx}_${ty+1}`, `${tx}_${ty-1}`); } 
-    else if (style === 'x_shape') { cells.push(`${tx}_${ty}`); for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty+i}`, `${tx-i}_${ty-i}`, `${tx+i}_${ty-i}`, `${tx-i}_${ty+i}`); } }
-    else if (style === 'big_cross') { cells.push(`${tx}_${ty}`); for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty}`, `${tx-i}_${ty}`, `${tx}_${ty+i}`, `${tx}_${ty-i}`); } } 
-    else if (style === 'line') { let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`]; let xInc = dx / steps; let yInc = dy / steps; for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`); } 
-    else if (style === 'alternating_line') { let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`]; let xInc = dx / steps; let yInc = dy / steps; for(let i=1; i<=steps; i+=2) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`); } 
-    else if (style === 't_shape') { let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`]; let xInc = dx / steps; let yInc = dy / steps; for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`); let rx = Math.round(px + steps*xInc); let ry = Math.round(py + steps*yInc); if (Math.abs(dx) > Math.abs(dy)) { cells.push(`${rx}_${ry+1}`, `${rx}_${ry-1}`); } else { cells.push(`${rx+1}_${ry}`, `${rx-1}_${ry}`); } } 
-    else if (style === 'cone') { let dx = tx - px; let dy = ty - py; let dirX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let dirY = dy === 0 ? 0 : (dy > 0 ? 1 : -1); for(let i=1; i<=range; i++) { if (Math.abs(dx) > Math.abs(dy)) { for(let j=-i; j<=i; j++) cells.push(`${px + (dirX*i)}_${py + j}`); } else { for(let j=-i; j<=i; j++) cells.push(`${px + j}_${py + (dirY*i)}`); } } }
+    else if (style === 'x_shape') { 
+        cells.push(`${tx}_${ty}`);
+        for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty+i}`, `${tx-i}_${ty-i}`, `${tx+i}_${ty-i}`, `${tx-i}_${ty+i}`); }
+    }
+    else if (style === 'big_cross') {
+        cells.push(`${tx}_${ty}`);
+        for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty}`, `${tx-i}_${ty}`, `${tx}_${ty+i}`, `${tx}_${ty-i}`); }
+    } else if (style === 'line') {
+        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
+        let xInc = dx / steps; let yInc = dy / steps;
+        for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
+    } else if (style === 'alternating_line') {
+        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
+        let xInc = dx / steps; let yInc = dy / steps;
+        for(let i=1; i<=steps; i+=2) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
+    } else if (style === 't_shape') {
+        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
+        let xInc = dx / steps; let yInc = dy / steps;
+        for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
+        let rx = Math.round(px + steps*xInc); let ry = Math.round(py + steps*yInc);
+        if (Math.abs(dx) > Math.abs(dy)) { cells.push(`${rx}_${ry+1}`, `${rx}_${ry-1}`); } else { cells.push(`${rx+1}_${ry}`, `${rx-1}_${ry}`); }
+    } else if (style === 'cone') {
+        let dx = tx - px; let dy = ty - py; let dirX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let dirY = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
+        for(let i=1; i<=range; i++) {
+            if (Math.abs(dx) > Math.abs(dy)) { for(let j=-i; j<=i; j++) cells.push(`${px + (dirX*i)}_${py + j}`); } 
+            else { for(let j=-i; j<=i; j++) cells.push(`${px + j}_${py + (dirY*i)}`); }
+        }
+    }
     return cells;
 };
 
@@ -263,6 +488,9 @@ window.lastFocusTurnIndex = -1; window.lastFocusCid = "";
 window.updateTacticalBoard = function() {
     try {
         if(!window.currentSubMapKey) return;
+        
+        window.turnosVTTGlobal = window.allTurnosVTT ? window.allTurnosVTT[window.currentSubMapKey] : null;
+
         let painelMestre = document.getElementById("mestreVTT"); 
         if(window.isMaster) { if(painelMestre) painelMestre.style.display = "flex"; let conf = window.submapasConfig[window.currentSubMapKey] || {}; if(document.getElementById("vttColsInp")) document.getElementById("vttColsInp").value = conf.cols || 16; if(document.getElementById("vttRowsInp")) document.getElementById("vttRowsInp").value = conf.rows || 12; if(document.getElementById("vttShapeInp")) document.getElementById("vttShapeInp").value = conf.shape || 'quadrado'; } else { if(painelMestre) painelMestre.style.display = "none"; }
 
@@ -309,17 +537,25 @@ window.updateTacticalBoard = function() {
 
         Object.keys(grid).forEach(cid => {
             let occupier = grid[cid]; if(!occupier) return; let parts = cid.split("_"); let x = parseInt(parts[0]); let y = parseInt(parts[1]); if(x >= cols || y >= rows) return; 
-            let tokenId = `token_${occupier}`; currentTokens.push(tokenId); let tokenEl = document.getElementById(tokenId); let avToken = window.usersGlobais[occupier]?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${occupier}`; let isMe = (occupier === window.jogadorAtual); let leftPx = (x * cellSize); let topPx = (y * cellSize);
+            let tokenId = `token_${occupier}`; currentTokens.push(tokenId); let tokenEl = document.getElementById(tokenId); 
+            
+            // AQUI: Puxa a Imagem Customizada primeiro para o VTT (Tabuleiro)
+            let occData = window.usersGlobais[occupier] || {};
+            let avToken = occData.charImgUrl || occData.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${occupier}`; 
+            
+            let isMe = (occupier === window.jogadorAtual); let leftPx = (x * cellSize); let topPx = (y * cellSize);
             if(!tokenEl) { 
                 let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token"; 
                 if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; } 
-                tHtml.style.backgroundImage = `url('${avToken}')`; 
                 tHtml.innerHTML = `<div id="status_layer_${occupier}" class="token-status-layer"></div><div class="token-hp-bar-container"><div class="token-hp-bar-trail" id="hp_trail_${occupier}"></div><div class="token-hp-bar-fill" id="hp_fill_${occupier}"></div></div>`; 
                 layer.appendChild(tHtml); tokenEl = tHtml; 
             }
+            
+            // Força a imagem a atualizar se a pessoa upar uma nova
+            tokenEl.style.backgroundImage = `url('${avToken}')`; 
             tokenEl.style.left = leftPx + "px"; tokenEl.style.top = topPx + "px"; tokenEl.style.width = cellSize + "px"; tokenEl.style.height = cellSize + "px"; 
             
-            let occRpg = window.getSafeRpg(window.usersGlobais[occupier]); let hpPct = Math.max(0, Math.min(100, ((occRpg.hp || 0) / 100) * 100)); let fillBar = document.getElementById(`hp_fill_${occupier}`); let trailBar = document.getElementById(`hp_trail_${occupier}`); if(fillBar && trailBar) { fillBar.style.width = hpPct + "%"; trailBar.style.width = hpPct + "%"; }
+            let occRpg = window.getSafeRpg(occData); let hpPct = Math.max(0, Math.min(100, ((occRpg.hp || 0) / 100) * 100)); let fillBar = document.getElementById(`hp_fill_${occupier}`); let trailBar = document.getElementById(`hp_trail_${occupier}`); if(fillBar && trailBar) { fillBar.style.width = hpPct + "%"; trailBar.style.width = hpPct + "%"; }
             
             let stLayer = document.getElementById(`status_layer_${occupier}`);
             if(stLayer) {
@@ -366,7 +602,9 @@ window.clicarGrid = function(x,y, isObs) {
     if(window.combatState && window.combatState.active) { window.executarAtaque(x, y); return; }
 
     let u = window.usersGlobais[window.jogadorAtual]; let isGaia = (u.deus && u.deus.includes("Gaia"));
-    if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
+    let isTurnoAtivo = (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0);
+    
+    if(isTurnoAtivo && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Espere seu turno."); return; }
     
     let grid = window.submapasGlobais[window.currentSubMapKey] || {};
     if(grid[`${x}_${y}`]) return; 
@@ -374,7 +612,7 @@ window.clicarGrid = function(x,y, isObs) {
     let px = -1, py = -1; let isAlreadyOnBoard = false;
     Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { isAlreadyOnBoard = true; let parts = cid.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
 
-    if(!window.isMaster && isAlreadyOnBoard) {
+    if(!window.isMaster && isAlreadyOnBoard && isTurnoAtivo) {
         let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
         if(dist > window.movimentosRestantes) return; 
         if(isObs && !isGaia) { window.showNeonToast("Obstáculo!"); return; }
@@ -389,7 +627,7 @@ window.clicarGrid = function(x,y, isObs) {
             let trap = traps[tId];
             if (trap.x === x && trap.y === y && trap.owner !== window.jogadorAtual) {
                 window.showNeonToast("💥 PISOU EM UMA ARMADILHA!");
-                let combatEvent = { attacker: trap.owner, weaponName: trap.name + " [Armadilha]", atkRoll: 25, isCrit: false, dmgRoll: trap.dmgRoll, wpnEffect: trap.effect || "", wpnEffectVal: trap.effectVal || 1, atkX: trap.x, atkY: trap.y, targets: [window.jogadorAtual], isHeal: false, timestamp: Date.now() };
+                let combatEvent = { attacker: trap.owner, weaponName: trap.name + " [Armadilha]", atkRoll: 25, isCrit: false, dmgRoll: trap.dmgRoll, wpnEffect: trap.effect || "", wpnEffectVal: trap.effectVal || 1, atkX: trap.x, atkY: trap.y, targets: [window.jogadorAtual], isHeal: false, timestamp: Date.now(), mapKey: window.currentSubMapKey };
                 window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${Date.now()}`).set(combatEvent);
                 window.db.ref(`tokyoRpg/submapsTraps/${window.currentSubMapKey}/${tId}`).remove(); 
             }
@@ -413,7 +651,9 @@ window.iniciarIniciativaVTT = function() {
 };
 
 window.passarTurnoVTT = function() {
-    if(!window.turnosVTTGlobal) return;
+    // CORREÇÃO: Impede que o jogo tente passar o turno se a iniciativa não estiver ligada!
+    if(!window.turnosVTTGlobal || !window.turnosVTTGlobal.ordem || window.turnosVTTGlobal.ordem.length === 0) return;
+    
     let eu = window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual];
     let updates = {}; let danoTurno = 0; let logsStatus = [];
 
@@ -422,6 +662,8 @@ window.passarTurnoVTT = function() {
         Object.keys(meusStatus).forEach(efeito => {
             if(meusStatus[efeito].turnos > 0) {
                 if(["Sangramento", "Queimadura", "Veneno"].includes(efeito)) { danoTurno += meusStatus[efeito].dano; logsStatus.push(`${efeito}: -${meusStatus[efeito].dano} HP`); }
+                if(efeito === "Regeneração") { let r = window.getSafeRpg(window.usersGlobais[eu]); updates[`tokyoRpg/users/${eu}/rpg/hp`] = Math.min(100, r.hp + meusStatus[efeito].dano); window.db.ref('tokyoRpg/mapDados').push({ nome: "SISTEMA", texto: `<span class="neon-green">${eu} Regenerou +${meusStatus[efeito].dano} HP</span>` }); }
+                
                 if(efeito === "Derrubado") { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${eu}/${efeito}/turnos`] = 1; } 
                 else if(meusStatus[efeito].turnos - 1 <= 0) { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${eu}/${efeito}`] = null; } 
                 else { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${eu}/${efeito}/turnos`] = meusStatus[efeito].turnos - 1; }
@@ -502,14 +744,13 @@ window.executarAtaque = function(tx, ty) {
             window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Usou habilidade: <span class="neon-blue">${arma.nome}</span> (Moveu-se)` });
             window.cancelarAtaqueVTT(); 
             if(invKeyToDel) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${invKeyToDel}`).remove(); window.showNeonToast(`${nomeDaArmaUsada} consumido!`); }
-            if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT(); 
+            if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT(); 
             return;
         }
 
         if (arma.wpnStyle === 'trap') {
             let dest = `${tx}_${ty}`; if (grid[dest]) { window.showNeonToast("Local ocupado! Armadilhas devem ir no chão."); return; }
             let d20Atk = Math.floor(Math.random() * 20) + 1; let isCrit = (d20Atk === 20);
-            window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Plantou Armadilha`, results: [d20Atk], ts: Date.now() });
 
             let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice = 1; if(isNaN(sides)) sides = 4;
             let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalDmg = dmgRoll + (parseInt(arma.wpnBonus) || 0);
@@ -522,7 +763,7 @@ window.executarAtaque = function(tx, ty) {
             
             window.cancelarAtaqueVTT(); 
             if(invKeyToDel) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${invKeyToDel}`).remove(); window.showNeonToast(`${nomeDaArmaUsada} consumido!`); }
-            if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT(); 
+            if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT(); 
             return;
         }
 
@@ -533,8 +774,6 @@ window.executarAtaque = function(tx, ty) {
 
         let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let attrMod = arma.wpnStyle === 'melee' ? (r.for + buffs.for) : (r.man + buffs.man);
         let d20Atk = Math.floor(Math.random() * 20) + 1; let totalAtk = d20Atk + attrMod; let isCrit = (d20Atk === 20);
-        
-        if(!isHeal) { window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Ataque: ${arma.nome}`, results: [d20Atk], ts: Date.now() }); }
 
         let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice = 1; if(isNaN(sides)) sides = 4;
         let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalDmg = dmgRoll + (parseInt(arma.wpnBonus) || 0);
@@ -542,18 +781,19 @@ window.executarAtaque = function(tx, ty) {
         if(isCrit && !isHeal) { let critRule = arma.wpnCrit || "2x"; if(critRule === "2x") totalDmg *= 2; else if(critRule === "3x") totalDmg *= 3; else if(critRule === "4x") totalDmg *= 4; else if(critRule === "+12") totalDmg += 12; else if(critRule === "+10") totalDmg += 10; else if(critRule === "+5") totalDmg += 5; }
 
         let atkId = Date.now().toString();
-        let combatEvent = { attacker: window.jogadorAtual, weaponName: arma.nome, atkRoll: totalAtk, isCrit: isCrit, dmgRoll: totalDmg, wpnEffect: arma.wpnEffect || "", wpnEffectVal: parseInt(arma.wpnEffectVal) || 1, atkX: px, atkY: py, targets: targets, isHeal: isHeal, timestamp: Date.now() };
+        let combatEvent = { attacker: window.jogadorAtual, weaponName: arma.nome, atkRoll: totalAtk, isCrit: isCrit, dmgRoll: totalDmg, wpnEffect: arma.wpnEffect || "", wpnEffectVal: parseInt(arma.wpnEffectVal) || 1, atkX: px, atkY: py, targets: targets, isHeal: isHeal, timestamp: Date.now(), mapKey: window.currentSubMapKey };
         window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${atkId}`).set(combatEvent);
         let logTxt = isHeal ? `Usou Consumível/Cura: ${arma.nome} (Restaura ${totalDmg})` : `Usa ${arma.nome}: <span class="dice-result-box">${totalAtk}</span>${isCrit ? ' [CRÍTICO!]' : ''} (Poder Final: ${totalDmg})`;
         window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: logTxt });
 
         window.cancelarAtaqueVTT(); 
         if(invKeyToDel) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${invKeyToDel}`).remove(); window.showNeonToast(`${nomeDaArmaUsada} foi consumido!`); }
-        if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT();
+        if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT(); 
         
     } catch (err) { console.error("Erro critico no combate:", err); window.showNeonToast("Ação cancelada (Erro Interno)"); window.cancelarAtaqueVTT(); }
 };
 
+// === AS TRÊS FUNÇÕES QUE TINHAM SUMIDO E QUEBRARAM O RECEPTOR ===
 window.focarCameraVTT = function(x, y) {
     let board = document.getElementById("tacticalBoard"); if(!board) return;
     let cellSize = window.VTT_CELL_SIZE || 50; let leftPx = (x * cellSize); let topPx = (y * cellSize); let vW = board.clientWidth; let vH = board.clientHeight;
@@ -567,9 +807,11 @@ window.listenCombatEvents = function() {
     if(window.currentCombatListener && window._lastCombatMap === window.currentSubMapKey) return;
     if(window.currentCombatListener && window._lastCombatMap) { window.db.ref(`tokyoRpg/submapsCombat/${window._lastCombatMap}`).off('child_added', window.currentCombatListener); }
     window._lastCombatMap = window.currentSubMapKey;
+    
     window.currentCombatListener = window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}`).on('child_added', snap => {
         let atk = snap.val(); let atkId = snap.key; if(!atk) return;
         if(Date.now() - atk.timestamp > 60000) return; 
+        // Se EU sou o alvo, eu mostro a janela de reagir
         if(atk.targets && atk.targets.includes(window.jogadorAtual)) { window.mostrarUIReacao(atkId, atk); }
     });
 };
@@ -581,43 +823,100 @@ window.mostrarUIReacao = function(atkId, atkData) {
     if(info) { info.innerHTML = `<strong style="color:var(--accent-blue);">${atkData.attacker}</strong> atacou você com <strong>${atkData.weaponName}</strong>!<br>Poder de Ataque: <span class="neon-red" style="font-size:18px;">${atkData.atkRoll}</span>`; }
     document.getElementById("reactionModal").style.display = "flex";
 };
+// ===================================================================
 
 window.reagirAtaque = function(tipo) {
     if(!window.pendingAttack) return;
     let atk = window.pendingAttack.data; let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u);
     let finalDmg = atk.dmgRoll || 0; let reactionText = ""; let defRollVal = 0; let resultText = ""; let winnerId = "atk";
 
-    if (atk.isHeal) {
-        reactionText = `Recebeu cura / efeito benéfico.`; resultText = `+${finalDmg} HP RESTAURADO!`; winnerId = 'heal'; 
-    } else if(tipo === 'esquiva') {
+    let isImune = false; let isReflect = false; let shieldVal = 0;
+    if(window.turnosVTTGlobal?.status?.[window.jogadorAtual]) {
+        let st = window.turnosVTTGlobal.status[window.jogadorAtual];
+        if(st["Imunidade"] && st["Imunidade"].turnos > 0) isImune = true;
+        if(st["Reflexão"] && st["Reflexão"].turnos > 0) isReflect = true;
+        if(st["Escudo"] && st["Escudo"].turnos > 0) shieldVal = st["Escudo"].dano;
+    }
+
+    if (atk.isHeal || atk.wpnStyle === 'self_buff') { reactionText = `Recebeu o buff/cura.`; resultText = `EFEITO APLICADO!`; winnerId = 'heal'; } 
+    else if (isImune) { finalDmg = 0; winnerId = 'def'; reactionText = `Ativou a Imunidade e bloqueou 100% do dano!`; resultText = "IMUNE!"; } 
+    else if (isReflect) {
+        finalDmg = 0; winnerId = 'def'; reactionText = `Ativou a Reflexão! O dano volta para o atacante!`; resultText = "REFLETIU!";
+        let atkUsr = window.usersGlobais[atk.attacker]; if(atkUsr) { let atkRpg = window.getSafeRpg(atkUsr); window.db.ref(`tokyoRpg/users/${atk.attacker}/rpg/hp`).set(Math.max(0, atkRpg.hp - (atk.dmgRoll||0))); window.db.ref('tokyoRpg/mapDados').push({ nome: "SISTEMA", texto: `<span class="neon-purple">${atk.attacker} tomou ${atk.dmgRoll} do Reflexo!</span>` }); }
+    }
+    else if(tipo === 'esquiva') {
         let d20 = Math.floor(Math.random() * 20) + 1; 
-        window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Tentativa de Esquiva`, results: [d20], ts: Date.now() });
         let agiTotal = r.agi + buffs.agi; defRollVal = d20 + agiTotal;
         if (d20 === 1) { finalDmg = atk.dmgRoll || 0; winnerId = 'atk'; reactionText = `Tentou Esquivar (<span class="neon-blue">1</span>). Tomou <span class="neon-red">${finalDmg}</span> de dano crítico.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
         else if(defRollVal > atk.atkRoll) { finalDmg = 0; winnerId = 'def'; reactionText = `Rolou Esquiva (<span class="neon-green">${defRollVal}</span>) e evitou!`; resultText = "ESQUIVOU COM SUCESSO!"; } 
-        else { reactionText = `Tentou Esquivar (<span class="neon-red">${defRollVal}</span>) mas falhou! Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `SOFREU ${finalDmg} DE DANO!`; }
+        else { finalDmg = Math.max(0, finalDmg - shieldVal); reactionText = `Tentou Esquivar (<span class="neon-red">${defRollVal}</span>) mas falhou! Tomou <span class="neon-red">${finalDmg}</span> de dano. ${shieldVal>0?'(Escudo ajudou) ':''}`; resultText = `SOFREU ${finalDmg} DE DANO!`; }
     } else if(tipo === 'defender') {
         let d20 = Math.floor(Math.random() * 20) + 1; 
-        window.db.ref('tokyoRpg/currentRoll').set({ nome: window.jogadorAtual, form: `Tentativa de Defesa`, results: [d20], ts: Date.now() });
         let vigTotal = r.vig + buffs.vig; let defArmor = window.calcularDefesa(u); defRollVal = d20 + vigTotal;
-        if (d20 === 1) { finalDmg = atk.dmgRoll || 0; winnerId = 'atk'; reactionText = `Rolou Defesa (<span class="neon-blue">1</span>). Armadura ignorada. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
+        if (d20 === 1) { finalDmg = Math.max(0, (atk.dmgRoll || 0) - shieldVal); winnerId = 'atk'; reactionText = `Rolou Defesa (<span class="neon-blue">1</span>). Armadura ignorada. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
         else if (defRollVal > atk.atkRoll) { finalDmg = 0; winnerId = 'def'; reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>) e superou o ataque. Tomou 0.`; resultText = `DEFESA PERFEITA!`; } 
-        else { finalDmg = Math.max(0, (atk.dmgRoll || 0) - defArmor); reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>). Reduziu com Armadura (${defArmor}). Tomou <span class="neon-red">${finalDmg}</span> de dano.`; if (finalDmg === 0) { winnerId = 'def'; resultText = `A ARMADURA ABSORVEU TUDO!`; } else { resultText = `DEFESA QUEBRADA! SOFREU ${finalDmg} DE DANO!`; } }
-    } else { defRollVal = 0; reactionText = `Aceitou o golpe. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `SOFREU ${finalDmg} DE DANO CRÍTICO!`; }
+        else { finalDmg = Math.max(0, (atk.dmgRoll || 0) - defArmor - shieldVal); reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>). Reduziu com Armadura (${defArmor}) e Escudo (${shieldVal}). Tomou <span class="neon-red">${finalDmg}</span> de dano.`; if (finalDmg === 0) { winnerId = 'def'; resultText = `DEFESA IMPENETRÁVEL!`; } else { resultText = `DEFESA QUEBRADA! SOFREU ${finalDmg} DE DANO!`; } }
+    } else { finalDmg = Math.max(0, finalDmg - shieldVal); reactionText = `Aceitou o golpe. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `SOFREU ${finalDmg} DE DANO CRÍTICO!`; }
 
-    if(atk.isCrit && finalDmg > 0 && !atk.isHeal) resultText = "ATAQUE CRÍTICO! " + resultText;
-    if(atk.wpnEffect && atk.wpnEffect !== "" && finalDmg > 0 && !atk.isHeal) resultText += ` + ${atk.wpnEffect.toUpperCase()}`;
+    if(atk.isCrit && finalDmg > 0 && !atk.isHeal && !isImune && !isReflect) resultText = "ATAQUE CRÍTICO! " + resultText;
+    if(atk.wpnEffect && atk.wpnEffect !== "" && finalDmg > 0 && !atk.isHeal && !isImune && !isReflect) resultText += ` + ${atk.wpnEffect.toUpperCase()}`;
 
     window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Reação contra ${atk.attacker}: ${reactionText}` });
+    
     let atkUser = window.usersGlobais[atk.attacker];
-    let clashPayload = { ts: Date.now(), atkName: atk.attacker || "Desconhecido", atkAv: atkUser?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${atk.attacker}`, atkAction: `${atk.isHeal ? 'Usou' : 'Ataque'} c/ ${atk.weaponName || 'Arma'}`, atkRoll: atk.atkRoll || 0, defName: window.jogadorAtual, defAv: u?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`, defAction: atk.isHeal ? 'RECEBEU' : tipo.toUpperCase(), defRoll: defRollVal || 0, dmg: finalDmg || 0, winner: winnerId, resultText: resultText, effect: atk.wpnEffect || "", effectVal: atk.wpnEffectVal || 1, atkX: atk.atkX !== undefined ? atk.atkX : -1, atkY: atk.atkY !== undefined ? atk.atkY : -1, isHeal: atk.isHeal || false };
+    
+    // AQUI: Clash Payload usa o charImgUrl primeiro para estampar a tela do VS de forma imersiva!
+    let defImgDisplay = u?.charImgUrl || u?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
+    let atkImgDisplay = atkUser?.charImgUrl || atkUser?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${atk.attacker}`;
+
+    let clashPayload = { ts: Date.now(), atkName: atk.attacker || "Desconhecido", atkAv: atkImgDisplay, atkAction: `${atk.isHeal ? 'Usou' : 'Ataque'} c/ ${atk.weaponName || 'Arma'}`, atkRoll: atk.atkRoll || 0, defName: window.jogadorAtual, defAv: defImgDisplay, defAction: atk.isHeal ? 'RECEBEU' : tipo.toUpperCase(), defRoll: defRollVal || 0, dmg: finalDmg || 0, winner: winnerId, resultText: resultText, effect: atk.wpnEffect || "", effectVal: atk.wpnEffectVal || 1, atkX: atk.atkX !== undefined ? atk.atkX : -1, atkY: atk.atkY !== undefined ? atk.atkY : -1, isHeal: atk.isHeal || false, mapKey: window.currentSubMapKey };
 
     document.getElementById("reactionModal").style.display = "none";
-    if(tipo !== 'aceitar' && !atk.isHeal) { setTimeout(() => { window.db.ref('tokyoRpg/currentClash').set(clashPayload); }, 2500); } 
-    else { window.db.ref('tokyoRpg/currentClash').set(clashPayload); }
+    window.db.ref('tokyoRpg/currentClash').set(clashPayload);
     
     if(window.currentSubMapKey && window.pendingAttack.id) window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${window.pendingAttack.id}`).remove().catch(()=>{});
     window.pendingAttack = null;
+};
+
+// **BÔNUS DA TELA DE FACES:**
+window.renderizarFace = function() {
+    let targetName = window.remoteSpeakerName ? window.remoteSpeakerName : window.jogadorAtual;
+    let u = window.usersGlobais[targetName]; 
+    if(!u) return;
+
+    let faceImg = document.getElementById("charFaceDisplay");
+    if(faceImg) {
+        let isFalando = false; let estadoFace = "Normal";
+
+        if (targetName === window.remoteSpeakerName) { isFalando = true; estadoFace = "Falando"; } 
+        else { estadoFace = window.faceAtual; if (estadoFace === "Falando") isFalando = true; }
+        if (targetName !== window.jogadorAtual && u.faceAtual && !isFalando) { estadoFace = u.faceAtual; }
+
+        let faceNameFormatada = estadoFace.charAt(0).toUpperCase() + estadoFace.slice(1);
+        let path = `img/faces/${targetName}_Face_${faceNameFormatada}.png`;
+        faceImg.src = path;
+        
+        if(isFalando) { faceImg.style.transform = "scale(1.05)"; faceImg.style.borderColor = "#00ff66"; faceImg.style.boxShadow = "0 0 20px rgba(0, 255, 102, 0.4)"; } 
+        else if(estadoFace === "Dano") { faceImg.style.transform = "rotate(-10deg) scale(0.9)"; faceImg.style.borderColor = "#ff1a55"; faceImg.style.boxShadow = "none"; } 
+        else { faceImg.style.transform = "none"; faceImg.style.borderColor = "var(--accent-blue)"; faceImg.style.boxShadow = "none"; }
+
+        // AQUI: Fallback inteligente que pega a Imagem Customizada e, por fim, o Avatar do G-Chat
+        faceImg.onerror = function() { this.src = u.charImgUrl || u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${targetName}`; };
+
+        let nameTag = document.getElementById("faceNameTag");
+        if(!nameTag) {
+            nameTag = document.createElement("div"); nameTag.id = "faceNameTag";
+            nameTag.style.position = "absolute"; nameTag.style.top = "5px"; nameTag.style.left = "50%"; nameTag.style.transform = "translateX(-50%)";
+            nameTag.style.background = "rgba(0,0,0,0.8)"; nameTag.style.padding = "2px 10px"; nameTag.style.borderRadius = "4px";
+            nameTag.style.fontSize = "12px"; nameTag.style.fontWeight = "bold"; nameTag.style.border = "1px solid var(--accent-blue)";
+            nameTag.style.pointerEvents = "none"; nameTag.style.zIndex = "10";
+            faceImg.parentElement.style.position = "relative"; faceImg.parentElement.appendChild(nameTag);
+        }
+        
+        nameTag.innerText = targetName.toUpperCase();
+        nameTag.style.borderColor = isFalando ? "#00ff66" : "var(--accent-blue)";
+        nameTag.style.color = isFalando ? "#00ff66" : "var(--accent-blue)";
+    }
 };
 
 window.processClashQueue = function() {
@@ -657,7 +956,8 @@ window.processClashQueue = function() {
                     let tId = `token_${c.defName}`; let tEl = document.getElementById(tId);
                     if(tEl) {
                         let popTxt = c.isHeal ? `+${c.dmg}` : (c.dmg > 0 ? `-${c.dmg}` : "MISS"); let popColor = c.isHeal ? "#00ff66" : (c.dmg > 0 ? "#ff1a55" : "#aaa");
-                        let dmgPop = document.createElement("div"); dmgPop.className = "damage-popup"; dmgPop.innerText = popTxt; dmgPop.style.color = popColor; dmgPop.style.textShadow = `0 0 10px #000, 0 0 5px ${popColor}`;
+                        let dmgPop = document.createElement("div"); dmgPop.className = "damage-popup"; dmgPop.innerText = popTxt;
+                        dmgPop.style.color = popColor; dmgPop.style.textShadow = `0 0 10px #000, 0 0 5px ${popColor}`;
                         tEl.appendChild(dmgPop); setTimeout(() => dmgPop.remove(), 1500);
                     }
                 }
@@ -685,8 +985,8 @@ window.processClashQueue = function() {
                         }
                         else if(c.effect === "Troca" && c.atkX !== -1 && c.atkY !== -1 && defCid) { updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${defCid}`] = c.atkName; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${c.atkX}_${c.atkY}`] = c.defName; }
 
-                        if(["Sangramento", "Queimadura", "Veneno"].includes(c.effect)) { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/${c.effect}`] = { dano: c.effectVal || Math.max(1, Math.floor(safeDmg / 2)), turnos: 3 }; }
-                        if(c.effect === "Atordoamento") updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/Atordoamento`] = { turnos: 1 };
+                        if(["Sangramento", "Queimadura", "Veneno", "Regeneração", "Escudo"].includes(c.effect)) { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/${c.effect}`] = { dano: c.effectVal || Math.max(1, Math.floor(safeDmg / 2)), turnos: 3 }; }
+    if(["Atordoamento", "Derrubado", "Imunidade", "Reflexão"].includes(c.effect)) { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/${c.effect}`] = { turnos: 1 }; }
                         if(c.effect === "Derrubado") updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/Derrubado`] = { turnos: 1 };
                     }
                     if(Object.keys(updates).length > 0) window.db.ref().update(updates);
@@ -696,11 +996,9 @@ window.processClashQueue = function() {
         }, 600); 
     }, 1500); 
 };
-
 // =========================================================
-// SISTEMA DE TETRIS INVENTÁRIO 
+// SISTEMA DE TETRIS INVENTÁRIO E CONSUMÍVEIS
 // =========================================================
-
 window.renderizarMochila = function() {
     let g = document.getElementById("grid-personagem"); let l = document.getElementById("lista-itens-soltos"); if(!g || !l) return;
     if(window.arrastandoKey !== null) return; 
@@ -752,7 +1050,6 @@ window.iniciarArrasteTetris = function(e) {
     if(e.target.closest('.btn-excluir-item') || e.target.closest('.btn-rotate-item') || e.target.tagName.toLowerCase() === 'button') return;
     e.preventDefault(); window.itemArrastado = e.currentTarget; window.arrastandoKey = window.itemArrastado.getAttribute('data-key');
     let gridEl = document.getElementById("grid-personagem"); let rectOrig = window.itemArrastado.getBoundingClientRect();
-
     if (window.itemArrastado.parentElement === gridEl) {
         window.origin = 'grid'; window.initPos = {c: parseInt(window.itemArrastado.getAttribute('data-c')), r: parseInt(window.itemArrastado.getAttribute('data-r'))};
         let w = parseInt(window.itemArrastado.getAttribute('data-w')); let h = parseInt(window.itemArrastado.getAttribute('data-h'));
@@ -762,7 +1059,6 @@ window.iniciarArrasteTetris = function(e) {
         window.itemArrastado.style.margin = "0"; window.itemArrastado.style.left = (rectOrig.left - gridRect.left) + 'px'; window.itemArrastado.style.top = (rectOrig.top - gridRect.top) + 'px';
         gridEl.appendChild(window.itemArrastado); 
     }
-    
     window.itemArrastado.classList.add('dragging'); window.itemArrastado.style.position = 'absolute'; 
     let newRect = window.itemArrastado.getBoundingClientRect(); window.offsetX = e.clientX - newRect.left; window.offsetY = e.clientY - newRect.top;
     document.addEventListener('pointermove', window.arrastarTetris); document.addEventListener('pointerup', window.soltarTetris);
@@ -901,11 +1197,10 @@ window.comprarItem = function(id, n, p, t, d, poder, buff, w, h, exW, exH, peso,
     let c = window.usersGlobais[window.jogadorAtual].carteira || 0; 
     window.itemCompraAtual = { id: id, n: n, p: p, t: t, d: d, poder: poder, buff: buff, w: w, h: h, exW: exW, exH: exH, peso: peso, cd: cd };
     let buyModal = document.getElementById("buyModal");
-    if(!buyModal) { // Fallback se não tiver modal no HTML
+    if(!buyModal) {
         let qtdStr = prompt(`Quantas unidades de [${n}] você deseja comprar?`, "1"); if(!qtdStr) return;
         let qtd = parseInt(qtdStr); if(isNaN(qtd) || qtd < 1) { window.showNeonToast("Quantidade inválida."); return; }
-        document.getElementById("buyQtdInput").value = qtd;
-        window.confirmarCompraModal();
+        document.getElementById("buyQtdInput").value = qtd; window.confirmarCompraModal();
     } else {
         document.getElementById("buyItemName").innerText = n; document.getElementById("buyQtdInput").value = 1; document.getElementById("buyCurrentBalance").innerText = c + " ¥";
         window.atualizarTotalCompra(); buyModal.style.display = "flex";
@@ -1107,17 +1402,39 @@ window.togglePostCreator = function() { let bx = document.getElementById("postCr
 window.enviarPost = function() {
     if(!window.jogadorAtual && !window.isMaster) { window.showNeonToast("Faça login!"); return; }
     if(!window.db) return;
-    let txt = (document.getElementById("postText")?.value || "").trim(); let imgUrl = (document.getElementById("postImgUrl")?.value || "").trim(); let imgFile = document.getElementById("postImgFile")?.files?.[0] || null; let audio = (document.getElementById("postAudioUrl")?.value || "").trim();
-    let cAv = document.getElementById("postCustomAvatar") ? document.getElementById("postCustomAvatar").value.trim() : ""; let cName = document.getElementById("postCustomName") ? document.getElementById("postCustomName").value.trim() : ""; let isAd = document.getElementById("postIsAd") ? document.getElementById("postIsAd").checked : false;
+
+    let txt = (document.getElementById("postText")?.value || "").trim();
+    let imgUrl = (document.getElementById("postImgUrl")?.value || "").trim();
+    let imgFile = document.getElementById("postImgFile")?.files?.[0] || null;
+    let audio = (document.getElementById("postAudioUrl")?.value || "").trim();
+
+    let cAv = document.getElementById("postCustomAvatar") ? document.getElementById("postCustomAvatar").value.trim() : "";
+    let cName = document.getElementById("postCustomName") ? document.getElementById("postCustomName").value.trim() : "";
+    let isAd = document.getElementById("postIsAd") ? document.getElementById("postIsAd").checked : false;
 
     if(!txt && !imgUrl && !imgFile && !audio) { window.showNeonToast("O post está vazio!"); return; }
+    
+    // BLOQUEIO DE SEGURANÇA PARA VÍDEOS GIGANTES DO PC (5MB)
+    if(imgFile && imgFile.size > 5000000) { window.showNeonToast("Arquivo muito grande! Máximo de 5MB."); return; }
 
-       let postarNoBanco = function(n, a, idAutor, finalImg) {
-        let payload = { autor: n, autorId: idAutor, avatar: a, texto: txt, imagem: finalImg || "", audio: audio, timestamp: Date.now(), isAd: (window.isMaster && isAd), likes: 0, reposts: 0, likers: {}, reposters: {}, comentarios: {} };
+    let postarNoBanco = function(n, a, idAutor, finalImg) {
+        let uPop = (window.usersGlobais[idAutor] && window.usersGlobais[idAutor].popTier) ? window.usersGlobais[idAutor].popTier : "branca";
+        if(window.isMaster && isAd) uPop = "dourado";
+        let pData = window.popularityTiers[uPop] || window.popularityTiers["branca"];
+        let tLikes = Math.floor(Math.random() * (pData.maxL - pData.minL + 1)) + pData.minL;
+
+        let payload = { autor: n, autorId: idAutor, avatar: a, texto: txt, imagem: finalImg || "", audio: audio, timestamp: Date.now(), isAd: (window.isMaster && isAd), likes: 0, targetLikes: tLikes, reposts: 0, likers: {}, reposters: {}, comentarios: {} };
+
         let newPostRef = window.db.ref('tokyoRpg/posts').push();
         newPostRef.set(payload).then(() => {
             if(typeof window.dispatchMentions === "function") { window.dispatchMentions({ from: idAutor !== "MESTRE" ? window.jogadorAtual : "SISTEMA", contextType: "gpost", contextId: newPostRef.key, text: txt }); }
-            if(document.getElementById("postText")) document.getElementById("postText").value = ""; if(document.getElementById("postImgUrl")) document.getElementById("postImgUrl").value = ""; if(document.getElementById("postAudioUrl")) document.getElementById("postAudioUrl").value = ""; if(document.getElementById("postImgFile")) document.getElementById("postImgFile").value = ""; let bx = document.getElementById("postCreatorBox"); if(bx) bx.style.display = "none"; window.showNeonToast("Publicado!");
+
+            if(document.getElementById("postText")) document.getElementById("postText").value = "";
+            if(document.getElementById("postImgUrl")) document.getElementById("postImgUrl").value = "";
+            if(document.getElementById("postAudioUrl")) document.getElementById("postAudioUrl").value = "";
+            if(document.getElementById("postImgFile")) document.getElementById("postImgFile").value = "";
+            let bx = document.getElementById("postCreatorBox"); if(bx) bx.style.display = "none";
+            window.showNeonToast("Publicado!");
         });
     };
 
@@ -1132,36 +1449,100 @@ window.enviarPost = function() {
     if(imgFile) { let r = new FileReader(); r.onload = (e) => postarNoBanco(nome, avatar, window.jogadorAtual, e.target.result); r.readAsDataURL(imgFile); } else { postarNoBanco(nome, avatar, window.jogadorAtual, imgUrl); }
 };
 
-window.curtirPost = function(id) {
-    if(!window.jogadorAtual) return; let ref = window.db.ref(`tokyoRpg/posts/${id}`);
-    ref.once('value').then(snap => { let p = snap.val(); if(!p) return; let likers = p.likers || {}; if(likers[window.jogadorAtual]) { delete likers[window.jogadorAtual]; ref.update({ likes: Math.max(0, (p.likes||1) - 1), likers }); } else { likers[window.jogadorAtual] = true; ref.update({ likes: (p.likes||0) + 1, likers }); } });
+window.curtirPost = function(id, event) {
+    if(!window.jogadorAtual) return; 
+    
+    // Dispara o Coração subindo EXATAMENTE onde a pessoa clicou!
+    if(event) {
+        window.animarCoracaoTela(event.clientX, event.clientY);
+        event.currentTarget.style.transform = "scale(1.3)";
+        setTimeout(() => event.currentTarget.style.transform = "scale(1)", 150);
+    }
+
+    let ref = window.db.ref(`tokyoRpg/posts/${id}`);
+    if (window.isMaster) {
+        ref.once('value').then(snap => { let p = snap.val(); if(!p) return; ref.update({ likes: (p.likes||0) + 10000 }); window.showNeonToast("Boost de Curtidas Aplicado!"); });
+        return;
+    }
+    ref.once('value').then(snap => { 
+        let p = snap.val(); if(!p) return; 
+        let likers = p.likers || {}; 
+        if(likers[window.jogadorAtual]) { delete likers[window.jogadorAtual]; ref.update({ likes: Math.max(0, (p.likes||1) - 1), likers }); } 
+        else { likers[window.jogadorAtual] = true; ref.update({ likes: (p.likes||0) + 1, likers }); } 
+    });
 };
 
 window.repostarPost = function(id) {
-    if(!window.jogadorAtual) return; let ref = window.db.ref(`tokyoRpg/posts/${id}`);
-    ref.once('value').then(snap => { let p = snap.val(); if(!p) return; let rps = p.reposters || {}; if(!rps[window.jogadorAtual]) { rps[window.jogadorAtual] = true; ref.update({ reposts: (p.reposters||0) + 1, reposters: rps }); window.showNeonToast("Compartilhado!"); } });
+    if(!window.jogadorAtual) return; 
+    let ref = window.db.ref(`tokyoRpg/posts/${id}`);
+    if (window.isMaster) {
+        ref.once('value').then(snap => { let p = snap.val(); if(!p) return; ref.update({ reposts: (p.reposts||0) + 10 }); window.showNeonToast("Boost de Reposts Aplicado!"); });
+        return;
+    }
+    ref.once('value').then(snap => { 
+        let p = snap.val(); if(!p) return; 
+        let rps = p.reposters || {}; 
+        if(!rps[window.jogadorAtual]) { 
+            rps[window.jogadorAtual] = true; 
+            ref.update({ reposts: (p.reposts || 0) + 1, reposters: rps }); 
+            window.showNeonToast("Compartilhado!"); 
+        } 
+    });
 };
 
-window.postObserver = window.postObserver || new IntersectionObserver((entries) => { entries.forEach(entry => { let audioEl = entry.target.querySelector('audio.post-audio'); if(!audioEl) return; if(entry.isIntersecting) { if(!window.postAudioMuted) { audioEl.currentTime = 0; audioEl.play().catch(()=>{}); } } else { audioEl.pause(); } }); }, { threshold: 0.6 });
+window.postObserver = window.postObserver || new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        let audioEl = entry.target.querySelector('audio.post-audio');
+        if(!audioEl) return;
+        if(entry.isIntersecting) { 
+            if(!window.postAudioMuted) { 
+                audioEl.currentTime = 0; 
+                let p = audioEl.play();
+                if(p !== undefined) p.catch(()=>{});
+            } 
+        } else { 
+            audioEl.pause(); 
+        }
+    });
+}, { threshold: 0.6 });
 
 window.switchIGambleTab = function(tabId, btnEl) {
-  document.querySelectorAll(".igamble-tab-btn").forEach(b => b.classList.remove("active")); if(btnEl) btnEl.classList.add("active");
+  document.querySelectorAll(".igamble-tab-btn").forEach(b => b.classList.remove("active"));
+  if(btnEl) btnEl.classList.add("active");
+
   if(typeof window.marcarNotificacoesComoLidas === "function") window.marcarNotificacoesComoLidas(tabId);
+
   document.querySelectorAll(".igamble-view").forEach(v => v.classList.remove("active"));
-  const target = document.getElementById("igamble-view-" + tabId); if(target) target.classList.add("active");
+  const target = document.getElementById("igamble-view-" + tabId);
+  if(target) target.classList.add("active");
+
   if(tabId === "chat") { setTimeout(() => { const cb = document.getElementById("chatMessages"); if(cb) cb.scrollTop = cb.scrollHeight; }, 50); }
+
   if(tabId === "embates") {
-    const mPanel = document.getElementById("masterEmbatePanel"); if(mPanel) mPanel.style.display = window.isMaster ? "block" : "none";
-    if(window.isMaster && window.db) { window.db.ref("tokyoRpg/users").once("value").then(snap => { const dl = document.getElementById("listaJogadoresDatalist"); if(!dl) return; dl.innerHTML = ""; const data = snap.val(); if(!data) return; Object.keys(data).forEach(k => { const u = data[k] || {}; const nome = u.nome || k; const av = u.avatarUrl || u.avatar || ""; dl.innerHTML += `<option value="${nome}" data-av="${av}"></option>`; }); }); }
+    const mPanel = document.getElementById("masterEmbatePanel");
+    if(mPanel) mPanel.style.display = window.isMaster ? "block" : "none";
+    if(window.isMaster && window.db) {
+      window.db.ref("tokyoRpg/users").once("value").then(snap => {
+        const dl = document.getElementById("listaJogadoresDatalist");
+        if(!dl) return; dl.innerHTML = "";
+        const data = snap.val(); if(!data) return;
+        Object.keys(data).forEach(k => { const u = data[k] || {}; const nome = u.nome || k; const av = u.avatarUrl || u.avatar || ""; dl.innerHTML += `<option value="${nome}" data-av="${av}"></option>`; });
+      });
+    }
   }
+
   if(tabId === "posts") {
-    const isAdmin = !!window.isMaster; const cn = document.getElementById("postCustomName"); const ca = document.getElementById("postCustomAvatar"); const la = document.getElementById("lblAd");
+    const isAdmin = !!window.isMaster;
+    const cn = document.getElementById("postCustomName"); const ca = document.getElementById("postCustomAvatar"); const la = document.getElementById("lblAd");
     if(cn) cn.style.display = isAdmin ? "block" : "none"; if(ca) ca.style.display = isAdmin ? "block" : "none"; if(la) la.style.display = isAdmin ? "inline-block" : "none";
     if(!window._postsListenerStarted && typeof window.iniciarListenersIgamble === "function") { window._postsListenerStarted = true; window.iniciarListenersIgamble(); }
   }
 };
 
-window.excluirPost = function(postId) { if (!window.db || !postId) return; window.db.ref(`tokyoRpg/posts/${postId}`).remove().then(() => { window.showNeonToast("Post excluído!"); }); };
+window.excluirPost = function(postId) {
+  if (!window.db || !postId) return;
+  window.db.ref(`tokyoRpg/posts/${postId}`).remove().then(() => { window.showNeonToast("Post excluído!"); });
+};
 
 window.criarEmbate = function() {
   if (!window.isMaster || !window.db) return;
@@ -1185,27 +1566,108 @@ window.canDeletePost = function(post) {
   return false;
 };
 
+// =========================================================
+// G-POST TURBINADO: LAZY LOAD E RAM INTELIGENTE (LIMITE DE 3)
+// =========================================================
+
+window.limitGPosts = 3; // Limite ultra restrito de 3 posts para não estourar a memória
+window.postsListenerRef = null;
+
+window.toggleMasterPostMenu = function(postId) {
+    let menu = document.getElementById("masterMenu_" + postId);
+    if(menu) { menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none"; }
+};
+
 window.iniciarListenersIgamble = function() {
   if (!window.db) return; if (window._igambleListenersStarted) return; window._igambleListenersStarted = true;
-  window.db.ref("tokyoRpg/posts").on("value", snap => {
-    const feed = document.getElementById("igamblePostsFeed"); if(!feed) return; feed.innerHTML = "";
-    const data = snap.val(); if(!data) return;
+
+  const feed = document.getElementById("igamblePostsFeed"); 
+  if(feed) feed.innerHTML = "<div style='text-align:center; padding:50px; color:#00e5ff; font-weight:bold; animation: pulse 1.5s infinite;'>Conectando à rede do Distrito...</div>";
+
+  window.postsListenerRef = window.db.ref("tokyoRpg/posts");
+  
+  window.postsListenerRef.limitToLast(window.limitGPosts).on("value", snap => {
+    if(!feed) return; 
+    const data = snap.val(); if(!data) { feed.innerHTML = "<div style='text-align:center; color:#555; padding:30px;'>O feed está vazio.</div>"; return; }
+
+    let htmlStr = "";
     const postsArray = Object.keys(data).map(id => ({ id, ...data[id] })).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
     postsArray.forEach(p => {
-      const d = new Date(p.timestamp || Date.now()); const timeStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} - ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
-      const hasBg = p.imagem ? `<img src="${p.imagem}" class="post-media-bg">` : ""; const hasImg = p.imagem ? `<img src="${p.imagem}" class="post-media">` : ""; const hasAudio = p.audio ? `<audio class="post-audio" loop src="${p.audio}"></audio>` : "";
-      const iLiked = (p.likers && window.jogadorAtual && p.likers[window.jogadorAtual]) ? "liked" : ""; const iReposted = (p.reposters && window.jogadorAtual && p.reposters[window.jogadorAtual]) ? "reposted" : ""; const numComents = p.comentarios ? Object.keys(p.comentarios).length : 0;
-      const delBtn = window.canDeletePost(p) ? `<button class="post-del-btn" onclick="window.excluirPost('${p.id}')">EXCLUIR</button>` : ""; const adTag = p.isAd ? `<span class="post-ad-tag">⭐ PATROCINADO</span>` : "";
-      let followBtnHtml = typeof window.getFollowButtonHtml === "function" ? window.getFollowButtonHtml(p.autor) : "";
-      feed.innerHTML += `<div class="post-card" id="post-${p.id}">${hasBg}${hasImg}${hasAudio}<div class="post-overlay"><div class="post-header"><div class="post-header-left"><div class="avatar-wrapper"><img src="${p.avatar || "https://api.dicebear.com/9.x/adventurer/svg?seed=Anon"}" class="post-avatar">${followBtnHtml}</div><div><div class="post-name">${p.autor || "---"} ${adTag}</div><div style="font-size:10px; color:#aaa;">${timeStr}</div></div></div>${delBtn}</div><div class="post-body"><div class="post-caption">${p.texto || ""}</div><div class="post-sidebar"><button class="post-btn-vert ${iLiked}" onclick="window.curtirPost('${p.id}')">❤ <span>${p.likes||0}</span></button><button class="post-btn-vert" onclick="window.abrirComentarios('${p.id}')">💬 <span>${numComents}</span></button><button class="post-btn-vert ${iReposted}" onclick="window.repostarPost('${p.id}')">🔄 <span>${p.reposts||0}</span></button></div></div></div></div>`;
+      try {
+          const d = new Date(p.timestamp || Date.now()); const timeStr = `${d.getDate().toString().padStart(2,'0')}/${(d.getMonth()+1).toString().padStart(2,'0')} - ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+          
+          let isVideo = false;
+          if(p.imagem) {
+              let cStr = p.imagem.toLowerCase();
+              if(cStr.includes('.mp4') || cStr.includes('.webm') || cStr.startsWith('data:video')) isVideo = true;
+          }
+
+          const hasBg = p.imagem ? (isVideo ? `<video data-src="${p.imagem}" class="post-media-bg" muted loop playsinline preload="none" style="min-height: 300px;"></video>` : `<img loading="lazy" src="${p.imagem}" class="post-media-bg" style="min-height: 300px;">`) : ""; 
+          const hasImg = p.imagem ? (isVideo ? `<video data-src="${p.imagem}" class="post-media" controls loop muted playsinline preload="none" style="min-height: 300px;"></video>` : `<img loading="lazy" src="${p.imagem}" class="post-media" style="min-height: 300px;">`) : ""; 
+          const hasAudio = p.audio ? `<audio class="post-audio" preload="none" loop src="${p.audio}"></audio>` : "";
+          
+          const iLiked = (p.likers && window.jogadorAtual && p.likers[window.jogadorAtual]) ? "liked" : ""; const iReposted = (p.reposters && window.jogadorAtual && p.reposters[window.jogadorAtual]) ? "reposted" : ""; const numComents = p.comentarios ? Object.keys(p.comentarios).length : 0;
+          const delBtn = window.canDeletePost(p) ? `<button class="post-del-btn" onclick="window.excluirPost('${p.id}')">EXCLUIR</button>` : ""; 
+          const adTag = p.isAd ? `<span class="post-ad-tag">⭐ PATROCINADO</span>` : "";
+
+          let followBtnHtml = typeof window.getFollowButtonHtml === "function" ? window.getFollowButtonHtml(p.autor) : "";
+          
+          let uData = window.usersGlobais[p.autorId] || window.usersGlobais[p.autor] || {};
+          let popTier = window.popularityTiers[uData.popTier] || window.popularityTiers["branca"];
+          if (p.isAd) popTier = window.popularityTiers["dourado"]; 
+          let starHtml = `<span class="pop-star" style="color:${popTier.cor}; text-shadow: 0 0 10px ${popTier.cor};" title="${popTier.nome}">${popTier.icone}</span>`;
+
+          let likesFormated = window.formatNumberInfo(p.likes || 0);
+          let repostsFormated = window.formatNumberInfo(parseInt(p.reposts) || 0);
+
+          let masterBtnToggle = ""; let masterToolsHtml = "";
+          
+          if(window.isMaster) {
+              masterBtnToggle = `<button class="post-del-btn" style="border-color:#ffaa00; color:#ffaa00; margin-right: 5px;" onclick="window.toggleMasterPostMenu('${p.id}')">⚙️ MESTRE</button>`;
+              masterToolsHtml = `
+              <div id="masterMenu_${p.id}" style="display: none; position: relative; z-index: 50; margin-top: 10px; background: rgba(10,10,15,0.95); border: 1px solid #ff1a55; padding: 12px; border-radius: 8px; box-shadow: 0 0 20px rgba(255,26,85,0.4);">
+                  <h4 style="color:#ff1a55; margin:0 0 10px 0; font-size:12px; text-align:center; border-bottom: 1px dashed #ff1a55; padding-bottom: 5px;">PAINEL DE ENGAJAMENTO</h4>
+                  <div style="display:flex; flex-direction:column; gap: 10px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <span style="font-size:10px; color:#fff; font-weight:bold;">Criar Comentários Fakes:</span>
+                          <select id="botCtx_${p.id}" style="background:#000; color:#fff; font-size:11px; padding:4px; border:1px solid #555; border-radius:4px; width: 120px;">
+                              <option value="selfie">Selfie / Look</option><option value="selfie_grupo">Selfie em Grupo</option><option value="paisagem">Paisagem</option><option value="batalha">Batalha / Sangue</option><option value="tristeza">Derrota</option><option value="ostentacao">Grana Alta</option><option value="romantica">Romântica</option><option value="radical">Radical</option><option value="trabalho">Do Trabalho</option>
+                          </select>
+                      </div>
+                      <button class="action-btn" style="margin: 5px 0 0 0; width: 100%; font-size:11px; border-color:#ff1a55; color:#ff1a55;" onclick="window.gerarComentariosBot('${p.id}', document.getElementById('botCtx_${p.id}').value)">🤖 Injetar Bots no Post</button>
+                  </div>
+              </div>`;
+          }
+
+          htmlStr += `<div class="post-card" id="post-${p.id}">${hasBg}${hasImg}${hasAudio}<div class="post-overlay"><div class="post-header"><div class="post-header-left"><div class="avatar-wrapper"><img src="${p.avatar || "https://api.dicebear.com/9.x/adventurer/svg?seed=Anon"}" class="post-avatar">${followBtnHtml}</div><div><div class="post-name">${p.autor || "---"} ${starHtml} ${adTag}</div><div style="font-size:10px; color:#aaa;">${timeStr}</div></div></div><div>${masterBtnToggle}${delBtn}</div></div><div class="post-body"><div class="post-caption">${p.texto || ""}</div>${masterToolsHtml}<div class="post-sidebar"><button class="post-btn-vert ${iLiked}" onclick="window.curtirPost('${p.id}', event)">❤ <span style="color:#ffffff !important; text-shadow: 0 0 5px #000000 !important;">${likesFormated}</span></button><button class="post-btn-vert" onclick="window.abrirComentarios('${p.id}')">💬 <span style="color:#ffffff !important; text-shadow: 0 0 5px #000000 !important;">${numComents}</span></button><button class="post-btn-vert ${iReposted}" onclick="window.repostarPost('${p.id}')">🔄 <span style="color:#ffffff !important; text-shadow: 0 0 5px #000000 !important;">${repostsFormated}</span></button></div></div></div></div>`;
+      } catch(err) { console.error("Post isolado por erro:", p.id, err); }
     });
-    try { if (window.postObserver) { document.querySelectorAll(".post-card").forEach(card => { window.postObserver.unobserve(card); window.postObserver.observe(card); }); } } catch(e) {}
+
+    // BOTÃO FORA DO LOOP (Aparece só 1 vez no final)
+    htmlStr += `
+    <div style="text-align:center; padding: 20px 0 40px 0; display:flex; flex-direction:column; align-items:center;">
+        <button onclick="window.loadMorePosts()" style="background: rgba(0, 229, 255, 0.1); border: 2px solid var(--accent-blue); color: var(--accent-blue); border-radius: 50%; width: 50px; height: 50px; font-size: 20px; cursor: pointer; box-shadow: 0 0 15px rgba(0,229,255,0.4); display:flex; justify-content:center; align-items:center; transition: 0.3s;">
+            ⬇
+        </button>
+        <span style="color:var(--accent-blue); font-size:11px; margin-top:8px; font-weight:bold; text-shadow: 0 0 5px var(--accent-blue);">CARREGAR +3</span>
+    </div>`;
+
+    feed.innerHTML = htmlStr;
+
+    try { 
+        if (window.postObserver) { 
+            window.postObserver.disconnect();
+            document.querySelectorAll(".post-card").forEach(card => { window.postObserver.observe(card); }); 
+        } 
+    } catch(e) {}
   });
 
   window.db.ref("tokyoRpg/embates").on("value", snap => {
     const lista = document.getElementById("listaEmbates"); if(!lista) return; lista.innerHTML = "";
     const data = snap.val(); if(!data) return;
     const embatesArray = Object.keys(data).map(id => ({ id, ...data[id] })).sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
     embatesArray.forEach(e => {
       let statusHtml = "", masterBtn = "", winnerHtml = "";
       if(e.status === "ativo" || !e.status) {
@@ -1221,7 +1683,51 @@ window.iniciarListenersIgamble = function() {
     });
   });
 };
+// =========================================================
+// O OBSERVADOR INTELIGENTE (PAUSA VÍDEOS DE FORA DA TELA)
+// =========================================================
+window.postObserver = window.postObserver || new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        let card = entry.target;
+        let videos = card.querySelectorAll('video');
+        let audioEl = card.querySelector('audio.post-audio');
+        
+        if(entry.isIntersecting) { 
+            // O post apareceu na tela! Dá Play!
+            videos.forEach(v => {
+                if(!v.src) v.src = v.getAttribute('data-src'); // Carrega a fonte
+                let p = v.play(); if(p) p.catch(()=>{});
+            });
+            if(audioEl && !window.postAudioMuted) { 
+                audioEl.currentTime = 0; 
+                let p = audioEl.play(); if(p) p.catch(()=>{});
+            } 
+        } else { 
+            // Post saiu da tela! Pausa os vídeos e áudios pra não bugar a máquina
+            videos.forEach(v => { v.pause(); });
+            if(audioEl) audioEl.pause(); 
+        }
+    });
+}, { rootMargin: "300px 0px", threshold: 0.1 }); 
 
+window.loadMorePosts = function() {
+    window.limitGPosts += 3; // Puxa MAIS 3 ao clicar
+    window.showNeonToast("Carregando +3 posts antigos...");
+    if(window.postsListenerRef) window.postsListenerRef.off();
+    window._igambleListenersStarted = false; 
+    window.iniciarListenersIgamble();
+};
+
+// =========================================================
+// ROLAGEM INFINITA DO G-POST
+// =========================================================
+window.loadMorePosts = function() {
+    window.limitGPosts += 10;
+    window.showNeonToast("Carregando mais dados da rede...");
+    if(window.postsListenerRef) window.postsListenerRef.off();
+    window._igambleListenersStarted = false; // Força reiniciar o observador com +10 posts
+    window.iniciarListenersIgamble();
+};
 window.getFollowButtonHtml = function(autorName) {
     if (!window.jogadorAtual || autorName === window.jogadorAtual || autorName === "MESTRE" || autorName === "SISTEMA") return "";
     let me = window.usersGlobais[window.jogadorAtual] || {}; let target = window.usersGlobais[autorName] || {};
@@ -1237,73 +1743,149 @@ window.toggleFollow = function(alvo, event) {
     let me = window.usersGlobais[window.jogadorAtual] || {}; let target = window.usersGlobais[alvo] || {};
     let isFollowing = me.seguindo && me.seguindo[alvo]; let theyFollow = target.seguindo && target.seguindo[window.jogadorAtual];
     let updates = {};
-    if (isFollowing) { updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = null; updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = null; window.showNeonToast(`Você deixou de seguir ${alvo}`); } 
-    else { updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = true; updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = true; if(typeof window.enviarNotificacao === "function") window.enviarNotificacao(alvo, 'gpost', window.jogadorAtual, "começou a seguir você!", "follow"); window.showNeonToast(`Você agora segue ${alvo}`); }
+    if (isFollowing) {
+        updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = null; updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = null;
+        window.showNeonToast(`Você deixou de seguir ${alvo}`);
+    } else {
+        updates[`tokyoRpg/users/${window.jogadorAtual}/seguindo/${alvo}`] = true; updates[`tokyoRpg/users/${alvo}/seguidores/${window.jogadorAtual}`] = true;
+        if(typeof window.enviarNotificacao === "function") window.enviarNotificacao(alvo, 'gpost', window.jogadorAtual, "começou a seguir você!", "follow");
+        window.showNeonToast(`Você agora segue ${alvo}`);
+    }
     window.db.ref().update(updates);
     
     let safeClass = alvo.replace(/[^a-zA-Z0-9]/g, '');
     document.querySelectorAll(`.follow-btn-${safeClass}`).forEach(btn => {
         if (isFollowing) { btn.className = `follow-badge-btn follow-btn-${safeClass}`; btn.innerHTML = "+"; } 
-        else { if(theyFollow) { btn.className = `follow-badge-btn friends follow-btn-${safeClass}`; btn.innerHTML = "✓✓ Amigos"; } else { btn.className = `follow-badge-btn following follow-btn-${safeClass}`; btn.innerHTML = "✓"; } }
+        else { 
+            if(theyFollow) { btn.className = `follow-badge-btn friends follow-btn-${safeClass}`; btn.innerHTML = "✓✓ Amigos"; } 
+            else { btn.className = `follow-badge-btn following follow-btn-${safeClass}`; btn.innerHTML = "✓"; }
+        }
     });
 };
 
 window.enviarMsgGamble = function() {
     try {
         if (!window.db || !window.jogadorAtual) return;
-        const inp = document.getElementById("chatInputMsg"); const txt = (inp.value || "").trim(); if (!txt) return;
+        const inp = document.getElementById("chatInputMsg");
+        const txt = (inp.value || "").trim(); 
+        if (!txt) return;
+
         let msgData = { nome: window.jogadorAtual, texto: txt, data: new Date().toLocaleTimeString(), ts: Date.now() };
+
         if (window.mensagemEmResposta) { msgData.replyTo = window.mensagemEmResposta.nome; msgData.replyText = window.mensagemEmResposta.texto; }
-        window.db.ref("tokyoRpg/chat").push(msgData).then(() => { if(typeof window.dispatchMentions === "function") window.dispatchMentions({ from: window.jogadorAtual, contextType: "gchat", contextId: "", text: txt }); });
-        inp.value = ""; if(typeof window.cancelarResposta === "function") window.cancelarResposta();
+
+        window.db.ref("tokyoRpg/chat").push(msgData).then(() => {
+            if(typeof window.dispatchMentions === "function") window.dispatchMentions({ from: window.jogadorAtual, contextType: "gchat", contextId: "", text: txt });
+        });
+        
+        inp.value = "";
+        if(typeof window.cancelarResposta === "function") window.cancelarResposta();
     } catch (e) { console.error("Erro ao enviar.", e); }
 };
 
 window.mensagemEmResposta = null; 
 window.responderMensagem = function(nome, texto) {
     window.mensagemEmResposta = { nome, texto };
-    document.getElementById("replyToName").innerText = nome; document.getElementById("replyToText").innerText = texto; document.getElementById("replyPreview").style.display = "flex"; document.getElementById("chatInputMsg").focus();
+    document.getElementById("replyToName").innerText = nome;
+    document.getElementById("replyToText").innerText = texto;
+    document.getElementById("replyPreview").style.display = "flex";
+    document.getElementById("chatInputMsg").focus();
 };
-window.cancelReply = function() { window.mensagemEmResposta = null; document.getElementById("replyPreview").style.display = "none"; };
+
+window.cancelReply = function() {
+    window.mensagemEmResposta = null;
+    document.getElementById("replyPreview").style.display = "none";
+};
+
+// =========================================================
+// MENÇÕES, COMENTÁRIOS E NOTIFICAÇÕES (INSTA HUD)
+// =========================================================
 
 window._mentionRuntime = { active: false, inputEl: null, startPos: 0 };
+
 window.handleMention = function(e, inputEl) {
-    let val = inputEl.value; let cursorPos = inputEl.selectionStart; let textBeforeCursor = val.substring(0, cursorPos); let atIndex = textBeforeCursor.lastIndexOf('@');
+    let val = inputEl.value; let cursorPos = inputEl.selectionStart;
+    let textBeforeCursor = val.substring(0, cursorPos);
+    let atIndex = textBeforeCursor.lastIndexOf('@');
+
     if (atIndex !== -1 && (atIndex === 0 || textBeforeCursor[atIndex - 1] === ' ' || textBeforeCursor[atIndex - 1] === '\n')) {
         let query = textBeforeCursor.substring(atIndex + 1);
-        if (!query.includes(' ') && !query.includes('\n')) { window._mentionRuntime = { active: true, inputEl: inputEl, startPos: atIndex, query: query }; window.showMentionDropdown(inputEl, query); return; }
+        if (!query.includes(' ') && !query.includes('\n')) {
+            window._mentionRuntime = { active: true, inputEl: inputEl, startPos: atIndex, query: query };
+            window.showMentionDropdown(inputEl, query);
+            return;
+        }
     }
     window.closeMentionDropdown();
 };
+
 window.showMentionDropdown = function(inputEl, query) {
     let drop = document.getElementById("mentionDropdown"); if (!drop) return;
-    let rect = inputEl.getBoundingClientRect(); drop.style.left = rect.left + "px"; drop.style.top = (rect.top - 160) + "px"; drop.style.display = "block";
-    let users = Object.values(window.usersGlobais || {}); let filtered = users.filter(u => u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+    let rect = inputEl.getBoundingClientRect();
+    drop.style.left = rect.left + "px"; drop.style.top = (rect.top - 160) + "px"; 
+    drop.style.display = "block";
+
+    let users = Object.values(window.usersGlobais || {});
+    let filtered = users.filter(u => u.nome && u.nome.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+
     if (filtered.length === 0) { drop.style.display = "none"; return; }
-    drop.innerHTML = filtered.map(u => { let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`; return `<div class="mention-item" onclick="window.selectMention('${u.nome}')"><img src="${av}" class="mention-avatar"><span>${u.nome}</span></div>`; }).join('');
+
+    drop.innerHTML = filtered.map(u => {
+        let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${u.nome}`;
+        return `<div class="mention-item" onclick="window.selectMention('${u.nome}')"><img src="${av}" class="mention-avatar"><span>${u.nome}</span></div>`;
+    }).join('');
 };
+
 window.selectMention = function(nome) {
     let s = window._mentionRuntime; if (!s || !s.active || !s.inputEl) return;
-    const inputEl = s.inputEl; const val = inputEl.value || ""; const cursorPos = inputEl.selectionStart || val.length;
-    const before = val.substring(0, s.startPos); const after = val.substring(cursorPos); const nomeLimpo = nome.replace(/\s+/g, "_");
-    inputEl.value = before + "@" + nomeLimpo + " " + after; inputEl.focus(); window.closeMentionDropdown();
+
+    const inputEl = s.inputEl; const val = inputEl.value || "";
+    const cursorPos = inputEl.selectionStart || val.length;
+
+    const before = val.substring(0, s.startPos);
+    const after = val.substring(cursorPos);
+    const nomeLimpo = nome.replace(/\s+/g, "_");
+
+    inputEl.value = before + "@" + nomeLimpo + " " + after;
+    inputEl.focus();
+    window.closeMentionDropdown();
 };
-window.closeMentionDropdown = function(){ window._mentionRuntime.active = false; const drop = document.getElementById("mentionDropdown"); if(drop) drop.style.display = "none"; };
+
+window.closeMentionDropdown = function(){
+  window._mentionRuntime.active = false;
+  const drop = document.getElementById("mentionDropdown");
+  if(drop) drop.style.display = "none";
+};
 
 window.dispatchMentions = function({ from, contextType, contextId, text }) {
     try {
-        if (!window.db || !text) return; let matches = text.match(/@([\w_]+)/g); if (!matches) return;
+        if (!window.db || !text) return;
+        let matches = text.match(/@([\w_]+)/g); if (!matches) return;
         let users = Object.keys(window.usersGlobais || {}); let mencionados = new Set();
-        matches.forEach(m => { let nomeMencionadoComUnderline = m.substring(1); let nomeMencionadoOriginal = nomeMencionadoComUnderline.replace(/_/g, ' '); let usuarioReal = users.find(u => u.toLowerCase() === nomeMencionadoOriginal.toLowerCase()); if (usuarioReal && usuarioReal !== from) { mencionados.add(usuarioReal); } });
-        mencionados.forEach(alvo => { window.db.ref(`tokyoRpg/users/${alvo}/notificacoes`).push({ from: from, contextType: contextType, contextId: contextId, texto: text, lida: false, ts: Date.now() }); });
+
+        matches.forEach(m => {
+            let nomeMencionadoComUnderline = m.substring(1); 
+            let nomeMencionadoOriginal = nomeMencionadoComUnderline.replace(/_/g, ' '); 
+            let usuarioReal = users.find(u => u.toLowerCase() === nomeMencionadoOriginal.toLowerCase());
+            if (usuarioReal && usuarioReal !== from) { mencionados.add(usuarioReal); }
+        });
+
+        mencionados.forEach(alvo => {
+            window.db.ref(`tokyoRpg/users/${alvo}/notificacoes`).push({ from: from, contextType: contextType, contextId: contextId, texto: text, lida: false, ts: Date.now() });
+        });
     } catch(e) {}
 };
 
 window.mostrarNotificacaoHUD = function(from, type, text) {
     let stack = document.getElementById("mentionNotifyStack"); if (!stack) return;
-    let u = window.usersGlobais[from] || {}; let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${from}`; let appTitle = type === "gchat" ? "G-Chat" : (type === "gpost" ? "G-Post" : "Arena");
-    let div = document.createElement("div"); div.className = "mention-notify"; div.innerHTML = `<img src="${avatar}"><div class="mn-texts"><div class="mn-title">${from} marcou você em ${appTitle}</div><div class="mn-sub">${text}</div></div>`;
-    stack.appendChild(div); setTimeout(() => { div.classList.add("out"); setTimeout(() => div.remove(), 400); }, 5000);
+    let u = window.usersGlobais[from] || {};
+    let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${from}`;
+    let appTitle = type === "gchat" ? "G-Chat" : (type === "gpost" ? "G-Post" : "Arena");
+
+    let div = document.createElement("div"); div.className = "mention-notify";
+    div.innerHTML = `<img src="${avatar}"><div class="mn-texts"><div class="mn-title">${from} marcou você em ${appTitle}</div><div class="mn-sub">${text}</div></div>`;
+    stack.appendChild(div);
+    setTimeout(() => { div.classList.add("out"); setTimeout(() => div.remove(), 400); }, 5000);
 };
 
 window.atualizarBadgesHUD = function(chat, post, challenger) {
@@ -1317,14 +1899,17 @@ window.atualizarBadgesHUD = function(chat, post, challenger) {
 window.escutarNotificacoes = function() {
     if (!window.jogadorAtual || !window.db) return;
     let notifRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/notificacoes`);
+
     notifRef.on('value', snap => {
         let data = snap.val() || {}; let nGchat = 0, nGpost = 0, nGchallenger = 0;
         Object.values(data).forEach(n => { if (!n.lida) { if (n.contextType === "gchat") nGchat++; if (n.contextType === "gpost") nGpost++; if (n.contextType === "embates") nGchallenger++; } });
         window.atualizarBadgesHUD(nGchat, nGpost, nGchallenger);
     });
+
     let readyToNotify = false;
     notifRef.limitToLast(1).on('child_added', snap => {
-        if (!readyToNotify) return; let n = snap.val(); if (!n || n.lida) return;
+        if (!readyToNotify) return; 
+        let n = snap.val(); if (!n || n.lida) return;
         if(typeof window.mostrarNotificacaoHUD === "function") { window.mostrarNotificacaoHUD(n.from, n.contextType, n.texto); }
     });
     setTimeout(() => { readyToNotify = true; }, 2000);
@@ -1334,25 +1919,44 @@ window.marcarNotificacoesComoLidas = function(tabId) {
     if (!window.jogadorAtual || !window.db) return;
     let cType = tabId === "chat" ? "gchat" : (tabId === "posts" ? "gpost" : "embates");
     let notifRef = window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/notificacoes`);
+
     notifRef.once('value', snap => {
-        let data = snap.val(); if(!data) return; let updates = {};
+        let data = snap.val(); if(!data) return;
+        let updates = {};
         Object.keys(data).forEach(k => { if (data[k].contextType === cType && !data[k].lida) updates[`${k}/lida`] = true; });
         if (Object.keys(updates).length > 0) notifRef.update(updates);
     });
 };
 
-window.abrirComentarios = function(postId) { window.currentPostIdForComment = postId; document.getElementById("commentsOverlay").style.display = "flex"; window.carregarComentarios(postId); };
-window.fecharComentarios = function() { window.currentPostIdForComment = null; document.getElementById("commentsOverlay").style.display = "none"; document.getElementById("commentsList").innerHTML = ""; };
+window.abrirComentarios = function(postId) {
+    window.currentPostIdForComment = postId;
+    document.getElementById("commentsOverlay").style.display = "flex";
+    window.carregarComentarios(postId);
+};
+
+window.fecharComentarios = function() {
+    window.currentPostIdForComment = null;
+    document.getElementById("commentsOverlay").style.display = "none";
+    document.getElementById("commentsList").innerHTML = ""; 
+};
 
 window.carregarComentarios = function(postId) {
-    let list = document.getElementById("commentsList"); if(!list) return; list.innerHTML = "<div style='text-align:center; color:#aaa; margin-top:20px;'>Carregando...</div>";
+    let list = document.getElementById("commentsList"); if(!list) return;
+    list.innerHTML = "<div style='text-align:center; color:#aaa; margin-top:20px;'>Carregando...</div>";
+    
     window.db.ref(`tokyoRpg/posts/${postId}/comentarios`).on('value', snap => {
-        if(window.currentPostIdForComment !== postId) return; let data = snap.val();
+        if(window.currentPostIdForComment !== postId) return; 
+        
+        let data = snap.val();
         if(!data) { list.innerHTML = "<div style='text-align:center; color:#555; margin-top:20px;'>Seja o primeiro a comentar!</div>"; return; }
+        
         let html = ""; let sortedKeys = Object.keys(data).sort((a,b) => data[a].timestamp - data[b].timestamp);
+
         sortedKeys.forEach(k => {
-            let c = data[k]; let u = window.usersGlobais[c.autor] || {}; let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${c.autor}`; let nome = u.nome || c.autor;
+            let c = data[k]; let u = window.usersGlobais[c.autor] || {};
+            let avatar = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${c.autor}`; let nome = u.nome || c.autor;
             let textoBonito = (c.texto||"").replace(/@([\w_]+)/g, function(match, nomeMention) { return `<span style="color:var(--accent-blue); font-weight:bold;">@${nomeMention.replace(/_/g, ' ')}</span>`; });
+
             html += `<div class="comment-item"><img src="${avatar}" class="comment-avatar"><div class="comment-content"><div class="comment-name">${nome}</div><div>${textoBonito}</div></div></div>`;
         });
         list.innerHTML = html; setTimeout(() => { list.scrollTop = list.scrollHeight; }, 50);
@@ -1362,6 +1966,7 @@ window.carregarComentarios = function(postId) {
 window.enviarComentario = function() {
     if(!window.currentPostIdForComment || !window.jogadorAtual) return;
     let inp = document.getElementById("commentInput"); let txt = inp.value.trim(); if(!txt) return;
+    
     window.db.ref(`tokyoRpg/posts/${window.currentPostIdForComment}/comentarios`).push({ autor: window.jogadorAtual, texto: txt, timestamp: Date.now() }).then(() => {
         inp.value = ""; window.closeMentionDropdown();
         if(typeof window.dispatchMentions === "function") { window.dispatchMentions({ from: window.jogadorAtual, contextType: "gpost", contextId: window.currentPostIdForComment, text: txt }); }
@@ -1369,7 +1974,7 @@ window.enviarComentario = function() {
 };
 
 // =========================================================
-// GAMBLENGER (CELULAR SMS)
+// GAMBLENGER (CELULAR SMS) 
 // =========================================================
 window.contatoSmsAtual = null; window._smsListener = null; window._lastChatId = null;
 
@@ -1378,37 +1983,53 @@ window.adicionarContato = function() {
     let me = window.usersGlobais[window.jogadorAtual];
     if(!me.numero && !window.isMaster) { window.showNeonToast("Registre seu próprio Número no perfil primeiro!"); return; }
     if(num === me.numero) { window.showNeonToast("Este é o seu próprio número!"); return; }
+
     let alvo = null; Object.keys(window.usersGlobais).forEach(k => { if(window.usersGlobais[k].numero === num) alvo = k; });
     if(!alvo) { window.showNeonToast("Número inexistente ou fora de área."); return; }
-    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/contatos/${alvo}`).set(true).then(() => { window.showNeonToast(`Contato [${alvo}] salvo!`); document.getElementById("novoContatoNum").value = ""; window.carregarContatosSMS(); });
+
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/contatos/${alvo}`).set(true).then(() => {
+        window.showNeonToast(`Contato [${alvo}] salvo!`); document.getElementById("novoContatoNum").value = ""; window.carregarContatosSMS();
+    });
 };
 
 window.carregarContatosSMS = function() {
     let lista = document.getElementById("listaContatosSMS"); if(!lista || !window.usersGlobais || !window.jogadorAtual) return;
-    lista.innerHTML = ""; let meusContatos = window.usersGlobais[window.jogadorAtual]?.contatos || {}; let contatosArray = Object.keys(meusContatos);
+    lista.innerHTML = ""; let meusContatos = window.usersGlobais[window.jogadorAtual]?.contatos || {};
+    let contatosArray = Object.keys(meusContatos);
+
     if(window.isMaster) contatosArray = Object.keys(window.usersGlobais).filter(n => n !== "MESTRE" && n !== window.jogadorAtual);
     if(contatosArray.length === 0) { lista.innerHTML = `<div style="text-align:center; color:#555; font-size:10px; margin-top:20px;">Sua agenda está vazia.</div>`; return; }
 
     contatosArray.forEach(n => {
-        let u = window.usersGlobais[n]; if(!u) return; let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
+        let u = window.usersGlobais[n]; if(!u) return;
+        let av = u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${n}`;
         let isSel = (window.contatoSmsAtual === n) ? "background:rgba(0, 229, 255, 0.2); border-left:3px solid var(--accent-blue);" : "background:#111; border-left:3px solid #333;";
         lista.innerHTML += `<div style="display:flex; align-items:center; gap:10px; padding:10px; cursor:pointer; border-radius:4px; margin-bottom:5px; ${isSel}" onclick="window.abrirChatSMS('${n}')"><img src="${av}" style="width:35px; height:35px; border-radius:50%; object-fit:cover; border:1px solid #555;"><div style="color:#fff; font-weight:bold; font-size:12px; overflow:hidden; text-overflow:ellipsis;">${n}</div></div>`;
     });
 };
 
-window.abrirChatSMS = function(contato) { window.contatoSmsAtual = contato; let headerName = document.getElementById("smsChatName"); let callBtn = document.getElementById("btnCallUI"); if(headerName) headerName.innerText = "Criptografado: " + contato; if(callBtn) callBtn.style.display = "block"; window.carregarContatosSMS(); window.renderizarSMSLog(); };
+window.abrirChatSMS = function(contato) {
+    window.contatoSmsAtual = contato;
+    let headerName = document.getElementById("smsChatName"); let callBtn = document.getElementById("btnCallUI");
+    if(headerName) headerName.innerText = "Criptografado: " + contato; if(callBtn) callBtn.style.display = "block"; 
+    window.carregarContatosSMS(); window.renderizarSMSLog(); 
+};
 
 window.renderizarSMSLog = function() {
     if(!window.jogadorAtual || !window.contatoSmsAtual) return;
     let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
+    
     if(window._smsListener && window._lastChatId) window.db.ref('tokyoRpg/smsChats/' + window._lastChatId).off('value', window._smsListener);
     window._lastChatId = chatId;
     
     window._smsListener = window.db.ref('tokyoRpg/smsChats/' + chatId).on('value', snap => {
         let log = document.getElementById("smsLog"); if(!log) return; log.innerHTML = ""; 
-        let data = snap.val(); if(!data) { log.innerHTML = `<div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura. Envie a primeira mensagem.</div>`; return; }
+        let data = snap.val();
+        if(!data) { log.innerHTML = `<div style="text-align:center; color:#555; margin-top:20px; font-style:italic;">A conexão é segura. Envie a primeira mensagem.</div>`; return; }
+        
         Object.keys(data).forEach(k => {
-            let m = data[k]; let isMe = (m.de === window.jogadorAtual); let align = isMe ? "flex-end" : "flex-start"; let bg = isMe ? "var(--accent-blue)" : "#222";
+            let m = data[k]; let isMe = (m.de === window.jogadorAtual);
+            let align = isMe ? "flex-end" : "flex-start"; let bg = isMe ? "var(--accent-blue)" : "#222";
             let color = isMe ? "#000" : "#fff"; let radius = isMe ? "12px 12px 0 12px" : "12px 12px 12px 0";
             log.innerHTML += `<div style="display:flex; flex-direction:column; align-items:${align}; margin-bottom:10px; width:100%;"><div style="background:${bg}; color:${color}; padding:10px; border-radius:${radius}; max-width:80%; font-size:13px; font-family:monospace; font-weight:bold; word-wrap:break-word;">${m.msg}</div><div style="font-size:10px; color:#666; margin-top:3px;">${m.data || ""}</div></div>`;
         });
@@ -1419,13 +2040,21 @@ window.renderizarSMSLog = function() {
 window.enviarSMS = function() {
     if(!window.jogadorAtual || !window.contatoSmsAtual) { window.showNeonToast("Selecione um contato na agenda primeiro!"); return; }
     let inputEl = document.getElementById("smsTexto"); let txt = inputEl.value.trim(); if(!txt) return;
-    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_"); let payload = { de: window.jogadorAtual, para: window.contatoSmsAtual, msg: txt, data: new Date().toLocaleTimeString().substring(0, 5), ts: Date.now() };
-    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push(payload); inputEl.value = ""; inputEl.focus();    
+    
+    let chatId = [window.jogadorAtual, window.contatoSmsAtual].sort().join("_");
+    let payload = { de: window.jogadorAtual, para: window.contatoSmsAtual, msg: txt, data: new Date().toLocaleTimeString().substring(0, 5), ts: Date.now() };
+    
+    window.db.ref(`tokyoRpg/smsChats/${chatId}`).push(payload);
+    inputEl.value = ""; inputEl.focus();    
 };
-window.iniciarLigacao = function() { if(!window.contatoSmsAtual) return; window.showNeonToast(`📞 Conectando com ${window.contatoSmsAtual}...`); };
+
+window.iniciarLigacao = function() {
+    if(!window.contatoSmsAtual) return;
+    window.showNeonToast(`📞 Conectando com ${window.contatoSmsAtual}...`);
+};
 
 // =========================================================
-// FIREBASE ONLOAD (MOTOR INICIAL)
+// INICIALIZAÇÃO FIREBASE (O MOTOR PRINCIPAL)
 // =========================================================
 window.onload = function() {
     if (window.db) {
@@ -1446,17 +2075,30 @@ window.onload = function() {
         window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); });
         window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; if(typeof window.renderizarLojaUI === "function") window.renderizarLojaUI(); if(typeof window.renderizarFicha === "function") window.renderizarFicha(); if(typeof window.renderizarMochila === "function") window.renderizarMochila(); if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); }); 
         window.db.ref('tokyoRpg/casasGrid').on('value', s => { window.casaGlobais = s.val() || {}; if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); });
+        window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
+        window.db.ref('tokyoRpg/submapsTraps').on('value', s => { window.submapasTraps = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
         
         window.db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { if(typeof window.mostrarDadoOverlay === "function") window.mostrarDadoOverlay(d.nome, d.form, d.results); } });
         window.db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div style="margin-bottom:5px;"><strong class="neon-blue">${x.nome}:</strong> ${x.texto}</div>`); b.scrollTop = b.scrollHeight; }});
         
-        // MOTOR DE FILA DO CLASH (CORRIGIDO PARA CHAMAR A ANIMAÇÃO CORRETAMENTE)
+        window.db.ref('tokyoRpg/turnosVTT').on('value', s => { 
+            window.allTurnosVTT = s.val() || {};
+            if(window.currentSubMapKey) {
+                window.turnosVTTGlobal = window.allTurnosVTT[window.currentSubMapKey] || null;
+                if (typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); 
+            }
+        });
+
+        // MOTOR DE FILA DO CLASH 
         window.db.ref('tokyoRpg/currentClash').on('value', s => {
             let d = s.val();
-            if(d && d.ts > window.lastClashTs) {
+            // Evita rodar batalhas velhas e só roda se for na SALA ATUAL!
+            if(d && d.ts > window.lastClashTs && (Date.now() - d.ts < 15000)) {
                 window.lastClashTs = d.ts;
-                window.clashQueue.push(d);
-                if(typeof window.processClashQueue === "function") window.processClashQueue();
+                if (d.mapKey === window.currentSubMapKey) { 
+                    window.clashQueue.push(d);
+                    if(typeof window.processClashQueue === "function") window.processClashQueue();
+                }
             }
         });
 
@@ -1474,3 +2116,717 @@ window.onload = function() {
     }
     if(typeof window.abrirModal === "function") window.abrirModal();
 };
+
+// =========================================================
+// SISTEMA DE FACES, MICROFONE E SALA DE VOZ (WEBRTC INTERATIVO)
+// =========================================================
+window.audioContext = null; window.analyser = null; window.micStream = null; window.micInterval = null; 
+window.faceAtual = "Normal"; window.remoteSpeakerName = null;
+window.whisperTarget = null; // Armazena quem é o alvo do sussurro!
+
+window.rtcPeers = {}; 
+window.rtcConfig = { iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }] };
+
+window.renderizarFace = function() {
+    let targetName = window.remoteSpeakerName ? window.remoteSpeakerName : window.jogadorAtual;
+    let u = window.usersGlobais[targetName]; 
+    if(!u) return;
+
+    let faceImg = document.getElementById("charFaceDisplay");
+    if(faceImg) {
+        let isFalando = false; let estadoFace = "Normal";
+
+        if (targetName === window.remoteSpeakerName) { isFalando = true; estadoFace = "Falando"; } 
+        else { estadoFace = window.faceAtual; if (estadoFace === "Falando") isFalando = true; }
+        if (targetName !== window.jogadorAtual && u.faceAtual && !isFalando) { estadoFace = u.faceAtual; }
+
+        let faceNameFormatada = estadoFace.charAt(0).toUpperCase() + estadoFace.slice(1);
+        let path = `img/faces/${targetName}_Face_${faceNameFormatada}.png`;
+        faceImg.src = path;
+        
+        if(isFalando) { faceImg.style.transform = "scale(1.05)"; faceImg.style.borderColor = "#00ff66"; faceImg.style.boxShadow = "0 0 20px rgba(0, 255, 102, 0.4)"; } 
+        else if(estadoFace === "Dano") { faceImg.style.transform = "rotate(-10deg) scale(0.9)"; faceImg.style.borderColor = "#ff1a55"; faceImg.style.boxShadow = "none"; } 
+        else { faceImg.style.transform = "none"; faceImg.style.borderColor = "var(--accent-blue)"; faceImg.style.boxShadow = "none"; }
+
+        faceImg.onerror = function() { this.src = u.charImgUrl || u.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${targetName}`; };
+
+        let nameTag = document.getElementById("faceNameTag");
+        if(!nameTag) {
+            nameTag = document.createElement("div"); nameTag.id = "faceNameTag";
+            nameTag.style.position = "absolute"; nameTag.style.top = "5px"; nameTag.style.left = "50%"; nameTag.style.transform = "translateX(-50%)";
+            nameTag.style.background = "rgba(0,0,0,0.8)"; nameTag.style.padding = "2px 10px"; nameTag.style.borderRadius = "4px";
+            nameTag.style.fontSize = "12px"; nameTag.style.fontWeight = "bold"; nameTag.style.border = "1px solid var(--accent-blue)";
+            nameTag.style.pointerEvents = "none"; nameTag.style.zIndex = "10";
+            faceImg.parentElement.style.position = "relative"; faceImg.parentElement.appendChild(nameTag);
+        }
+        
+        nameTag.innerText = targetName.toUpperCase();
+        nameTag.style.borderColor = isFalando ? "#00ff66" : "var(--accent-blue)";
+        nameTag.style.color = isFalando ? "#00ff66" : "var(--accent-blue)";
+    }
+};
+
+window.mudarFaceManual = function() { 
+    let select = document.getElementById("faceSelect"); window.faceAtual = select.value; window.renderizarFace(); 
+    if(window.db) window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/faceAtual`).set(window.faceAtual);
+};
+
+window.ativarMicrofoneFace = async function() {
+    let btn = document.getElementById("btnToggleMic");
+    
+    if (window.micStream) {
+        clearInterval(window.micInterval); 
+        window.micStream.getTracks().forEach(track => track.stop()); 
+        window.micStream = null;
+        window.faceAtual = document.getElementById("faceSelect").value; 
+        window.renderizarFace(); 
+        window.pararVoiceChat();
+        if(window.db) { 
+            window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/faceAtual`).set(window.faceAtual); 
+            window.db.ref(`tokyoRpg/voicePresence/${window.jogadorAtual}/isSpeaking`).set(false); 
+        }
+        btn.innerText = "🎙️ Ativar Mic (Falar)"; btn.style.borderColor = "#00ff66"; btn.style.color = "#00ff66"; 
+        return;
+    }
+
+    try {
+        // MOTOR DE ÁUDIO APRIMORADO: Liga anti-ruído, anti-eco e estabilizador de ganho nativos do navegador!
+        window.micStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            } 
+        }); 
+
+        window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        window.analyser = window.audioContext.createAnalyser(); 
+        let source = window.audioContext.createMediaStreamSource(window.micStream); 
+        source.connect(window.analyser);
+        window.analyser.fftSize = 512; // Resolução maior para captar melhor
+        let bufferLength = window.analyser.frequencyBinCount; 
+        let dataArray = new Uint8Array(bufferLength);
+
+        btn.innerText = "🛑 Desligar Mic"; btn.style.borderColor = "#ff1a55"; btn.style.color = "#ff1a55";
+        window.iniciarVoiceChat(window.micStream);
+
+        let wasSpeaking = false;
+        window.micInterval = setInterval(() => {
+            window.analyser.getByteFrequencyData(dataArray); 
+            
+            // Foca apenas nas frequências da voz humana (a primeira metade do gráfico), ignorando ruídos agudos
+            let sum = 0; 
+            let voiceDataLength = Math.floor(bufferLength / 2);
+            for(let i = 0; i < voiceDataLength; i++) { sum += dataArray[i]; }
+            let average = sum / voiceDataLength; 
+            
+            let faceSelectValue = document.getElementById("faceSelect").value;
+            
+            // Puxa a sensibilidade do slider da tela (Quanto MENOR o número, mais fácil de ativar a boca)
+            let sensInput = document.getElementById("micSensitivity");
+            let sensibilidade = sensInput ? parseInt(sensInput.value) : 15;
+
+            let isSpeakingNow = (average > sensibilidade);
+            
+            if (isSpeakingNow && !window.remoteSpeakerName) { 
+                if(window.faceAtual !== "Falando") { window.faceAtual = "Falando"; window.renderizarFace(); } 
+            } else if (!isSpeakingNow && !window.remoteSpeakerName) { 
+                if(window.faceAtual !== faceSelectValue) { window.faceAtual = faceSelectValue; window.renderizarFace(); } 
+            }
+
+            if(isSpeakingNow !== wasSpeaking) {
+                wasSpeaking = isSpeakingNow;
+                if(window.db) window.db.ref(`tokyoRpg/voicePresence/${window.jogadorAtual}/isSpeaking`).set(isSpeakingNow);
+            }
+
+        }, 150);
+    } catch (err) { 
+        console.error("Erro mic:", err); 
+        window.showNeonToast("Permissão de Microfone Negada!"); 
+    }
+};
+
+// =========================================================
+// O MOTOR WEBRTC (SOM 100% LIMPO E SUSSURROS DIRETOS)
+// =========================================================
+window.iniciarVoiceChat = function(stream) {
+    window.localStream = stream;
+    window.whisperTarget = null;
+    window.db.ref(`tokyoRpg/voiceSignals/${window.jogadorAtual}`).remove();
+    window.db.ref(`tokyoRpg/voicePresence/${window.jogadorAtual}`).set({ active: true, isSpeaking: false });
+    window.db.ref(`tokyoRpg/voicePresence/${window.jogadorAtual}`).onDisconnect().remove();
+
+    window.db.ref('tokyoRpg/voicePresence').on('child_added', snap => {
+        let peerName = snap.key; 
+        if (peerName !== window.jogadorAtual && !window.rtcPeers[peerName]) { window.chamarPeer(peerName); }
+        window.renderizarWhisperBar();
+    });
+
+    window.db.ref('tokyoRpg/voicePresence').on('child_removed', snap => {
+        let peerName = snap.key;
+        if(window.rtcPeers[peerName]) {
+            window.rtcPeers[peerName].close(); delete window.rtcPeers[peerName];
+            let audioEl = document.getElementById(`rtc_audio_${peerName}`); if(audioEl) audioEl.remove();
+            if(window.remoteSpeakerName === peerName) { window.remoteSpeakerName = null; window.renderizarFace(); }
+        }
+        if(window.whisperTarget === peerName) window.whisperTarget = null;
+        window.renderizarWhisperBar();
+    });
+
+    window.db.ref(`tokyoRpg/voiceSignals/${window.jogadorAtual}`).on('child_added', async snap => {
+        let signal = snap.val(); let peerName = signal.from;
+        try {
+            if (signal.type === "offer") {
+                let pc = window.criarPeerConnection(peerName);
+                await pc.setRemoteDescription(new RTCSessionDescription(signal.data));
+                let answer = await pc.createAnswer(); await pc.setLocalDescription(answer);
+                window.db.ref(`tokyoRpg/voiceSignals/${peerName}`).push({ type: "answer", from: window.jogadorAtual, data: JSON.parse(JSON.stringify(answer)) });
+            } 
+            else if (signal.type === "answer" && window.rtcPeers[peerName]) { await window.rtcPeers[peerName].setRemoteDescription(new RTCSessionDescription(signal.data)); } 
+            else if (signal.type === "ice" && window.rtcPeers[peerName]) { await window.rtcPeers[peerName].addIceCandidate(new RTCIceCandidate(signal.data)); }
+        } catch(e) {}
+        window.db.ref(`tokyoRpg/voiceSignals/${window.jogadorAtual}/${snap.key}`).remove();
+    });
+
+    window.db.ref('tokyoRpg/voicePresence').on('value', snap => {
+        let presences = snap.val() || {}; let activeSpeaker = null;
+        Object.keys(presences).forEach(pName => {
+            let tEl = document.getElementById(`token_${pName}`);
+            if(presences[pName].isSpeaking && pName !== window.jogadorAtual) { activeSpeaker = pName; }
+            if(tEl) {
+                if(presences[pName].isSpeaking) { tEl.style.boxShadow = "0 0 20px #00ff66, 0 0 40px #00ff66"; tEl.style.transform = "scale(1.15)"; tEl.style.zIndex = "100"; } 
+                else { tEl.style.boxShadow = "0 0 20px #fff"; tEl.style.transform = "none"; tEl.style.zIndex = "10"; }
+            }
+        });
+        window.remoteSpeakerName = activeSpeaker; window.renderizarFace();
+    });
+};
+
+window.criarPeerConnection = function(peerName) {
+    let pc = new RTCPeerConnection(window.rtcConfig); window.rtcPeers[peerName] = pc;
+    if (window.localStream) { window.localStream.getTracks().forEach(track => pc.addTrack(track, window.localStream)); }
+
+    pc.onicecandidate = event => { if (event.candidate) window.db.ref(`tokyoRpg/voiceSignals/${peerName}`).push({ type: "ice", from: window.jogadorAtual, data: JSON.parse(JSON.stringify(event.candidate)) }); };
+
+    pc.ontrack = event => {
+        let audioEl = document.getElementById(`rtc_audio_${peerName}`);
+        if(!audioEl) {
+            audioEl = document.createElement("audio"); audioEl.id = `rtc_audio_${peerName}`;
+            audioEl.autoplay = true; audioEl.setAttribute('playsinline', ''); audioEl.style.display = "none";
+            document.body.appendChild(audioEl);
+        }
+        audioEl.srcObject = event.streams[0];
+        
+        // Puxa o volume da barra e aplica na hora!
+        let vol = document.getElementById("globalVoiceVolume") ? document.getElementById("globalVoiceVolume").value / 100 : 1;
+        audioEl.volume = vol;
+        audioEl.play().catch(e => console.warn("Aguardando clique para tocar o som", e));
+    };
+    return pc;
+};
+
+window.chamarPeer = async function(peerName) {
+    let pc = window.criarPeerConnection(peerName); let offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+    window.db.ref(`tokyoRpg/voiceSignals/${peerName}`).push({ type: "offer", from: window.jogadorAtual, data: JSON.parse(JSON.stringify(offer)) });
+};
+
+window.pararVoiceChat = function() {
+    window.db.ref(`tokyoRpg/voicePresence/${window.jogadorAtual}`).remove();
+    window.db.ref(`tokyoRpg/voiceSignals/${window.jogadorAtual}`).remove();
+    Object.keys(window.rtcPeers).forEach(peerName => {
+        window.rtcPeers[peerName].close(); let audioEl = document.getElementById(`rtc_audio_${peerName}`); if(audioEl) audioEl.remove();
+    });
+    window.rtcPeers = {}; window.remoteSpeakerName = null; window.whisperTarget = null;
+    window.renderizarWhisperBar(); window.renderizarFace();
+};
+
+window.atualizarVolumeVozes = function() {
+    let vol = document.getElementById("globalVoiceVolume").value / 100;
+    document.querySelectorAll('audio[id^="rtc_audio_"]').forEach(a => { a.volume = vol; });
+};
+
+// =========================================================
+// FUNÇÕES DA BARRA DE SUSSURRO
+// =========================================================
+window.renderizarWhisperBar = function() {
+    let bar = document.getElementById("whisperBar");
+    let wList = document.getElementById("whisperList");
+    if(!bar || !wList) return;
+    
+    let vozesConectadas = Object.keys(window.rtcPeers);
+    
+    if(vozesConectadas.length === 0 || !window.micStream) {
+        bar.style.display = "none";
+        return;
+    }
+
+    bar.style.display = "flex";
+    wList.innerHTML = "";
+
+    vozesConectadas.forEach(peerName => {
+        let isAlvo = (window.whisperTarget === peerName);
+        let btnColor = isAlvo ? "var(--accent-purple)" : "#aaa";
+        let shadow = isAlvo ? "box-shadow: 0 0 10px var(--accent-purple);" : "";
+        let bg = isAlvo ? "rgba(176, 0, 255, 0.2)" : "transparent";
+        
+        wList.innerHTML += `<button class="action-btn" style="padding: 4px 10px; font-size: 10px; border-color: ${btnColor}; color: ${btnColor}; background: ${bg}; ${shadow} margin:0;" onclick="window.alternarWhisper('${peerName}')">🗣️ ${peerName}</button>`;
+    });
+};
+
+window.alternarWhisper = function(peerName) {
+    if(window.whisperTarget === peerName) {
+        window.whisperTarget = null;
+        window.showNeonToast("Voz ABERTA para todos.");
+    } else {
+        window.whisperTarget = peerName;
+        window.showNeonToast(`Sussurrando APENAS para ${peerName}.`);
+    }
+
+    window.aplicarMuteDeSussurro();
+    window.renderizarWhisperBar();
+};
+
+window.aplicarMuteDeSussurro = function() {
+    // Para cada conexão (Pessoa), a gente decide se o nosso microfone envia áudio ou envia silêncio
+    Object.keys(window.rtcPeers).forEach(peer => {
+        let pc = window.rtcPeers[peer];
+        let senders = pc.getSenders();
+        senders.forEach(sender => {
+            if(sender.track && sender.track.kind === 'audio') {
+                if(window.whisperTarget === null) {
+                    sender.track.enabled = true; // Voz liberada pra geral
+                } else {
+                    sender.track.enabled = (peer === window.whisperTarget); // Voz só chega no alvo
+                }
+            }
+        });
+    });
+};
+
+// =========================================================
+// INICIALIZAÇÃO FIREBASE (O MOTOR PRINCIPAL)
+// =========================================================
+window.onload = function() {
+    if (window.db) {
+        window.carregarTitulos(); window.carregarAvatares(); 
+        
+        window.db.ref('tokyoRpg/users').on('value', s => { 
+            window.usersGlobais = s.val()||{}; 
+            if(typeof window.renderizarFicha === "function") window.renderizarFicha(); 
+            if(typeof window.renderizarMochila === "function") window.renderizarMochila(); 
+            if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); 
+            if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); 
+            if(typeof window.desenharListaUsuarios === "function") window.desenharListaUsuarios(); 
+            if(typeof window.renderizarPanteao === "function") window.renderizarPanteao(); 
+            if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard();
+        });
+        
+        window.db.ref('tokyoRpg/presence').on('value', s => { window.presenceGlobal = s.val()||{}; if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); if(typeof window.desenharListaUsuarios === "function") window.desenharListaUsuarios(); });
+        window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); });
+        window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; if(typeof window.renderizarLojaUI === "function") window.renderizarLojaUI(); if(typeof window.renderizarFicha === "function") window.renderizarFicha(); if(typeof window.renderizarMochila === "function") window.renderizarMochila(); if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); }); 
+        window.db.ref('tokyoRpg/casasGrid').on('value', s => { window.casaGlobais = s.val() || {}; if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); });
+        window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
+        window.db.ref('tokyoRpg/submapsTraps').on('value', s => { window.submapasTraps = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
+        
+        window.db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { if(typeof window.mostrarDadoOverlay === "function") window.mostrarDadoOverlay(d.nome, d.form, d.results); } });
+        window.db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div style="margin-bottom:5px;"><strong class="neon-blue">${x.nome}:</strong> ${x.texto}</div>`); b.scrollTop = b.scrollHeight; }});
+        
+        window.db.ref('tokyoRpg/turnosVTT').on('value', s => { 
+            window.allTurnosVTT = s.val() || {};
+            if(window.currentSubMapKey) {
+                window.turnosVTTGlobal = window.allTurnosVTT[window.currentSubMapKey] || null;
+                if (typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); 
+            }
+        });
+
+        // MOTOR DE FILA DO CLASH (CORRIGIDO PARA CHAMAR A ANIMAÇÃO CORRETAMENTE)
+        window.db.ref('tokyoRpg/currentClash').on('value', s => {
+            let d = s.val();
+            if(d && d.ts > window.lastClashTs && (Date.now() - d.ts < 15000)) {
+                window.lastClashTs = d.ts;
+                if (d.mapKey === window.currentSubMapKey) { 
+                    window.clashQueue.push(d);
+                    if(typeof window.processClashQueue === "function") window.processClashQueue();
+                }
+            }
+        });
+
+        window.db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
+            try {
+                let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
+                if(d){ Object.keys(d).forEach(k => { 
+                    let m = d[k]; let rCount = m.reacoes || {}; let uData = window.usersGlobais[m.nome] || {}; 
+                    let curAv = uData.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${m.nome}`; let curTit = uData.tituloChat || m.titulo; 
+                    let reactHtml = `<button class="react-add" onclick="window.abrirEmojiReacao('${k}', event)">+</button>${rCount['🔥']?`<button class="react-btn">🔥 ${rCount['🔥']}</button>`:''}${rCount['💀']?`<button class="react-btn">💀 ${rCount['💀']}</button>`:''}${rCount['😂']?`<button class="react-btn">😂 ${rCount['😂']}</button>`:''}${rCount['👀']?`<button class="react-btn">👀 ${rCount['👀']}</button>`:''}${rCount['💯']?`<button class="react-btn">💯 ${rCount['💯']}</button>`:''}${rCount['🤡']?`<button class="react-btn">🤡 ${rCount['🤡']}</button>`:''}${rCount['💔']?`<button class="react-btn">💔 ${rCount['💔']}</button>`:''}${rCount['💰']?`<button class="react-btn">💰 ${rCount['💰']}</button>`:''}`;
+                    b.innerHTML += `<div class="msg-box"><div class="msg-avatar-container"><span style="font-size:10px; color:#ff2a5f;">${uData.carteira||0}¥</span><img src="${curAv}" class="msg-avatar"></div><div class="msg-content"><div style="display:flex; flex-direction:column; margin-bottom:5px;">${curTit?`<div class="title-tag ${curTit.raridade}" style="display:inline-block; width:fit-content; margin-bottom:2px;">${curTit.txt||curTit}</div>`:''}<strong style="color:var(--accent-blue); font-size:14px;">${m.nome} <span style="color:#555;font-size:10px; margin-left:5px;">${m.data}</span></strong></div><p style="font-size:13px; line-height:1.4; margin-top:2px;">${(m.texto||"").replace(/@([\w_]+)/g, function(match, nomeMention) { return `<span style="color:var(--accent-blue); font-weight:bold;">@${nomeMention.replace(/_/g, ' ')}</span>`; })}</p>${m.imagemUrl?`<img src="${m.imagemUrl}" class="msg-image">`:''}<div style="margin-top:5px; display:flex; flex-wrap:wrap; gap:5px;">${reactHtml}</div></div></div>`; 
+                }); b.scrollTop = b.scrollHeight; }
+            } catch (err) { console.error("Erro ao renderizar chat:", err); }
+        });
+    }
+    if(typeof window.abrirModal === "function") window.abrirModal();
+};
+// SALVAR CHAR IMG URL
+window.salvarCharImgUrl = function() {
+    let url = document.getElementById("customCharUrl").value.trim();
+    if(!url) return;
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/charImgUrl`).set(url);
+    window.showNeonToast("Foto do Personagem Atualizada!");
+    document.getElementById("customCharUrl").value = "";
+};
+
+window.uploadCharImage = function(event) {
+    let file = event.target.files[0];
+    if(!file) return;
+    if(file.size > 2000000) { window.showNeonToast("Erro: Imagem deve ter menos de 2MB!"); return; } 
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/charImgUrl`).set(e.target.result);
+        window.showNeonToast("Foto do Personagem Atualizada!");
+    };
+    reader.readAsDataURL(file);
+};
+
+// =========================================================
+// SISTEMA DE CORTE DE IMAGEM (CROPPER)
+// =========================================================
+window.cropperInstance = null;
+
+// 1. Quando clica em SALVAR a URL
+window.salvarCharImgUrl = function() {
+    let url = document.getElementById("customCharUrl").value.trim();
+    if(!url) return;
+
+    let cropModal = document.getElementById("cropModal");
+    let imgTarget = document.getElementById("cropImageTarget");
+
+    // Tenta contornar bloqueios de segurança (CORS) da web
+    imgTarget.crossOrigin = "anonymous";
+    imgTarget.src = url;
+    cropModal.style.display = "flex";
+
+    if (window.cropperInstance) window.cropperInstance.destroy();
+
+    // Espera a imagem da web carregar antes de aplicar a grade de corte
+    imgTarget.onload = function() {
+        window.cropperInstance = new Cropper(imgTarget, {
+            aspectRatio: 1,
+            viewMode: 1,
+            autoCropArea: 1,
+            background: false,
+            guides: true,
+            dragMode: 'move' // Permite arrastar com o mouse/dedo
+        });
+        imgTarget.onload = null; // Limpa o evento
+    };
+
+    document.getElementById("customCharUrl").value = ""; // Limpa a barrinha
+};
+
+// 2. Quando envia arquivo do PC (Mantido igual, mas aprimorado)
+window.uploadCharImage = function(event) {
+    let file = event.target.files[0];
+    if(!file) return;
+    if(file.size > 2000000) { window.showNeonToast("Erro: Imagem deve ter menos de 2MB!"); return; } 
+
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        let cropModal = document.getElementById("cropModal");
+        let imgTarget = document.getElementById("cropImageTarget");
+        
+        imgTarget.removeAttribute("crossOrigin"); 
+        cropModal.style.display = "flex";
+
+        if (window.cropperInstance) window.cropperInstance.destroy();
+
+        // Aguarda a imagem aparecer na tela antes de jogar a grade de corte em cima
+        imgTarget.onload = function() {
+            window.cropperInstance = new Cropper(imgTarget, {
+                aspectRatio: 1, 
+                viewMode: 1,
+                autoCropArea: 1,
+                background: false,
+                guides: true,
+                dragMode: 'move'
+            });
+            imgTarget.onload = null; // limpa o evento pra não travar depois
+        };
+        
+        imgTarget.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    event.target.value = ""; 
+};
+
+window.fecharCropModal = function() {
+    document.getElementById("cropModal").style.display = "none";
+    if (window.cropperInstance) { window.cropperInstance.destroy(); window.cropperInstance = null; }
+};
+
+// 3. O Salvador Blindado
+window.confirmarCrop = function() {
+    if (!window.cropperInstance) return;
+    
+    try {
+        // Tenta gerar a imagem em 256x256
+        let canvas = window.cropperInstance.getCroppedCanvas({ width: 256, height: 256 });
+        let croppedBase64 = canvas.toDataURL("image/png");
+        
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/charImgUrl`).set(croppedBase64).then(() => {
+            window.showNeonToast("Foto Enquadrada e Salva!");
+            window.fecharCropModal();
+        });
+    } catch (err) {
+        // Se a imagem for da web e o site bloquear o recorte (Tainted Canvas), o sistema pega a URL inteira
+        console.warn("Bloqueio de site detectado. Salvando URL original.", err);
+        let originalUrl = document.getElementById("cropImageTarget").src;
+        
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/charImgUrl`).set(originalUrl).then(() => {
+            window.showNeonToast("Foto Salva (S/ recorte por proteção do site)");
+            window.fecharCropModal();
+        });
+    }
+};
+
+// =========================================================
+// SISTEMA DE POPULARIDADE E BOTS DO G-POST
+// =========================================================
+
+// =========================================================
+// O NOVO MOTOR DE POPULARIDADE GLOBAL (TIERS, BOTS E ANIMAÇÃO TIKTOK)
+// =========================================================
+
+// Limites Atualizados
+window.popularityTiers = {
+    "branca": { nome: "Estrela Nascente", cor: "#ffffff", minL: 600, maxL: 3000, icone: "⭐" },
+    "verde": { nome: "Hype Regional", cor: "#00ff66", minL: 3000, maxL: 7000, icone: "🌟" },
+    "azul": { nome: "Lenda da Mídia", cor: "#00e5ff", minL: 10000, maxL: 50000, icone: "💫" },
+    "dourado": { nome: "Astro Supremo", cor: "#ffaa00", minL: 100000, maxL: 1000000, icone: "✨" },
+    "roxo": { nome: "Superstar", cor: "#b000ff", minL: 500000, maxL: 5000000, icone: "🌠" }
+};
+
+// Formatador de Números (Ex: 1500 vira 1.5K, 2000000 vira 2M)
+window.formatNumberInfo = function(num) {
+    if(num >= 1000000) return (num / 1000000).toFixed(1).replace('.0', '') + "M";
+    if(num >= 1000) return (num / 1000).toFixed(1).replace('.0', '') + "K";
+    return num;
+};
+window.mudarPopTier = function(userId, tier) {
+    if(!window.isMaster) return;
+    window.db.ref(`tokyoRpg/users/${userId}/popTier`).set(tier).then(() => {
+        window.showNeonToast(`Tier de ${userId} mudado para ${tier.toUpperCase()}! Os likes dos posts vão se auto-ajustar.`);
+        window.renderizarFicha(); // Atualiza a tela de personagem na hora
+    });
+};
+
+// Dispara a animação visual por cima dos posts
+window.spawnTiktokHeart = function() {
+    let container = document.getElementById("igamble-view-posts");
+    if(!container || !container.classList.contains("active")) return; 
+
+    let h = document.createElement("div");
+    h.className = "tiktok-heart";
+    // Múltiplos emojis flutuantes (Coração, Fogo, Dinheiro, Estrela)
+    let emojis = ["❤️", "🔥", "⭐", "💸", "✨", "💖", "💎", "🎰"];
+    h.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+    
+    let rightPos = 15 + Math.random() * 40; // Aparece na direita aleatoriamente
+    h.style.right = rightPos + "px";
+    h.style.fontSize = (20 + Math.random() * 20) + "px";
+    
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 2500);
+};
+
+// O Motor Inteligente (Roda a cada 2.5s)
+setInterval(() => {
+    if(!window.db || !window.jogadorAtual) return;
+    
+    window.db.ref('tokyoRpg/posts').once('value').then(snap => {
+        let posts = snap.val(); if(!posts) return;
+        let updates = {};
+        let someoneGotLiked = false;
+
+        Object.keys(posts).forEach(k => {
+            let p = posts[k];
+            let autorId = p.autorId || p.autor;
+            
+            // Somente o dono do post ou o mestre processam os cálculos para não sobrecarregar
+            if(autorId === window.jogadorAtual || window.isMaster) {
+                let uData = window.usersGlobais[autorId] || {};
+                let currentTier = uData.popTier || "branca";
+                if(p.isAd) currentTier = "dourado";
+                
+                let limits = window.popularityTiers[currentTier] || window.popularityTiers["branca"];
+                let currentTarget = p.targetLikes || 0;
+                
+                // MÁGICA: Se a estrela do perfil mudou, ele reseta o alvo desse post (antigo ou novo) para subir de novo!
+                if(currentTarget < limits.minL || currentTarget > limits.maxL) {
+                    currentTarget = Math.floor(Math.random() * (limits.maxL - limits.minL + 1)) + limits.minL;
+                    updates[`${k}/targetLikes`] = currentTarget;
+                }
+
+                let currentLikes = parseInt(p.likes) || 0;
+                if(currentLikes < currentTarget) {
+                    let missing = currentTarget - currentLikes;
+                    let chunk = Math.max(1, Math.floor(missing * 0.08)); // Sobe rápido e desacelera
+                    if(missing < 5) chunk = missing;
+                    
+                    // 50% de chance de subir para parecer orgânico
+                    if(Math.random() > 0.5) {
+                        updates[`${k}/likes`] = currentLikes + chunk;
+                        someoneGotLiked = true;
+                    }
+                }
+            }
+        });
+
+        if(Object.keys(updates).length > 0) {
+            window.db.ref('tokyoRpg/posts').update(updates);
+            
+            // TIKTOK ANIMATION: Atira os emojis se alguém ganhou like
+            if(someoneGotLiked) {
+                let heartCount = Math.floor(Math.random() * 4) + 2; 
+                for(let i = 0; i < heartCount; i++) {
+                    setTimeout(window.spawnTiktokHeart, i * 350);
+                }
+            }
+        }
+    });
+}, 2500); 
+
+// Banco de Dados Estendido (30 bots e frases)
+window.botCommentsDb = {
+    "selfie": ["Que estilo! 🔥", "Tokyo ficou pequena pra vc!", "Aposta quanto que esse look custou mais que minha casa?", "Beleza nível Cassino Central 💎", "Passa a visão de onde comprou isso!", "Astro nato!", "O drip tá insano", "Slk, amassou no look", "Aí tem presença", "Trajado pra vencer", "Ficou muito bem em você", "Tá na pista pra negócio?", "Dono(a) do Distrito", "Que perfeição", "Nasceu pra brilhar", "Brabo(a) demais!", "Aí sabe se vestir", "O terror dos apostadores", "Arrasou corações", "Passou a visão", "Tá estourado(a)", "Roubou a cena", "Simplesmente sem defeitos", "Esse estilo é pra poucos", "Absurdo de lindo(a)", "O neon até ofusca com seu brilho", "Padrão ouro", "Nível VIP do Cassino", "Esquece, tá no topo!", "Muito ímpar!"],
+    "selfie_grupo": ["Bonde pesado! 💣", "Só os de verdade!", "A tropa tá na pista", "Ninguém peita esse esquadrão", "Família Distrito", "Só lenda na mesma foto", "Quem fecha junto, ganha junto", "Esquadrão VIP", "A elite reunida", "Muito peso numa foto só", "Amo vocês!", "Turma do barulho", "Se tem essa galera, tem aposta alta", "Fechamento 100%", "O terror de Tokyo", "Só apostador de elite", "Respeita a gangue", "A máfia tá online", "Aí tem história", "Só quem é sabe", "Faltou eu nessa foto!", "Melhor grupo", "O time que nunca perde", "Só os loucos", "Ninguém separa", "Conexão direta", "Timaço!", "Fechamento certo", "Cuidado com esses aí", "Os donos da cidade!"],
+    "paisagem": ["Esse distrito nunca dorme 🌃", "Qual a coord dessa vista?", "Bela foto, mas sinto cheiro de encrenca aí.", "Lugar perfeito para um embate clandestino ⚔️", "Amo essa área do Distrito!", "Foto pesada!", "Que vista absurda", "Cyberpunk vibes totais", "O neon dessa cidade é lindo", "Cuidado por aí", "Lugar perigoso, mas bonito", "Queria estar aí agora", "Onde é isso?", "Lugar top pra gastar uns Yenes", "Amo esse clima escuro", "Vibe de filme", "Paz antes do caos", "Melhor lugar de Tokyo", "Essa iluminação ficou perfeita", "Arte pura", "Dá até vontade de explorar", "Muito foda o cenário", "Esconderijo perfeito", "Tirou muita onda na foto", "A arquitetura do Distrito é única", "Ficou parecendo um quadro", "Lugar brabo", "Manda a localização no PV", "Visual limpo demais", "Que click genial!"],
+    "batalha": ["Apostei tudo em vc! Não me decepcione!", "Que porrada! 💥", "A casa sempre ganha... ou não?", "Alguém chama os paramédicos 🚑", "Essa luta vai entrar pra história!", "Apostas abertas galera!", "Amasou o adversário!", "Sangue no chão, Yenes no bolso", "Esse golpe foi fatal", "Briga de cachorro grande", "Sem piedade!", "Sobreviveu por milagre", "O Distrito é cruel", "Que combate insano", "Lutou muito", "Foi pra cima com tudo", "Queria ter visto ao vivo", "Bateu pra matar", "A adrenalina ferveu", "Luta épica", "Ninguém segura", "Quebrou a banca", "Apostei no cara errado...", "Isso que é um embate digno", "O chão ficou vermelho", "Violência pura", "Mostrou quem manda", "Achei que ia de arrasta", "Cena de guerra", "Vitória suada!"],
+    "tristeza": ["F no chat 💀", "Faz parte do jogo, levanta a cabeça.", "Perdeu tudo? kkkk", "Vem pro Bar Submundo afogar as mágoas 🍻", "O Distrito é cruel, man.", "Acontece com os melhores.", "Tristeza define", "Melhoras logo", "Nem sempre a banca quebra", "Hoje não foi seu dia", "Deu ruim né?", "Fica assim não", "Aposta de novo que recupera", "Que azar absurdo", "Forças aí guerreiro(a)", "Não era pra ser", "Chorei daqui", "Que bad", "F", "Dias de luta, dias de glória", "Infelizmente a maré tava baixa", "Vai passar", "Levanta e anda", "O jogo cobra caro", "Doeu na alma", "Faz uma vaquinha que eu ajudo", "Respira fundo e volta pro jogo", "Perdas acontecem", "Amanhã é outro dia", "Que dor."],
+    "ostentacao": ["Tá nadando em Yenes 💰", "Me empresta 1000¥?", "Patrão demais!", "A Receita do Distrito tá de olho 👀", "Vida de quem sabe apostar!", "Choveu dinheiro 🤑", "Luxo puro", "Esse é o cheiro do sucesso", "Conta bancária explodindo", "Só nota alta", "Pagando a bebida de geral hoje?", "Aí tem capital", "Faz o PIX", "Nível milionário", "Sabe fazer dinheiro", "O rei/rainha dos Yenes", "Venceu na vida", "Só ostentando o lucro", "A banca chorou pra te pagar", "Rico(a) demais", "Patrocinando o rolê", "Isso que é carteira cheia", "Tirou a sorte grande", "Aprendeu a dominar o jogo", "Aí tem dote", "Chefe é chefe", "O ouro brilha", "Vida de magnata", "Chovendo grana", "Invejinha bateu aqui!"],
+    "romantica": ["Casal do ano ❤️", "Até no submundo tem amor", "Fofos", "Meu coração até errou a batida", "Lindos demais juntos", "Feitos um pro outro", "Meta de relacionamento", "Vocês dois são perfeitos", "O amor vence o caos", "Aí tem química", "A melhor dupla de Tokyo", "Que casalzão", "Vocês transbordam amor", "Se não for assim eu nem quero", "O romance tá no ar", "Meu ship favorito", "Aposta certa: esse amor dura", "Lindos!", "Perfeição em forma de casal", "E o casamento sai quando?", "Até me deu gatilho aqui", "Que fotão de vocês", "Transmitem muita paz", "Sintonia pura", "O verdadeiro prêmio do jogo", "O casal mais hypado", "Eu amo vocês dois", "Almas gêmeas", "Muito amor numa foto só", "Felicidades sempre!"],
+    "radical": ["Quase morreu mas a foto ficou top ⚡", "Adrenalina pura", "Você é louco(a)", "Isso que é viver no limite", "Eu teria infartado", "Ação nível hard", "Coragem é o seu nome", "Sem medo do perigo", "Loucura total", "Passou raspando!", "Que manobra épica", "Sabe viver a vida", "Eu pisquei e perdi", "Radical demais", "Coração deve ter ido a mil", "Só pra quem tem coragem", "Aí é pro player", "Vive como se não houvesse amanhã", "Insano!", "Maluquice boa", "Quebrou as leis da física", "Se der ruim, pelo menos a foto tá feita", "Aventura pura", "Você não tem instinto de sobrevivência kkk", "No limite da navalha", "Pura emoção", "Lendário!", "Absurdo o que você fez", "Deu frio na barriga só de ver", "Zerou o game!"],
+    "trabalho": ["Focando nos Yenes 💼", "O corre não para", "Trabalhar pra apostar depois", "Isso que é dedicação", "Ganhando o pão de cada dia", "Luta diária", "Foco e progresso", "Mão na massa", "Não tem dia de folga", "Fazendo o capital girar", "Trabalhador(a) exemplar", "Produtividade a mil", "O esforço vai recompensar", "Bora fazer grana", "Aquele turno pesado", "Sucesso vem do trabalho", "Cansado(a) mas no corre", "Foco na missão", "O suor de hoje é a aposta de amanhã", "Respeito pelo corre", "Sempre na ativa", "Ninguém constrói império dormindo", "Sextou trabalhando", "A base da sociedade", "Isso aí, foco no objetivo", "Mais um dia, mais um Yen", "Honrando o serviço", "Fazendo a diferença", "Exemplo a ser seguido", "Guerreiro(a) do Distrito!"]
+};
+
+window.gerarComentariosBot = function(postId, contexto) {
+    if(!window.isMaster) return;
+    let frases = window.botCommentsDb[contexto]; if(!frases) return;
+    
+    let qtd = Math.floor(Math.random() * 2) + 5; 
+    let shuffled = frases.sort(() => 0.5 - Math.random());
+    
+    let names = ["Akira_xx", "ShinNeon", "Yumi99", "Kaito_Apostas", "KenjiX", "SoraGamer", "Ren_Cassino", "HanaDark", "Ryu_Lutador", "Natsuki11", "JinTóxico", "Taro_Yen", "Luna_Cyber", "Mika_Drift", "Zero_Cool", "Neon_Samurai", "Rei_das_Cartas", "Aiko_Blade", "Gamer_Z", "Rider_X", "Yakuza_Boy", "Cyber_Girl", "Kira_Tech", "Jinx_99", "Viper_Neon", "Ghost_Coder", "Shadow_Ninja", "Kaze_Rider", "Momo_Pop", "Riku_Flash", "Sato_Hacker", "Yuki_Sniper", "Zack_Jackpot"];
+    
+    let comsToPush = {};
+    for(let i = 0; i < qtd; i++) {
+        let fakeName = names[Math.floor(Math.random() * names.length)];
+        comsToPush[Date.now() + i] = { autor: fakeName, texto: shuffled[i % shuffled.length], timestamp: Date.now() + (i * 1000) };
+    }
+    window.db.ref(`tokyoRpg/posts/${postId}/comentarios`).update(comsToPush).then(() => { window.showNeonToast(`🤖 ${qtd} Bots engajaram no post!`); });
+};
+
+// MOTOR SILENCIOSO DE CURTIDAS EM TEMPO REAL (Roda só no PC do Mestre)
+// MOTOR DE CURTIDAS EM TEMPO REAL (Roda para o Mestre e para o Dono do Post)
+setInterval(() => {
+    if(!window.db || !window.jogadorAtual) return;
+    window.db.ref('tokyoRpg/posts').once('value').then(snap => {
+        let posts = snap.val(); if(!posts) return;
+        let updates = {};
+        Object.keys(posts).forEach(k => {
+            let p = posts[k];
+            // O próprio autor do post processa as curtidas automáticas (ou o Mestre)
+            if((p.autorId === window.jogadorAtual || window.isMaster) && p.targetLikes && (p.likes || 0) < p.targetLikes) {
+                let missing = p.targetLikes - (p.likes || 0);
+                
+                // Puxa 10% dos likes que faltam de uma vez (sobe rápido no início e lento no final)
+                let chunk = Math.max(1, Math.floor(missing * 0.10)); 
+                if(missing < 5) chunk = missing;
+                
+                // 70% de chance de subir curtidas neste exato segundo (dá um ritmo realista)
+                if(Math.random() > 0.3) { 
+                    updates[`${k}/likes`] = (p.likes || 0) + chunk; 
+                }
+            }
+        });
+        if(Object.keys(updates).length > 0) window.db.ref('tokyoRpg/posts').update(updates);
+    });
+}, 2000); // Atualiza a cada 2 segundos
+
+// Dispara os corações voando pelo canto direito da tela!
+// =========================================================
+// O NOVO MOTOR DE LIKES INTELIGENTE E BOTS
+// =========================================================
+
+// Dispara os Emojis (Estilo TikTok) Voando Pela Tela
+window.spawnTiktokHeart = function() {
+    let container = document.getElementById("igamble-view-posts");
+    if(!container || !container.classList.contains("active")) return; 
+
+    let h = document.createElement("div");
+    h.className = "tiktok-heart";
+    let emojis = ["❤️", "🔥", "⭐", "💸", "✨", "💖", "💎", "🎰"];
+    h.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+    
+    let rightPos = 15 + Math.random() * 40; 
+    h.style.right = rightPos + "px";
+    h.style.fontSize = (20 + Math.random() * 20) + "px";
+    
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 2500);
+};
+
+// O Motor Silencioso (Só dono do post puxa os próprios likes para não travar o banco)
+setInterval(() => {
+    if(!window.db || !window.jogadorAtual) return;
+    
+    window.db.ref('tokyoRpg/posts').once('value').then(snap => {
+        let posts = snap.val(); if(!posts) return;
+        let updates = {};
+        let meuPostGanhouLike = false;
+
+        Object.keys(posts).forEach(k => {
+            let p = posts[k];
+            let autorId = p.autorId || p.autor;
+            
+            // Somente o DONO do post ou o MESTRE tem autorização pra atualizar o banco
+            if(autorId === window.jogadorAtual || window.isMaster) {
+                let uData = window.usersGlobais[autorId] || {};
+                let currentTier = uData.popTier || "branca";
+                if(p.isAd) currentTier = "dourado";
+                
+                let limits = window.popularityTiers[currentTier] || window.popularityTiers["branca"];
+                let currentTarget = p.targetLikes || 0;
+                
+                // Mágica: Se a Fama mudou (ou postou agora), ele reseta o alvo para os novos limites
+                if(currentTarget < limits.minL || currentTarget > limits.maxL) {
+                    currentTarget = Math.floor(Math.random() * (limits.maxL - limits.minL + 1)) + limits.minL;
+                    updates[`${k}/targetLikes`] = currentTarget;
+                }
+
+                let currentLikes = parseInt(p.likes) || 0;
+                if(currentLikes < currentTarget) {
+                    let missing = currentTarget - currentLikes;
+                    let chunk = Math.max(1, Math.floor(missing * 0.08)); 
+                    if(missing < 5) chunk = missing;
+                    
+                    // 50% de chance de subir agora (dá aquele aspecto de curtida humana)
+                    if(Math.random() > 0.5) {
+                        updates[`${k}/likes`] = currentLikes + chunk;
+                        meuPostGanhouLike = true;
+                    }
+                }
+            }
+        });
+
+        if(Object.keys(updates).length > 0) {
+            window.db.ref('tokyoRpg/posts').update(updates);
+            
+            // Se as curtidas subiram, explode emojis na tela!
+            if(meuPostGanhouLike) {
+                let heartCount = Math.floor(Math.random() * 4) + 2; 
+                for(let i = 0; i < heartCount; i++) {
+                    setTimeout(window.spawnTiktokHeart, i * 300);
+                }
+            }
+        }
+    });
+}, 2500); // Roda a cada 2.5s
