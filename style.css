@@ -391,9 +391,9 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
 }
 
 #igamble-view-posts .post-sidebar { position: absolute !important; bottom: 25px !important; right: 15px !important; left: auto !important; display: flex !important; flex-direction: column !important; gap: 15px !important; pointer-events: auto !important; z-index: 20 !important; }
-#igamble-view-posts .post-btn-vert { width: 44px !important; height: 44px !important; border-radius: 50% !important; background: rgba(0, 0, 0, 0.6) !important; border: 1px solid rgba(255,255,255,0.2) !important; }
+#igamble-view-posts .post-btn-vert { width: 44px !important; height: 44px !important; border-radius: 50% !important; background: rgba(0, 0, 0, 0.6) !important; border: 1px solid rgba(255,255,255,0.2) !important; color: #fff !important; }
 .post-btn-vert:hover { transform: scale(1.06); border-color: var(--accent-blue); }
-.post-btn-vert span { font-size: 10px; font-weight: 900; line-height: 1; }
+.post-btn-vert span { font-size: 11px !important; font-weight: 900 !important; line-height: 1 !important; color: #fff !important; text-shadow: 0 0 5px #000 !important; }
 .post-btn-vert.liked { color: var(--accent-red); text-shadow: 0 0 15px var(--accent-red); border-color: rgba(255, 26, 85, 0.45); }
 .post-btn-vert.reposted { color: #00ff00; text-shadow: 0 0 15px #00ff00; border-color: rgba(0,255,0,0.35); }
 
@@ -620,3 +620,200 @@ button.action-btn:hover { background: var(--accent-red); color: #000; box-shadow
     border: 1px solid #fff;
 }
 
+/* === NOVO LAYOUT VTT TÁTICO === */
+.vtt-grid-layout {
+    display: flex;
+    gap: 15px;
+    width: 100%;
+    height: calc(100vh - 100px); /* Usa a tela toda menos o menu */
+}
+.vtt-sidebar-left {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    width: 250px;
+    flex-shrink: 0;
+}
+/* Caixa Azul - Faces */
+.box-faces {
+    background: rgba(5,5,10,0.95);
+    border: 2px solid var(--accent-blue);
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    box-shadow: inset 0 0 20px rgba(0,229,255,0.1);
+}
+.char-face-img {
+    width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border: 1px dashed var(--accent-blue);
+    background: #000;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    transition: 0.1s;
+}
+/* Caixa Vermelha - Perícias e Log */
+.box-history {
+    background: rgba(5,5,10,0.95);
+    border: 2px solid var(--accent-red);
+    border-radius: 8px;
+    padding: 10px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    box-shadow: inset 0 0 20px rgba(255,26,85,0.1);
+    overflow-y: auto;
+}
+.vtt-main-area {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+}
+/* A Mágica do Mapa Esticado */
+.map-visual-area { 
+    flex: 1; /* Empurra o HUD verde pro fundo */
+    position: relative; 
+    overflow: hidden; 
+    border: 2px solid var(--accent-blue); 
+    border-radius: 8px; 
+    box-shadow: inset 0 0 50px rgba(0,229,255,0.2); 
+    /* min-height removido para se adaptar perfeitamente */
+}
+/* Caixa Verde - HUD Atributos Inferior */
+.box-hud-bottom {
+    flex-shrink: 0; /* Impede o HUD de ser esmagado */
+    background: rgba(5,5,10,0.95);
+    border: 2px solid #00ff66;
+    border-radius: 8px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    box-shadow: inset 0 0 20px rgba(0,255,102,0.1);
+    gap: 10px;
+}
+.hud-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    background: #000;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid #333;
+}
+
+/* === CONTROLES DESLIZANTES DO MICROFONE E VOZ === */
+.gamble-slider { 
+    -webkit-appearance: none; appearance: none; width: 100%; height: 4px; 
+    background: #333; outline: none; border-radius: 2px; 
+}
+.gamble-slider::-webkit-slider-thumb { 
+    -webkit-appearance: none; appearance: none; width: 14px; height: 14px; 
+    border-radius: 50%; background: var(--accent-blue); cursor: pointer; 
+    box-shadow: 0 0 10px var(--accent-blue); 
+}
+/* === SISTEMA DE POPULARIDADE E ANIMAÇÕES === */
+.pop-star {
+    font-size: 14px;
+    margin-left: 6px;
+    cursor: help;
+    transition: transform 0.2s;
+    display: inline-block;
+}
+.pop-star:hover {
+    transform: scale(1.3);
+}
+
+/* O Coração que voa pro alto */
+.heart-anim {
+    position: fixed;
+    font-size: 28px;
+    color: #ff1a55;
+    pointer-events: none;
+    z-index: 999999;
+    animation: floatHeart 0.8s ease-out forwards;
+    text-shadow: 0 0 15px rgba(255, 26, 85, 0.8);
+}
+@keyframes floatHeart {
+    0% { transform: translateY(0) scale(0.5); opacity: 1; }
+    50% { transform: translateY(-40px) scale(1.2); opacity: 1; }
+    100% { transform: translateY(-80px) scale(1); opacity: 0; }
+}
+
+/* =========================================================
+   CORREÇÃO: FORÇAR CLIQUES NOS PAINÉIS DO MESTRE
+========================================================= */
+.mestre-panel, 
+#mestreVTT, 
+#masterShopPanel, 
+#masterEmbatePanel, 
+[id^="masterMenu_"] {
+    position: relative !important;
+    z-index: 99999 !important;
+    pointer-events: auto !important;
+}
+
+.mestre-panel input, 
+.mestre-panel select, 
+.mestre-panel button,
+#mestreVTT input,
+#mestreVTT button,
+#masterShopPanel input, 
+#masterShopPanel select, 
+#masterShopPanel button,
+#masterEmbatePanel input,
+#masterEmbatePanel button,
+[id^="masterMenu_"] select,
+[id^="masterMenu_"] button {
+    pointer-events: auto !important;
+    user-select: auto !important;
+    -webkit-user-select: auto !important;
+    position: relative;
+    z-index: 100000 !important;
+}
+
+/* =========================================================
+   ANIMAÇÃO TIKTOK LIKES (CORAÇÕES SUBINDO)
+========================================================= */
+@keyframes tiktokHeartAnim {
+    0% { transform: translateY(0) scale(0.5) translateX(0); opacity: 0; }
+    20% { opacity: 1; transform: translateY(-50px) scale(1.2) translateX(-15px); }
+    80% { opacity: 1; transform: translateY(-200px) scale(1) translateX(15px); }
+    100% { transform: translateY(-300px) scale(0.8) translateX(-20px); opacity: 0; }
+}
+
+.tiktok-heart {
+    position: fixed;
+    bottom: 90px;
+    pointer-events: none;
+    z-index: 999999;
+    animation: tiktokHeartAnim 2.5s ease-out forwards;
+    filter: drop-shadow(0 0 5px rgba(255,26,85,0.8));
+}
+
+/* =========================================================
+   ANIMAÇÃO TIKTOK LIKES (CORAÇÕES, FOGOS E DINHEIRO)
+========================================================= */
+@keyframes tiktokHeartAnim {
+    0% { transform: translateY(0) scale(0.5) translateX(0); opacity: 0; }
+    15% { opacity: 1; transform: translateY(-50px) scale(1.2) translateX(-15px); }
+    75% { opacity: 1; transform: translateY(-300px) scale(1) translateX(15px); }
+    100% { transform: translateY(-450px) scale(0.8) translateX(-20px); opacity: 0; }
+}
+
+.tiktok-heart {
+    position: fixed;
+    bottom: 120px;
+    pointer-events: none;
+    z-index: 9999999 !important;
+    animation: tiktokHeartAnim 2.5s ease-out forwards;
+    filter: drop-shadow(0 0 8px rgba(0,0,0,0.8));
+}
