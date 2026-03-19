@@ -8,6 +8,47 @@ window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; wind
 window.MASTER_SERIAL = "4053-DC1";
 window.allTurnosVTT = {}; // Cache global de iniciativas
 
+// === INICIALIZANDO O SOCKET.IO ===
+window.socket = io("http://26.100.100.199:3000"); 
+
+window.socket.on("tokenMovido", (data) => {
+    if(!window.submapasGlobais[data.mapKey]) window.submapasGlobais[data.mapKey] = {};
+    
+    Object.keys(data.updates).forEach(k => {
+        if(data.updates[k] === null) delete window.submapasGlobais[data.mapKey][k];
+        else window.submapasGlobais[data.mapKey][k] = data.updates[k];
+    });
+    
+    if(data.mapKey === window.currentSubMapKey) { 
+        if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); 
+    }
+});
+
+window.socket.on("turnoPassado", (data) => {
+    if(window.allTurnosVTT) window.allTurnosVTT[data.mapKey] = data.novoTurno;
+    if(data.mapKey === window.currentSubMapKey) { 
+        window.turnosVTTGlobal = data.novoTurno; 
+        if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); 
+    }
+});
+
+window.socket.on("receberAtaque", (data) => {
+    if(data.mapKey !== window.currentSubMapKey) return;
+    if(data.events) { 
+        data.events.forEach(atk => { 
+            if(atk.targets && atk.targets.includes(window.jogadorAtual)) {
+                window.mostrarUIReacao(atk.id, atk); 
+            }
+        }); 
+    }
+});
+
+window.socket.on("receberClash", (data) => {
+    if(data.mapKey !== window.currentSubMapKey) return;
+    if(!window.clashQueue) window.clashQueue = []; 
+    window.clashQueue.push(data.clashData);
+    if(typeof window.processClashQueue === "function") window.processClashQueue();
+});
 // === VARIÁVEIS DE COMBATE VTT E FILA DE ANIMAÇÕES ===
 window.combatState = { active: false, weapon: null };
 window.currentCombatListener = null; window.currentCombatChange = null; window._lastCombatMap = null; window.pendingAttack = null; window.clashQueue = []; window.isClashing = false; window.lastClashTs = 0;
@@ -234,21 +275,7 @@ let vttBootInterval = setInterval(() => {
                 }
             }
         });
-
-        window.db.ref('tokyoRpg/submaps').on('value', s => { 
-            window.submapasGlobais = s.val() || {}; 
-            if(isMapOpen()) window.updateTacticalBoard(); 
-        });
-
-        window.db.ref('tokyoRpg/submapsTraps').on('value', s => { 
-            window.submapasTraps = s.val() || {}; 
-            if(isMapOpen()) window.updateTacticalBoard(); 
-        });
-        
-        window.db.ref('tokyoRpg/turnosVTT').on('value', s => { 
-            window.allTurnosVTT = s.val() || {};
-            if(window.currentSubMapKey && isMapOpen()) window.updateTacticalBoard(); 
-        });
+        // ATENÇÃO: As escutas do Firebase para 'submaps', 'turnosVTT' e 'currentClash' foram removidas de propósito para o Socket.io assumir e tirar o lag!
     }
 }, 1000);
 
@@ -347,8 +374,10 @@ window.atualizarBgFace = function(localKey) {
 
 window.abrirSubMapa = function(localKey) {
     window.currentSubMapKey = localKey; 
-    window.turnosVTTGlobal = window.allTurnosVTT ? (window.allTurnosVTT[localKey] || null) : null;
-
+    
+    // 1. Avisa o Socket que você entrou na sala
+    window.socket.emit("joinMap", localKey);
+    
     let tabMapa = document.getElementById("tab-mapa"); if(tabMapa) tabMapa.style.display = "flex"; 
     let mc = document.getElementById("mapCanvas"); if(mc) mc.style.display = "none"; 
     let sc = document.getElementById("subMapCanvas"); if(sc) sc.style.display = "flex";
@@ -363,11 +392,36 @@ window.abrirSubMapa = function(localKey) {
         wrapper.style.backgroundPosition = "center";
     }
     
-    // CHAMA A FUNÇÃO PARA MUDAR O FUNDO DO ROSTO
     window.atualizarBgFace(localKey);
+    window.initTacticalBoard(); 
     
-    window.initTacticalBoard(); window.updateTacticalBoard(); window.listenCombatEvents();
-    if(window.jogadorAtual && window.db) { window.db.ref(`tokyoRpg/submaps/${localKey}`).once('value', s => { let currentGrid = s.val() || {}; if(!Object.values(currentGrid).includes(window.jogadorAtual)) window.db.ref(`tokyoRpg/submaps/${localKey}/0_0`).set(window.jogadorAtual); }); }
+    // 2. Puxa os dados do tabuleiro APENAS UMA VEZ (.once) e entrega pro Socket
+    if(window.jogadorAtual && window.db) { 
+        window.db.ref(`tokyoRpg/submaps/${localKey}`).once('value', s => { 
+            let currentGrid = s.val() || {}; 
+            window.submapasGlobais[localKey] = currentGrid;
+            
+            if(!Object.values(currentGrid).includes(window.jogadorAtual)) {
+                let up = {}; up[`0_0`] = window.jogadorAtual;
+                window.socket.emit("moverToken", { mapKey: localKey, updates: up });
+                window.db.ref(`tokyoRpg/submaps/${localKey}/0_0`).set(window.jogadorAtual); 
+                window.submapasGlobais[localKey]["0_0"] = window.jogadorAtual;
+            }
+            window.updateTacticalBoard();
+        });
+
+        window.db.ref(`tokyoRpg/turnosVTT/${localKey}`).once('value', s => {
+            let turnData = s.val() || {};
+            window.allTurnosVTT[localKey] = turnData;
+            window.turnosVTTGlobal = turnData;
+            window.updateTacticalBoard();
+        });
+
+        window.db.ref(`tokyoRpg/submapsTraps/${localKey}`).once('value', s => {
+            window.submapasTraps[localKey] = s.val() || {};
+            window.updateTacticalBoard();
+        });
+    }
 };
 window.removerDoVttLocal = function() {
     // CORREÇÃO: Salva o nome do mapa atual numa variável segura ANTES do sistema apagar
@@ -776,7 +830,7 @@ window.clicarGrid = function(x,y, isObs) {
     if(!window.isMaster && isAlreadyOnBoard && isTurnoAtivo) {
         let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
         let pesoStats = window.getPesoStatus(u);
-        let costPerStep = pesoStats.atual >= 20 ? 3 : 1; // Se tiver 20kg+ gasta 3 PA por casa
+        let costPerStep = pesoStats.atual >= 20 ? 3 : 1; 
         let totalCost = dist * costPerStep;
 
         if(totalCost > window.pontosAcao) { window.showNeonToast(`Distância requer ${totalCost} PA!`); return; } 
@@ -786,22 +840,29 @@ window.clicarGrid = function(x,y, isObs) {
 
     let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[`${x}_${y}`] = window.jogadorAtual;
     
+    // ATUALIZAÇÃO IMEDIATA VIA SOCKET (O LAG MORRE AQUI)
+    if(!window.submapasGlobais[window.currentSubMapKey]) window.submapasGlobais[window.currentSubMapKey] = {};
+    Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) delete window.submapasGlobais[window.currentSubMapKey][k]; });
+    window.submapasGlobais[window.currentSubMapKey][`${x}_${y}`] = window.jogadorAtual;
+    
+    window.socket.emit("moverToken", { mapKey: window.currentSubMapKey, updates: up });
+    window.updateTacticalBoard();
+
+    // BACKUP SILENCIOSO
     window.db.ref(`tokyoRpg/submaps/${window.currentSubMapKey}`).update(up).then(() => {
         let traps = window.submapasTraps ? window.submapasTraps[window.currentSubMapKey] || {} : {};
         Object.keys(traps).forEach(tId => {
             let trap = traps[tId];
             if (trap.x === x && trap.y === y && trap.owner !== window.jogadorAtual) {
                 window.showNeonToast("💥 PISOU EM UMA ARMADILHA!");
-                let combatEvent = { attacker: trap.owner, weaponName: trap.name + " [Armadilha]", atkRoll: 25, isCrit: false, dmgRoll: trap.dmgRoll, wpnEffect: trap.effect || "", wpnEffectVal: trap.effectVal || 1, atkX: trap.x, atkY: trap.y, targets: [window.jogadorAtual], isHeal: false, timestamp: Date.now(), mapKey: window.currentSubMapKey };
-                window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${Date.now()}`).set(combatEvent);
+                let combatEvent = { attacker: trap.owner, weaponName: trap.name + " [Armadilha]", atkRoll: 25, isCrit: false, dmgRoll: trap.dmgRoll, wpnEffect: trap.effect || "", wpnEffectVal: trap.effectVal || 1, atkX: trap.x, atkY: trap.y, targets: [window.jogadorAtual], isHeal: false, timestamp: Date.now(), mapKey: window.currentSubMapKey, id: Date.now() };
+                
+                window.socket.emit("attackEvent", { mapKey: window.currentSubMapKey, events: [combatEvent] });
                 window.db.ref(`tokyoRpg/submapsTraps/${window.currentSubMapKey}/${tId}`).remove(); 
             }
         });
 
-        // Passa o turno automaticamente se o PA zerar!
-        if(isTurnoAtivo && !window.isMaster && window.pontosAcao <= 0) {
-            setTimeout(() => window.passarTurnoVTT(), 800);
-        }
+        if(isTurnoAtivo && !window.isMaster && window.pontosAcao <= 0) setTimeout(() => window.passarTurnoVTT(), 800);
     });
 };
 
@@ -819,10 +880,34 @@ window.rolarPA = function() {
 
 window.iniciarIniciativaVTT = function() {
     if(!window.isMaster) return;
-    let onGrid = Object.values(window.submapasGlobais[window.currentSubMapKey]||{}).filter(x=>x!=="MESTRE");
-    if(onGrid.length===0) { alert("Ninguém no grid!"); return; }
-    let ini = []; onGrid.forEach(n => { let r=Math.floor(Math.random()*20)+1; let agi = (window.usersGlobais[n]?.rpg?.agi || 1); let sum = r+agi; ini.push({n:n, v:sum}); });
-    ini.sort((a,b)=>b.v-a.v); window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}`).set({ordem: ini.map(x=>x.n), atual:0}); window.showNeonToast("Turnos Definidos!");
+    
+    let grid = window.submapasGlobais[window.currentSubMapKey] || {};
+    let onGrid = Object.values(grid);
+    let participantes = onGrid.filter(n => window.usersGlobais[n] && window.usersGlobais[n].vttReady === true);
+    
+    if(participantes.length === 0) { window.showNeonToast("Nenhum agente confirmou participação!"); return; }
+    
+    let ini = []; 
+    participantes.forEach(n => { 
+        let r = Math.floor(Math.random() * 20) + 1; 
+        let agi = (window.usersGlobais[n]?.rpg?.agi || 1); 
+        let buffs = window.calcularBuffsMoveis(window.usersGlobais[n]);
+        let totalAgi = agi + (buffs.agi || 0);
+        let sum = r + totalAgi; 
+        ini.push({ n: n, v: sum }); 
+        
+        window.db.ref('tokyoRpg/mapDados').push({ 
+            nome: "SISTEMA", 
+            texto: `Iniciativa de ${n}: <span class="dice-result-box">${r}</span> + ${totalAgi} = <strong>${sum}</strong>` 
+        });
+    });
+    
+    ini.sort((a,b) => b.v - a.v); 
+    let tObj = { ordem: ini.map(x => x.n), atual: 0 };
+
+    window.socket.emit("passarTurno", { mapKey: window.currentSubMapKey, novoTurno: tObj });
+    window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}`).set(tObj); 
+    window.showNeonToast("Turnos Definidos!");
 };
 
 window.passarTurnoVTT = function() {
@@ -835,7 +920,6 @@ window.passarTurnoVTT = function() {
         let meusStatus = window.turnosVTTGlobal.status[eu]; 
         Object.keys(meusStatus).forEach(efeito => {
             if(meusStatus[efeito].turnos > 0) {
-                // Lê a lista universal de DoTs (Dano por turno)
                 let isDoT = ["Queimadura", "Veneno", "Sangramento", "Corrupcao", "Maldicao", "Infeccao", "Acido", "Decadencia", "ChoqueEletrico", "CongelamentoInterno", "Hemorragia", "Necrose"].includes(efeito);
                 
                 if(isDoT) { 
@@ -869,8 +953,22 @@ window.passarTurnoVTT = function() {
         }
     });
 
-  if(Object.keys(updates).length > 0) window.db.ref().update(updates);
-    window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}/atual`).set((window.turnosVTTGlobal.atual+1)%window.turnosVTTGlobal.ordem.length);
+    if(Object.keys(updates).length > 0) window.db.ref().update(updates);
+
+    let proxIndex = window.turnosVTTGlobal.atual + 1; 
+    if(proxIndex >= window.turnosVTTGlobal.ordem.length) proxIndex = 0;
+    
+    let novoTurnoObj = JSON.parse(JSON.stringify(window.turnosVTTGlobal)); 
+    novoTurnoObj.atual = proxIndex;
+    
+    // AVISA TODOS VIA SOCKET
+    window.turnosVTTGlobal = novoTurnoObj; 
+    window.updateTacticalBoard(); 
+    window.socket.emit("passarTurno", { mapKey: window.currentSubMapKey, novoTurno: novoTurnoObj }); 
+    
+    // BACKUP
+    window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}/atual`).set(proxIndex); 
+    
     if(eu === window.jogadorAtual) { window.pontosAcao = 0; window.setElText("movRestantes", "PA: 0"); }
 };
 
@@ -948,7 +1046,7 @@ window.executarAtaque = function(tx, ty) {
 
         let u = window.usersGlobais[agenteAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u);
         let erCost = parseInt(arma.erCost) || 0;
-        let paCost = parseInt(arma.paCost) || 1; // Puxa o custo de PA da arma (padrão 1)
+        let paCost = parseInt(arma.paCost) || 1; 
         
         if(!window.isMaster) {
             if(paCost > window.pontosAcao) { window.showNeonToast(`Falta PA! (Requer ${paCost})`); window.cancelarAtaqueVTT(); return; }
@@ -958,16 +1056,10 @@ window.executarAtaque = function(tx, ty) {
             window.setElText("movRestantes", `PA: ${window.pontosAcao}`);
             if(erCost > 0) window.db.ref(`tokyoRpg/users/${agenteAtual}/rpg/integridade`).set(Math.max(0, r.integridade - erCost));
         }
-            if(r.integridade < erCost && !window.isMaster) { window.showNeonToast(`Falta ER! (Requer ${erCost}%)`); window.cancelarAtaqueVTT(); return; }
-            if(!window.isMaster) window.db.ref(`tokyoRpg/users/${agenteAtual}/rpg/integridade`).set(Math.max(0, r.integridade - erCost));
-        
 
         let updatesDB = {};
-        
-        // Puxa a máscara de efeito explodida no mapa real!
         let affectedMap = window.getAffectedCellsMap(tx, ty, px, py, armaCustom);
         
-        // TROCA MARCADA: Se achar o alvo na mesa com a marca, troca!
         let isSwapMarked = Object.values(affectedMap).some(sq => sq.e === 'TrocaMarcada');
         if (isSwapMarked) {
             let markedTarget = null; let markedCell = null;
@@ -982,6 +1074,10 @@ window.executarAtaque = function(tx, ty) {
                 updatesDB[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${markedTarget}/Marcado`] = null; 
                 window.db.ref('tokyoRpg/mapDados').push({ nome: agenteAtual, texto: `🔀 Trocou de lugar com <span class="neon-blue">${markedTarget}</span>!` }); 
                 window.db.ref().update(updatesDB); window.cancelarAtaqueVTT(); 
+                
+                let upS = {}; upS[`${px}_${py}`] = markedTarget; upS[`${markedCell}`] = agenteAtual; 
+                window.socket.emit("moverToken", { mapKey: window.currentSubMapKey, updates: upS });
+
                 if (isTurnoAtivo && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === agenteAtual) window.passarTurnoVTT(); 
                 return; 
             } else { window.showNeonToast("Nenhum alvo marcado no mapa!"); window.cancelarAtaqueVTT(); return; }
@@ -993,12 +1089,13 @@ window.executarAtaque = function(tx, ty) {
             hasActionInMap = true;
             let occ = grid[cid]; let squareData = affectedMap[cid];
             
-            // TP e TRAP (Lê a variável 't' que foi salva no JSON)
             if(squareData.t === 'tp') {
                 if (!grid[cid]) {
                     updatesDB[`tokyoRpg/submaps/${window.currentSubMapKey}/${px}_${py}`] = null; 
                     updatesDB[`tokyoRpg/submaps/${window.currentSubMapKey}/${cid}`] = agenteAtual;
                     window.db.ref('tokyoRpg/mapDados').push({ nome: agenteAtual, texto: `✨ Se teleportou!` }); 
+                    let upS = {}; upS[`${px}_${py}`] = null; upS[`${cid}`] = agenteAtual; 
+                    window.socket.emit("moverToken", { mapKey: window.currentSubMapKey, updates: upS });
                 }
             }
             if(squareData.t === 't') {
@@ -1023,22 +1120,30 @@ window.executarAtaque = function(tx, ty) {
         let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalPoder = dmgRoll + (parseInt(arma.wpnBonus) || 0); if(isCrit) totalPoder *= 2; 
 
         let atkTime = Date.now();
+        let combatEvents = [];
+
         targets.forEach((tgtObj, idx) => {
             let isHeal = (tgtObj.data.t === 'c');
-            updatesDB[`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${atkTime + idx}`] = { 
+            let evObj = { 
+                id: atkTime + idx,
                 attacker: agenteAtual, weaponName: arma.nome, atkRoll: totalAtk, isCrit: isCrit, dmgRoll: totalPoder, 
                 wpnEffect: tgtObj.data.e === "Nenhum" ? "" : tgtObj.data.e, 
                 wpnEffectVal: tgtObj.data.v, 
                 wpnEffectTurnos: tgtObj.data.tr, 
                 atkX: px, atkY: py, targets: [tgtObj.name], isHeal: isHeal, timestamp: atkTime + idx, mapKey: window.currentSubMapKey 
             };
+            combatEvents.push(evObj);
+            // Backup Silencioso
+            updatesDB[`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${atkTime + idx}`] = evObj;
         });
 
-if(targets.length > 0) window.db.ref('tokyoRpg/mapDados').push({ nome: agenteAtual, texto: `Usou <span class="neon-blue">${arma.nome}</span> (Dado: <span class="dice-result-box">${totalAtk}</span>${isCrit?' [CRÍTICO!]':''}) contra ${targets.length} alvo(s)!` });
+        if(targets.length > 0) {
+            window.db.ref('tokyoRpg/mapDados').push({ nome: agenteAtual, texto: `Usou <span class="neon-blue">${arma.nome}</span> (Dado: <span class="dice-result-box">${totalAtk}</span>${isCrit?' [CRÍTICO!]':''}) contra ${targets.length} alvo(s)!` });
+            window.socket.emit("attackEvent", { mapKey: window.currentSubMapKey, events: combatEvents });
+        }
         
         window.db.ref().update(updatesDB); window.cancelarAtaqueVTT(); 
         
-        // Passa o turno APENAS se o PA zerou (Dá tempo do alvo ver a animação de ataque)
         if (isTurnoAtivo && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === agenteAtual) {
             if (window.pontosAcao <= 0 && !window.isMaster) setTimeout(() => window.passarTurnoVTT(), 1500);
         }
@@ -1120,15 +1225,18 @@ window.reagirAtaque = function(tipo) {
         ts: Date.now(), atkName: atk.attacker || "Desconhecido", atkAv: atkImgDisplay, atkAction: `${atk.isHeal ? 'Usou' : 'Ataque'} c/ ${atk.weaponName || 'Arma'}`, 
         atkRoll: atk.atkRoll || 0, defName: window.jogadorAtual, defAv: defImgDisplay, defAction: atk.isHeal ? 'RECEBEU' : tipo.toUpperCase(), 
         defRoll: defRollVal || 0, dmg: finalDmg || 0, winner: winnerId, resultText: resultText, 
-        effect: atk.wpnEffect || "", 
-        effectVal: atk.wpnEffectVal || 1, 
-        effectTurnos: atk.wpnEffectTurnos || 1, // NOVO CAMPO
+        effect: atk.wpnEffect || "", effectVal: atk.wpnEffectVal || 1, effectTurnos: atk.wpnEffectTurnos || 1, 
         atkX: atk.atkX !== undefined ? atk.atkX : -1, atkY: atk.atkY !== undefined ? atk.atkY : -1, isHeal: atk.isHeal || false, mapKey: window.currentSubMapKey 
     };
 
     document.getElementById("reactionModal").style.display = "none";
+    
+    // MANDA A ANIMAÇÃO PRA TODO MUNDO VIA SOCKET
+    window.socket.emit("clashEvent", { mapKey: window.currentSubMapKey, clashData: clashPayload }); 
+    
     window.db.ref('tokyoRpg/currentClash').set(clashPayload);
     if(window.currentSubMapKey && window.pendingAttack.id) window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${window.pendingAttack.id}`).remove().catch(()=>{});
+    
     window.pendingAttack = null;
 };
 
@@ -2318,6 +2426,9 @@ window.iniciarLigacao = function() {
 // =========================================================
 // INICIALIZAÇÃO FIREBASE (O MOTOR PRINCIPAL)
 // =========================================================
+// =========================================================
+// INICIALIZAÇÃO FIREBASE (O MOTOR PRINCIPAL)
+// =========================================================
 window.onload = function() {
     if (window.db) {
         window.carregarTitulos(); window.carregarAvatares(); 
@@ -2337,33 +2448,17 @@ window.onload = function() {
         window.db.ref('tokyoRpg/mapEmbates').on('value', s => { window.embatesGlobais = s.val() || {}; if(!window.currentSubMapKey && typeof window.desenharMapa === "function") window.desenharMapa(); });
         window.db.ref('tokyoRpg/loja').on('value', s => { window.lojaGlobal = s.val() || {}; if(typeof window.renderizarLojaUI === "function") window.renderizarLojaUI(); if(typeof window.renderizarFicha === "function") window.renderizarFicha(); if(typeof window.renderizarMochila === "function") window.renderizarMochila(); if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); }); 
         window.db.ref('tokyoRpg/casasGrid').on('value', s => { window.casaGlobais = s.val() || {}; if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); });
-        window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
-        window.db.ref('tokyoRpg/submapsTraps').on('value', s => { window.submapasTraps = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
+        
+        // 🔥 AQUI ESTAVA O SEU ERRO!
+        // Eu REMOVI os window.db.ref('tokyoRpg/submaps').on(...)
+        // Removi os window.db.ref('tokyoRpg/turnosVTT').on(...)
+        // E removi os window.db.ref('tokyoRpg/currentClash').on(...)
+        // Agora o Socket.io tem o controle total da velocidade!
+
         window.db.ref('tokyoRpg/jobConfig').on('value', s => { window.jobConfigGlobais = s.val() || {}; if(window.currentViewingJob) window.abrirArvoreJob(window.currentViewingJob.subjob, window.currentViewingJob.cat, !window.usersGlobais[window.jogadorAtual]?.job?.locked); });
         window.db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { if(typeof window.mostrarDadoOverlay === "function") window.mostrarDadoOverlay(d.nome, d.form, d.results); } });
         window.db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div style="margin-bottom:5px;"><strong class="neon-blue">${x.nome}:</strong> ${x.texto}</div>`); b.scrollTop = b.scrollHeight; }});
         
-        window.db.ref('tokyoRpg/turnosVTT').on('value', s => { 
-            window.allTurnosVTT = s.val() || {};
-            if(window.currentSubMapKey) {
-                window.turnosVTTGlobal = window.allTurnosVTT[window.currentSubMapKey] || null;
-                if (typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); 
-            }
-        });
-
-        // MOTOR DE FILA DO CLASH 
-        window.db.ref('tokyoRpg/currentClash').on('value', s => {
-            let d = s.val();
-            // Evita rodar batalhas velhas e só roda se for na SALA ATUAL!
-            if(d && d.ts > window.lastClashTs && (Date.now() - d.ts < 15000)) {
-                window.lastClashTs = d.ts;
-                if (d.mapKey === window.currentSubMapKey) { 
-                    window.clashQueue.push(d);
-                    if(typeof window.processClashQueue === "function") window.processClashQueue();
-                }
-            }
-        });
-
         window.db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
             try {
                 let d = s.val(); let b = document.getElementById("chatMessages"); if(!b) return; b.innerHTML=""; 
@@ -2702,16 +2797,7 @@ window.onload = function() {
         });
 
         // MOTOR DE FILA DO CLASH (CORRIGIDO PARA CHAMAR A ANIMAÇÃO CORRETAMENTE)
-        window.db.ref('tokyoRpg/currentClash').on('value', s => {
-            let d = s.val();
-            if(d && d.ts > window.lastClashTs && (Date.now() - d.ts < 15000)) {
-                window.lastClashTs = d.ts;
-                if (d.mapKey === window.currentSubMapKey) { 
-                    window.clashQueue.push(d);
-                    if(typeof window.processClashQueue === "function") window.processClashQueue();
-                }
-            }
-        });
+        
 
         window.db.ref('tokyoRpg/chat').limitToLast(40).on('value', s => { 
             try {
@@ -5591,3 +5677,5 @@ window.mudarClasseMestreVTT = function(val) {
         if(btnCnc && btnCnc.style.display !== "none") window.cancelarAtaqueVTT();
     });
 };
+
+window.socket.emit("joinMap", mapKey);
