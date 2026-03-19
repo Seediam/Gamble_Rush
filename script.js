@@ -4,7 +4,7 @@
 window.submapasConfig = {};
 window.firebaseConfig = { apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw", authDomain: "gumble-rush.firebaseapp.com", databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com", projectId: "gumble-rush", storageBucket: "gumble-rush.firebasestorage.app", messagingSenderId: "837162957323", appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e" };
 window.db = null; window.usersGlobais = {}; window.presenceGlobal = {}; window.lojaGlobal = {}; window.submapasGlobais = {}; window.submapasBGs = {}; window.turnosVTTGlobal = null; window.embatesGlobais = {}; window.casaGlobais = {};
-window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.movimentosRestantes = 0; window.connectionRef = null;
+window.jogadorAtual = ""; window.serialAtual = ""; window.isMaster = false; window.currentSubMapKey = ""; window.pontosAcao = 0; window.connectionRef = null;
 window.MASTER_SERIAL = "4053-DC1";
 window.allTurnosVTT = {}; // Cache global de iniciativas
 
@@ -441,126 +441,265 @@ window.initTacticalBoard = function() {
     } catch(e) { console.error("Erro critico no grid:", e); }
 };
 
-window.getAffectedCells = function(tx, ty, px, py, style, range) {
-    let cells = [];
-    if (!style) style = 'melee'; 
+// =========================================================
+// MATEMÁTICA DO VTT: ÁREA, PULO E MIRA EXATOS
+// =========================================================
+window.getAffectedCellsMap = function(cx, cy, px, py, customPattern) {
+    let affectedMap = {}; 
+    if (!customPattern || !customPattern.startsWith("{")) return affectedMap;
 
-    if (style === 'melee' || style === 'ranged' || style === 'teleport' || style === 'heal' || style === 'trap') { cells.push(`${tx}_${ty}`); } 
-    else if (style === 'aoe') { for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) cells.push(`${tx+i}_${ty+j}`); } 
-    else if (style === 'self_aoe') { for(let i=-1; i<=1; i++) for(let j=-1; j<=1; j++) if(i!==0 || j!==0) cells.push(`${px+i}_${py+j}`); } 
-    else if (style === 'cross') { cells.push(`${tx}_${ty}`, `${tx+1}_${ty}`, `${tx-1}_${ty}`, `${tx}_${ty+1}`, `${tx}_${ty-1}`); } 
-    else if (style === 'x_shape') { 
-        cells.push(`${tx}_${ty}`);
-        for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty+i}`, `${tx-i}_${ty-i}`, `${tx+i}_${ty-i}`, `${tx-i}_${ty+i}`); }
-    }
-    else if (style === 'big_cross') {
-        cells.push(`${tx}_${ty}`);
-        for(let i=1; i<=range; i++) { cells.push(`${tx+i}_${ty}`, `${tx-i}_${ty}`, `${tx}_${ty+i}`, `${tx}_${ty-i}`); }
-    } else if (style === 'line') {
-        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
-        let xInc = dx / steps; let yInc = dy / steps;
-        for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
-    } else if (style === 'alternating_line') {
-        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
-        let xInc = dx / steps; let yInc = dy / steps;
-        for(let i=1; i<=steps; i+=2) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
-    } else if (style === 't_shape') {
-        let dx = tx - px; let dy = ty - py; let steps = Math.max(Math.abs(dx), Math.abs(dy)); if(steps===0) return [`${tx}_${ty}`];
-        let xInc = dx / steps; let yInc = dy / steps;
-        for(let i=1; i<=steps; i++) cells.push(`${Math.round(px + i*xInc)}_${Math.round(py + i*yInc)}`);
-        let rx = Math.round(px + steps*xInc); let ry = Math.round(py + steps*yInc);
-        if (Math.abs(dx) > Math.abs(dy)) { cells.push(`${rx}_${ry+1}`, `${rx}_${ry-1}`); } else { cells.push(`${rx+1}_${ry}`, `${rx-1}_${ry}`); }
-    } else if (style === 'cone') {
-        let dx = tx - px; let dy = ty - py; let dirX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let dirY = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
-        for(let i=1; i<=range; i++) {
-            if (Math.abs(dx) > Math.abs(dy)) { for(let j=-i; j<=i; j++) cells.push(`${px + (dirX*i)}_${py + j}`); } 
-            else { for(let j=-i; j<=i; j++) cells.push(`${px + j}_${py + (dirY*i)}`); }
+    let pat = {}; try { pat = JSON.parse(customPattern); } catch(e) { return affectedMap; }
+    
+    // Calcula a direção que o player tá olhando baseado onde o mouse tá
+    let diffX = cx - px; let diffY = cy - py; let dir = "UP";
+    if (Math.abs(diffX) > Math.abs(diffY)) { dir = diffX > 0 ? "RIGHT" : "LEFT"; } 
+    else if (diffX !== 0 || diffY !== 0) { dir = diffY > 0 ? "DOWN" : "UP"; }
+
+    Object.keys(pat.effectMask || {}).forEach(relCoord => {
+        let [dxStr, dyStr] = relCoord.split("_");
+        let dx = parseInt(dxStr); let dy = parseInt(dyStr);
+        let sqData = pat.effectMask[relCoord];
+
+        if (pat.castType === "alvo") { 
+            // Explosão sai do lugar exato que você clicou no mapa (cx, cy)
+            affectedMap[`${cx + dx}_${cy + dy}`] = sqData;
+        } else if (pat.castType === "aura") { 
+            // Explosão em volta do próprio corpo (px, py)
+            affectedMap[`${px + dx}_${py + dy}`] = sqData;
+        } else { 
+            // DIRECIONAL: Rotação geométrica exata pro lado que o mouse aponta
+            let finalDx = dx; let finalDy = dy;
+            if (dir === "RIGHT") { finalDx = -dy; finalDy = dx; } 
+            else if (dir === "DOWN") { finalDx = -dx; finalDy = -dy; } 
+            else if (dir === "LEFT") { finalDx = dy; finalDy = -dx; }
+            affectedMap[`${px + finalDx}_${py + finalDy}`] = sqData;
         }
-    }
-    return cells;
+    });
+    return affectedMap;
 };
 
-window.highlightTargetCells = function(tx, ty, px, py, style, range) { window.clearHighlightTargetCells(); let affected = window.getAffectedCells(tx, ty, px, py, style, range); affected.forEach(cid => { let cell = document.getElementById(`cell_${cid}`); if(cell && !cell.classList.contains("hidden-vtt-cell")) cell.classList.add("target-hover"); }); };
-window.clearHighlightTargetCells = function() { document.querySelectorAll(".target-hover").forEach(c => c.classList.remove("target-hover")); };
+window.clearHighlightTargetCells = function() { 
+    document.querySelectorAll(".target-hover").forEach(c => {
+        c.classList.remove("target-hover"); c.style.backgroundColor = ""; 
+        let emoji = c.querySelector('.vtt-aim-emoji'); if(emoji) emoji.remove(); 
+    }); 
+};
 
+window.highlightTargetCells = function(tx, ty, px, py, customPattern) { 
+    window.clearHighlightTargetCells(); 
+    let affectedMap = window.getAffectedCellsMap(tx, ty, px, py, customPattern); 
+    
+    Object.keys(affectedMap).forEach(cid => { 
+        let cell = document.getElementById(`cell_${cid}`); 
+        if(cell && !cell.classList.contains("hidden-vtt-cell")) {
+            cell.classList.add("target-hover"); 
+            let sq = affectedMap[cid];
+            if(sq.t === 'c') cell.style.backgroundColor = "rgba(0, 255, 102, 0.5)"; else if(sq.t === 't') cell.style.backgroundColor = "rgba(0, 102, 0, 0.5)"; else if(sq.t === 'tp') cell.style.backgroundColor = "rgba(176, 0, 255, 0.5)"; else if(sq.t === 'i') cell.style.backgroundColor = "rgba(0, 102, 255, 0.5)"; else cell.style.backgroundColor = "rgba(255, 26, 85, 0.5)";
+
+            if(sq.e && sq.e !== "Nenhum" && window.effectEmojis[sq.e]) {
+                if(!cell.querySelector('.vtt-aim-emoji')) {
+                    let el = document.createElement("span"); el.className = "vtt-aim-emoji";
+                    el.style.cssText = "position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-size:18px; pointer-events:none; z-index:5; text-shadow: 0 0 5px #000;";
+                    el.innerText = window.effectEmojis[sq.e]; cell.appendChild(el);
+                }
+            }
+        }
+    }); 
+};
 window.lastFocusTurnIndex = -1; window.lastFocusCid = "";
 
+// =========================================================
+// 2. TABULEIRO: SÓ PINTA DE AMARELO AS CASAS VÁLIDAS
+// =========================================================
+// =========================================================
+// TABULEIRO DO VTT (PERMITE DESENHAR SEM BLOQUEIOS)
+// =========================================================
 window.updateTacticalBoard = function() {
     try {
         if(!window.currentSubMapKey) return;
-        
         window.turnosVTTGlobal = window.allTurnosVTT ? window.allTurnosVTT[window.currentSubMapKey] : null;
 
-        let painelMestre = document.getElementById("mestreVTT"); 
-        if(window.isMaster) { if(painelMestre) painelMestre.style.display = "flex"; let conf = window.submapasConfig[window.currentSubMapKey] || {}; if(document.getElementById("vttColsInp")) document.getElementById("vttColsInp").value = conf.cols || 16; if(document.getElementById("vttRowsInp")) document.getElementById("vttRowsInp").value = conf.rows || 12; if(document.getElementById("vttShapeInp")) document.getElementById("vttShapeInp").value = conf.shape || 'quadrado'; } else { if(painelMestre) painelMestre.style.display = "none"; }
-
-        let grid = window.submapasGlobais[window.currentSubMapKey] || {}; let layer = document.getElementById("tokensLayer"); if(!layer) return;
-        let conf = window.submapasConfig[window.currentSubMapKey] || {}; let cols = conf.cols || 16; let rows = conf.rows || 12; let cellSize = window.VTT_CELL_SIZE || 50; 
+        let grid = window.submapasGlobais[window.currentSubMapKey] || {}; 
+        let layer = document.getElementById("tokensLayer"); if(!layer) return;
+        let conf = window.submapasConfig[window.currentSubMapKey] || {}; 
+        let cols = conf.cols || 16; let rows = conf.rows || 12; let cellSize = window.VTT_CELL_SIZE || 50; 
         
-        let px = -1, py = -1; Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let parts = cid.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); } });
+        let px = -1, py = -1; 
+        Object.keys(grid).forEach(cid => { 
+            if(grid[cid] === window.jogadorAtual) { 
+                let parts = cid.split("_"); px = parseInt(parts[0]); py = parseInt(parts[1]); 
+            } 
+        });
 
-        let isCombat = (window.combatState && window.combatState.active); let armaRange = isCombat && window.combatState.weapon ? parseInt(window.combatState.weapon.wpnRange || 1) : 0; let armaStyle = isCombat && window.combatState.weapon ? window.combatState.weapon.wpnStyle : 'melee';
+        let isCombat = (window.combatState && window.combatState.active); 
+        let arma = window.combatState.weapon;
+        let armaRange = isCombat && arma ? parseInt(arma.wpnRange || 1) : 0; 
+        let armaMin = isCombat && arma ? parseInt(arma.minRange || 0) : 0; 
+        let armaAoe = isCombat && arma ? parseInt(arma.aoe || 0) : 0; 
+        let armaStyle = isCombat && arma ? arma.wpnStyle : 'melee'; 
+        let armaCustom = isCombat && arma ? arma.customPattern : "";
 
+        // O LAÇO DE REPETIÇÃO COMEÇA AQUI
         for(let y=0; y<rows; y++) {
             for(let x=0; x<cols; x++) {
                 let cell = document.getElementById(`cell_${x}_${y}`);
                 if(cell && !cell.classList.contains("hidden-vtt-cell")) {
-                    cell.classList.remove("in-range", "in-range-blocked", "in-range-combat", "target-hover"); cell.onmouseover = null; cell.onmouseout = null;
-                    let isObs = conf.cells && conf.cells[`${x}_${y}`] ? conf.cells[`${x}_${y}`].obs : false; let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia")); let canWalk = !isObs || isGaia || window.isMaster;
+                    cell.classList.remove("in-range", "in-range-blocked", "in-range-combat", "target-hover"); 
+                    cell.onmouseover = null; cell.onmouseout = null;
+                    
+                    let isObs = conf.cells && conf.cells[`${x}_${y}`] ? conf.cells[`${x}_${y}`].obs : false; 
+                    let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia")); 
+                    let canWalk = !isObs || isGaia || window.isMaster;
+                    
                     if(px !== -1 && py !== -1) {
                         let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-                        if(isCombat) { if(dist >= 0 && dist <= armaRange) { cell.classList.add("in-range-combat"); cell.onmouseover = () => window.highlightTargetCells(x, y, px, py, armaStyle, armaRange); cell.onmouseout = () => window.clearHighlightTargetCells(); } } else if(window.movimentosRestantes > 0 && dist > 0 && dist <= window.movimentosRestantes && !grid[`${x}_${y}`]) { if(canWalk) cell.classList.add("in-range"); else cell.classList.add("in-range-blocked"); }
+                        
+                        if(isCombat) {  
+                            let isValidTarget = false;
+                            
+                            if (armaCustom && armaCustom.startsWith("{")) {
+                                try {
+                                    let pat = JSON.parse(armaCustom);
+                                    let realMaxRange = pat.maxRange || armaRange || 12;
+                                    
+                                    if (pat.castType === "aura") { 
+                                        if (dist === 0) isValidTarget = true; // Só deixa clicar em si mesmo
+                                    } else if (pat.castType === "direcional") {
+                                        if (dist > 0 && dist <= realMaxRange) isValidTarget = true; 
+                                    } else if (pat.castType === "alvo") {
+                                        // SÓ PINTA DE AMARELO SE VOCÊ DESENHOU NA MÁSCARA AZUL DO PINTOR
+                                        let relativeCid = `${x - px}_${y - py}`;
+                                        if (pat.rangeMask && pat.rangeMask.includes(relativeCid)) isValidTarget = true;
+                                    }
+                                } catch(e) {}
+                            } else {
+                                // Fallback pra skill antiga
+                                if (dist >= armaMin && dist <= Math.max(armaRange, armaMin)) isValidTarget = true;
+                            }
+
+                            if(isValidTarget) { 
+                                cell.classList.add("in-range-combat"); 
+                                cell.onmouseover = () => window.highlightTargetCells(x, y, px, py, armaCustom); 
+                                cell.onmouseout = () => window.clearHighlightTargetCells(); 
+                            } 
+                        } else if(window.pontosAcao > 0 && dist > 0 && !grid[`${x}_${y}`]) { 
+    let costPerStep = (window.getPesoStatus(window.usersGlobais[window.jogadorAtual]).atual >= 20) ? 3 : 1;
+    if ((dist * costPerStep) <= window.pontosAcao) {
+        if(canWalk) cell.classList.add("in-range"); 
+        else cell.classList.add("in-range-blocked"); 
+    }
+}
                     }
                 }
             }
-        }
+        } 
+        // AQUI ESTAVAM FALTANDO AS CHAVES PARA FECHAR O LAÇO! ^^^^
 
         let traps = window.submapasTraps ? window.submapasTraps[window.currentSubMapKey] || {} : {};
         document.querySelectorAll(".trap-icon-visual").forEach(e => e.remove());
         Object.keys(traps).forEach(tId => {
-            let trap = traps[tId]; let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia")); let isMyTrap = (trap.owner === window.jogadorAtual);
+            let trap = traps[tId]; 
+            let isGaia = (window.usersGlobais[window.jogadorAtual]?.deus && window.usersGlobais[window.jogadorAtual].deus.includes("Gaia")); 
+            let isMyTrap = (trap.owner === window.jogadorAtual);
+            
             if(isMyTrap || isGaia || window.isMaster) {
                 let cell = document.getElementById(`cell_${trap.x}_${trap.y}`);
                 if(cell && !cell.classList.contains("hidden-vtt-cell")) {
-                    let trapEl = document.createElement("div"); trapEl.className = "trap-icon-visual"; trapEl.innerHTML = "🕸️";
-                    trapEl.style.position = "absolute"; trapEl.style.top = "50%"; trapEl.style.left = "50%"; trapEl.style.transform = "translate(-50%, -50%)"; trapEl.style.fontSize = "25px"; trapEl.style.opacity = isMyTrap ? "0.8" : "0.4"; trapEl.style.pointerEvents = "none"; trapEl.style.zIndex = "4";
+                    let trapEl = document.createElement("div"); 
+                    trapEl.className = "trap-icon-visual"; 
+                    trapEl.innerHTML = "🕸️";
+                    trapEl.style.position = "absolute"; 
+                    trapEl.style.top = "50%"; 
+                    trapEl.style.left = "50%"; 
+                    trapEl.style.transform = "translate(-50%, -50%)"; 
+                    trapEl.style.fontSize = "25px"; 
+                    trapEl.style.opacity = isMyTrap ? "0.8" : "0.4"; 
+                    trapEl.style.pointerEvents = "none"; 
+                    trapEl.style.zIndex = "4";
                     if(isGaia && !isMyTrap) trapEl.style.filter = "drop-shadow(0 0 5px #00ff00)";
                     cell.appendChild(trapEl);
                 }
             }
         });
 
-        let focusTarget = window.jogadorAtual; let isTurnoAtivo = (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length > 0);
+        let focusTarget = window.jogadorAtual; 
+        let isTurnoAtivo = (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length > 0);
         if (isTurnoAtivo) { focusTarget = window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual]; }
 
         let currentTokens = []; let focarX = -1, focarY = -1;
 
         Object.keys(grid).forEach(cid => {
-            let occupier = grid[cid]; if(!occupier) return; let parts = cid.split("_"); let x = parseInt(parts[0]); let y = parseInt(parts[1]); if(x >= cols || y >= rows) return; 
-            let tokenId = `token_${occupier}`; currentTokens.push(tokenId); let tokenEl = document.getElementById(tokenId); 
+            let occupier = grid[cid]; if(!occupier) return; 
+            let parts = cid.split("_"); 
+            let x = parseInt(parts[0]); let y = parseInt(parts[1]); 
+            if(x >= cols || y >= rows) return; 
             
-            // AQUI: Puxa a Imagem Customizada primeiro para o VTT (Tabuleiro)
-            let occData = window.usersGlobais[occupier] || {};
+            let tokenId = `token_${occupier}`; 
+            currentTokens.push(tokenId); 
+            let tokenEl = document.getElementById(tokenId); 
+            
+            let occData = window.usersGlobais[occupier] || {}; 
             let avToken = occData.charImgUrl || occData.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${occupier}`; 
+            let isMe = (occupier === window.jogadorAtual); 
+            let leftPx = (x * cellSize); let topPx = (y * cellSize);
             
-            let isMe = (occupier === window.jogadorAtual); let leftPx = (x * cellSize); let topPx = (y * cellSize);
             if(!tokenEl) { 
                 let tHtml = document.createElement("div"); tHtml.id = tokenId; tHtml.className = "tactical-token"; 
-                if(isMe) { tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; } 
+                if(window.isMaster) { 
+                    tHtml.oncontextmenu = function(e) { 
+                        e.preventDefault(); 
+                        if(confirm(`Desintegrar [${occupier}] do tabuleiro?`)) { 
+                            let updates = {}; 
+                            updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${cid}`] = null; 
+                            if(occData.isSummon) updates[`tokyoRpg/users/${occupier}/status`] = "morto"; 
+                            window.db.ref().update(updates).then(() => { 
+                                window.showNeonToast("💥 Alvo removido!"); 
+                                window.updateTacticalBoard(); 
+                            }); 
+                        } 
+                    }; 
+                    tHtml.style.cursor = "crosshair"; 
+                }
+                if(isMe) { 
+                    tHtml.style.borderColor = "#fff"; tHtml.style.boxShadow = "0 0 20px #fff"; tHtml.style.zIndex = "10"; 
+                } else if (occData.isSummon) { 
+                    tHtml.style.borderColor = "#ffaa00"; tHtml.style.boxShadow = "0 0 10px #ffaa00"; tHtml.style.borderRadius = "20%"; 
+                } else if (occupier === "MESTRE") { 
+                    tHtml.style.borderColor = "#f00"; tHtml.style.boxShadow = "0 0 20px #f00"; 
+                }
                 tHtml.innerHTML = `<div id="status_layer_${occupier}" class="token-status-layer"></div><div class="token-hp-bar-container"><div class="token-hp-bar-trail" id="hp_trail_${occupier}"></div><div class="token-hp-bar-fill" id="hp_fill_${occupier}"></div></div>`; 
-                layer.appendChild(tHtml); tokenEl = tHtml; 
+                layer.appendChild(tHtml); 
+                tokenEl = tHtml; 
             }
-            
-            // Força a imagem a atualizar se a pessoa upar uma nova
             tokenEl.style.backgroundImage = `url('${avToken}')`; 
-            tokenEl.style.left = leftPx + "px"; tokenEl.style.top = topPx + "px"; tokenEl.style.width = cellSize + "px"; tokenEl.style.height = cellSize + "px"; 
+            tokenEl.style.left = leftPx + "px"; 
+            tokenEl.style.top = topPx + "px"; 
+            tokenEl.style.width = cellSize + "px"; 
+            tokenEl.style.height = cellSize + "px"; 
             
-            let occRpg = window.getSafeRpg(occData); let hpPct = Math.max(0, Math.min(100, ((occRpg.hp || 0) / 100) * 100)); let fillBar = document.getElementById(`hp_fill_${occupier}`); let trailBar = document.getElementById(`hp_trail_${occupier}`); if(fillBar && trailBar) { fillBar.style.width = hpPct + "%"; trailBar.style.width = hpPct + "%"; }
+            let occRpg = window.getSafeRpg(occData); 
+            let hpPct = Math.max(0, Math.min(100, ((occRpg.hp || 0) / (occRpg.hpMax || 100)) * 100)); 
+            let fillBar = document.getElementById(`hp_fill_${occupier}`); 
+            let trailBar = document.getElementById(`hp_trail_${occupier}`); 
+            
+            if(fillBar && trailBar) { 
+                fillBar.style.width = hpPct + "%"; 
+                trailBar.style.width = hpPct + "%"; 
+                fillBar.style.background = hpPct < 30 ? "#f00" : (hpPct < 60 ? "#ffaa00" : "#0f0"); 
+            }
             
             let stLayer = document.getElementById(`status_layer_${occupier}`);
             if(stLayer) {
-                stLayer.innerHTML = ""; let st = window.turnosVTTGlobal?.status?.[occupier];
-                if(st) { Object.keys(st).forEach(k => { if(st[k].turnos > 0) { let icon = "🔥"; if(k==="Sangramento") icon="🩸"; if(k==="Veneno") icon="🧪"; if(k==="Atordoamento") icon="⚡"; if(k==="Derrubado") icon="🦶"; stLayer.innerHTML += `<span class="vtt-status-icon" title="${k}">${icon}<small>${st[k].turnos}</small></span>`; } }); }
+                stLayer.innerHTML = ""; 
+                let st = window.turnosVTTGlobal?.status?.[occupier];
+                if(st) { 
+                    Object.keys(st).forEach(k => { 
+                        if(st[k].turnos > 0) { 
+                            let icon = window.effectEmojis ? (window.effectEmojis[k] || "🔥") : "🔥";
+                            stLayer.innerHTML += `<span class="vtt-status-icon" title="${k}">${icon}<small>${st[k].turnos}</small></span>`; 
+                        } 
+                    }); 
+                } 
             }
             if(occupier === focusTarget) { focarX = x; focarY = y; }
         });
@@ -568,32 +707,54 @@ window.updateTacticalBoard = function() {
         Array.from(layer.children).forEach(t => { if(!currentTokens.includes(t.id)) t.remove(); });
         
         let currentFocusCid = `${focarX}_${focarY}`; let turnIndex = isTurnoAtivo ? window.turnosVTTGlobal.atual : -1;
-        if (focarX !== -1 && focarY !== -1) { if (window.lastFocusTurnIndex !== turnIndex || window.lastFocusCid !== currentFocusCid) { setTimeout(() => window.focarCameraVTT(focarX, focarY), 100); window.lastFocusTurnIndex = turnIndex; window.lastFocusCid = currentFocusCid; } }
+        if (focarX !== -1 && focarY !== -1) { 
+            if (window.lastFocusTurnIndex !== turnIndex || window.lastFocusCid !== currentFocusCid) { 
+                setTimeout(() => window.focarCameraVTT(focarX, focarY), 100); 
+                window.lastFocusTurnIndex = turnIndex; 
+                window.lastFocusCid = currentFocusCid; 
+            } 
+        }
         
-        let tBar = document.getElementById("turnOrderUI"); let btnP = document.getElementById("btnPassTurno");
-        let btnAtk = document.getElementById("btnAtacar"); let btnMover = document.getElementById("btnMoverVTT"); let btnLevantar = document.getElementById("btnLevantarVTT");
+        let tBar = document.getElementById("turnOrderUI"); 
+        let btnP = document.getElementById("btnPassTurno"); 
+        let btnAtk = document.getElementById("btnAtacar"); 
+        let btnMover = document.getElementById("btnMoverVTT"); 
+        let btnLevantar = document.getElementById("btnLevantarVTT");
         
         if(isTurnoAtivo) {
             if(tBar) { tBar.style.display="flex"; tBar.innerHTML=""; }
             let isMyTurn = (window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual);
             let amIDown = window.turnosVTTGlobal.status && window.turnosVTTGlobal.status[window.jogadorAtual] && window.turnosVTTGlobal.status[window.jogadorAtual]["Derrubado"] && window.turnosVTTGlobal.status[window.jogadorAtual]["Derrubado"].turnos > 0;
-
-            if(isMyTurn) {
-                if(amIDown) {
-                    if(btnP) btnP.style.display = "none"; if(btnAtk) btnAtk.style.display = "none"; if(btnMover) btnMover.style.display = "none"; if(btnLevantar) btnLevantar.style.display = "inline-block";
-                } else {
-                    if(btnP) btnP.style.display = "inline-block"; if(btnAtk && !window.combatState.active) btnAtk.style.display = "inline-block"; if(btnMover) btnMover.style.display = "inline-block"; if(btnLevantar) btnLevantar.style.display = "none";
-                }
-            } else {
-                if(btnP) btnP.style.display = window.isMaster ? "inline-block" : "none"; if(btnAtk) btnAtk.style.display = "none"; if(btnMover) btnMover.style.display = "none"; if(btnLevantar) btnLevantar.style.display = "none";
+            
+            if(isMyTurn) { 
+                if(amIDown) { 
+                    if(btnP) btnP.style.display = "none"; 
+                    if(btnAtk) btnAtk.style.display = "none"; 
+                    if(btnMover) btnMover.style.display = "none"; 
+                    if(btnLevantar) btnLevantar.style.display = "inline-block"; 
+                } else { 
+                    if(btnP) btnP.style.display = "inline-block"; 
+                    if(btnAtk && !window.combatState.active) btnAtk.style.display = "inline-block"; 
+                    if(btnMover) btnMover.style.display = "inline-block"; 
+                    if(btnLevantar) btnLevantar.style.display = "none"; 
+                } 
+            } else { 
+                if(btnP) btnP.style.display = window.isMaster ? "inline-block" : "none"; 
+                if(btnAtk) btnAtk.style.display = "none"; 
+                if(btnMover) btnMover.style.display = "none"; 
+                if(btnLevantar) btnLevantar.style.display = "none"; 
             }
-            window.turnosVTTGlobal.ordem.forEach((n,i) => { if(tBar) tBar.innerHTML+=`<img src="${window.usersGlobais[n]?.avatarUrl||'https://api.dicebear.com/9.x/adventurer/svg?seed='+n}" class="turn-avatar ${i===window.turnosVTTGlobal.atual?'active':''}" title="${n}">`; });
+            window.turnosVTTGlobal.ordem.forEach((n,i) => { 
+                if(tBar) tBar.innerHTML+=`<img src="${window.usersGlobais[n]?.avatarUrl||'https://api.dicebear.com/9.x/adventurer/svg?seed='+n}" class="turn-avatar ${i===window.turnosVTTGlobal.atual?'active':''}" title="${n}">`; 
+            });
         } else { 
-            if(tBar) tBar.style.display="none"; if(btnP) btnP.style.display="none"; 
-            if(btnAtk && !window.combatState.active) btnAtk.style.display="inline-block";
-            if(btnMover) btnMover.style.display="inline-block";
-            if(btnLevantar) btnLevantar.style.display="none";
+            if(tBar) tBar.style.display="none"; 
+            if(btnP) btnP.style.display="none"; 
+            if(btnAtk && !window.combatState.active) btnAtk.style.display="inline-block"; 
+            if(btnMover) btnMover.style.display="inline-block"; 
+            if(btnLevantar) btnLevantar.style.display="none"; 
         }
+        
     } catch(e) { console.error(e); }
 };
 
@@ -614,9 +775,13 @@ window.clicarGrid = function(x,y, isObs) {
 
     if(!window.isMaster && isAlreadyOnBoard && isTurnoAtivo) {
         let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
-        if(dist > window.movimentosRestantes) return; 
+        let pesoStats = window.getPesoStatus(u);
+        let costPerStep = pesoStats.atual >= 20 ? 3 : 1; // Se tiver 20kg+ gasta 3 PA por casa
+        let totalCost = dist * costPerStep;
+
+        if(totalCost > window.pontosAcao) { window.showNeonToast(`Distância requer ${totalCost} PA!`); return; } 
         if(isObs && !isGaia) { window.showNeonToast("Obstáculo!"); return; }
-        window.movimentosRestantes -= dist; window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
+        window.pontosAcao -= totalCost; window.setElText("movRestantes", `PA: ${window.pontosAcao}`);
     } else if (isObs && !isGaia && !window.isMaster) { window.showNeonToast("Obstáculo!"); return; }
 
     let up = {}; Object.keys(grid).forEach(k => { if(grid[k]===window.jogadorAtual) up[k] = null; }); up[`${x}_${y}`] = window.jogadorAtual;
@@ -632,14 +797,24 @@ window.clicarGrid = function(x,y, isObs) {
                 window.db.ref(`tokyoRpg/submapsTraps/${window.currentSubMapKey}/${tId}`).remove(); 
             }
         });
+
+        // Passa o turno automaticamente se o PA zerar!
+        if(isTurnoAtivo && !window.isMaster && window.pontosAcao <= 0) {
+            setTimeout(() => window.passarTurnoVTT(), 800);
+        }
     });
 };
 
-window.rolarDadoMovimento = function() {
+window.rolarPA = function() {
     if(!window.jogadorAtual) return;
     if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length>0 && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual && !window.isMaster) { window.showNeonToast("Não é seu turno!"); return; }
-    let roll = Math.floor(Math.random()*4)+1; window.movimentosRestantes = roll; window.setElText("movRestantes", `Passos Livres: ${window.movimentosRestantes}`);
-    if(window.mostrarDadoOverlay) window.mostrarDadoOverlay(window.jogadorAtual, "Movimento", [roll], 4); window.updateTacticalBoard();
+    
+    let roll = Math.floor(Math.random() * 6) + 1; // Rola 1d6 para PA
+    window.pontosAcao = roll; 
+    window.setElText("movRestantes", `PA: ${window.pontosAcao}`);
+    
+    if(window.mostrarDadoOverlay) window.mostrarDadoOverlay(window.jogadorAtual, "Pontos de Ação (PA)", [roll], 6); 
+    window.updateTacticalBoard();
 };
 
 window.iniciarIniciativaVTT = function() {
@@ -651,7 +826,6 @@ window.iniciarIniciativaVTT = function() {
 };
 
 window.passarTurnoVTT = function() {
-    // CORREÇÃO: Impede que o jogo tente passar o turno se a iniciativa não estiver ligada!
     if(!window.turnosVTTGlobal || !window.turnosVTTGlobal.ordem || window.turnosVTTGlobal.ordem.length === 0) return;
     
     let eu = window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual];
@@ -661,15 +835,30 @@ window.passarTurnoVTT = function() {
         let meusStatus = window.turnosVTTGlobal.status[eu]; 
         Object.keys(meusStatus).forEach(efeito => {
             if(meusStatus[efeito].turnos > 0) {
-                if(["Sangramento", "Queimadura", "Veneno"].includes(efeito)) { danoTurno += meusStatus[efeito].dano; logsStatus.push(`${efeito}: -${meusStatus[efeito].dano} HP`); }
-                if(efeito === "Regeneração") { let r = window.getSafeRpg(window.usersGlobais[eu]); updates[`tokyoRpg/users/${eu}/rpg/hp`] = Math.min(100, r.hp + meusStatus[efeito].dano); window.db.ref('tokyoRpg/mapDados').push({ nome: "SISTEMA", texto: `<span class="neon-green">${eu} Regenerou +${meusStatus[efeito].dano} HP</span>` }); }
+                // Lê a lista universal de DoTs (Dano por turno)
+                let isDoT = ["Queimadura", "Veneno", "Sangramento", "Corrupcao", "Maldicao", "Infeccao", "Acido", "Decadencia", "ChoqueEletrico", "CongelamentoInterno", "Hemorragia", "Necrose"].includes(efeito);
+                
+                if(isDoT) { 
+                    danoTurno += meusStatus[efeito].dano; 
+                    logsStatus.push(`${efeito}: -${meusStatus[efeito].dano} HP`); 
+                }
+                
+                if(efeito.includes("Regeneracao")) { 
+                    let r = window.getSafeRpg(window.usersGlobais[eu]); 
+                    updates[`tokyoRpg/users/${eu}/rpg/hp`] = Math.min(100, r.hp + meusStatus[efeito].dano); 
+                    window.db.ref('tokyoRpg/mapDados').push({ nome: "SISTEMA", texto: `<span class="neon-green">${eu} Regenerou +${meusStatus[efeito].dano} HP (${efeito})</span>` }); 
+                }
                 
                 if(efeito === "Derrubado") { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${eu}/${efeito}/turnos`] = 1; } 
                 else if(meusStatus[efeito].turnos - 1 <= 0) { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${eu}/${efeito}`] = null; } 
                 else { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${eu}/${efeito}/turnos`] = meusStatus[efeito].turnos - 1; }
             }
         });
-        if(danoTurno > 0) { let r = window.getSafeRpg(window.usersGlobais[eu]); updates[`tokyoRpg/users/${eu}/rpg/hp`] = Math.max(0, r.hp - danoTurno); window.db.ref('tokyoRpg/mapDados').push({ nome: "SISTEMA", texto: `<span class="neon-red">${eu} sofreu dano de status (${logsStatus.join(", ")})</span>` }); }
+        if(danoTurno > 0) { 
+            let r = window.getSafeRpg(window.usersGlobais[eu]); 
+            updates[`tokyoRpg/users/${eu}/rpg/hp`] = Math.max(0, r.hp - danoTurno); 
+            window.db.ref('tokyoRpg/mapDados').push({ nome: "SISTEMA", texto: `<span class="neon-red">${eu} sofreu dano: (${logsStatus.join(", ")})</span>` }); 
+        }
     }
 
     let traps = window.submapasTraps ? window.submapasTraps[window.currentSubMapKey] || {} : {};
@@ -680,21 +869,33 @@ window.passarTurnoVTT = function() {
         }
     });
 
-    if(Object.keys(updates).length > 0) window.db.ref().update(updates);
+  if(Object.keys(updates).length > 0) window.db.ref().update(updates);
     window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}/atual`).set((window.turnosVTTGlobal.atual+1)%window.turnosVTTGlobal.ordem.length);
-    if(eu === window.jogadorAtual) { window.movimentosRestantes = 0; window.setElText("movRestantes", "Passos Livres: 0"); }
+    if(eu === window.jogadorAtual) { window.pontosAcao = 0; window.setElText("movRestantes", "PA: 0"); }
 };
 
 // =========================================================
 // SISTEMA DE COMBATE VTT & CLASH 
 // =========================================================
 
+// =========================================================
+// SISTEMA DE COMBATE VTT & CLASH (COM BOTÃO DE EXCLUIR SKILL PRO MESTRE)
+// =========================================================
 window.iniciarAtaqueVTT = function() {
-    if(!window.currentSubMapKey) { window.showNeonToast("Não está no mapa!"); return; }
-    if(!window.isMaster && window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] !== window.jogadorAtual) { window.showNeonToast("Espere seu turno!"); return; }
+    if(!window.currentSubMapKey) return;
+    
+    // Descobre de quem é a vez. Se for de uma invocação, verifica se você é o dono!
+    let isTurnoAtivo = window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length > 0;
+    let agenteAtual = isTurnoAtivo ? window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] : window.jogadorAtual;
+    let isMySummon = window.usersGlobais[agenteAtual]?.owner === window.jogadorAtual;
+    
+    if(isTurnoAtivo && !window.isMaster && agenteAtual !== window.jogadorAtual && !isMySummon) { 
+        window.showNeonToast("Espere seu turno!"); return; 
+    }
 
-    let u = window.usersGlobais[window.jogadorAtual];
-    if(!u || !u.mochila) { window.showNeonToast("Mochila vazia."); return; }
+    // Puxa a mochila de quem está atacando (Pode ser o jogador ou o monstro!)
+    let u = window.usersGlobais[agenteAtual];
+    if(!u || !u.mochila) { window.showNeonToast("Nenhuma ação disponível."); return; }
     
     let wDiv = document.getElementById("wpnSelectDiv"); let btnAtk = document.getElementById("btnAtacar"); let btnCnc = document.getElementById("btnCancelAtk");
     wDiv.innerHTML = ""; let temAcao = false;
@@ -702,19 +903,23 @@ window.iniciarAtaqueVTT = function() {
     Object.keys(u.mochila).forEach(k => {
         let item = u.mochila[k];
         if(item.wpnStyle || item.isVTT) {
-            temAcao = true; let isHeal = (item.wpnStyle === 'heal'); let isMove = (item.wpnStyle === 'teleport');
+            temAcao = true; 
+            let wrapper = document.createElement("div"); wrapper.style.display = "flex"; wrapper.style.alignItems = "center"; wrapper.style.gap = "2px";
             let btn = document.createElement("button"); btn.className = "action-btn";
-            if(isHeal) { btn.style.borderColor = "#00ff66"; btn.style.color = "#00ff66"; } else if (isMove) { btn.style.borderColor = "#00e5ff"; btn.style.color = "#00e5ff"; } else { btn.style.borderColor = "#ff1a55"; btn.style.color = "#ff1a55"; }
-            btn.style.padding = "5px 10px"; btn.style.fontSize = "12px"; btn.style.marginRight = "5px"; btn.innerText = item.nome;
+            btn.style.borderColor = "#ff1a55"; btn.style.color = "#ff1a55";
+            btn.style.padding = "3px 8px"; btn.style.fontSize = "11px"; btn.style.margin = "0"; btn.innerText = item.nome;
+            
             btn.onclick = () => { 
                 window.combatState.active = true; item.invKey = k; window.combatState.weapon = item; 
-                window.showNeonToast(`Ação: ${item.nome}. Clique no alvo!`); wDiv.style.display = "none"; window.updateTacticalBoard(); 
+                window.showNeonToast(`Ação: ${item.nome}. Clique no alvo!`); wDiv.style.display = "none"; 
+                if(window.updateTacticalBoard) window.updateTacticalBoard(); 
             }; 
-            wDiv.appendChild(btn);
+            wrapper.appendChild(btn);
+            wDiv.appendChild(wrapper);
         }
     });
 
-    if(!temAcao) { window.showNeonToast("Nenhuma habilidade ou arma equipada!"); return; }
+    if(!temAcao) { window.showNeonToast("Nenhuma habilidade equipada!"); return; }
     btnAtk.style.display = "none"; btnCnc.style.display = "inline-block"; wDiv.style.display = "flex";
 };
 
@@ -726,73 +931,120 @@ window.cancelarAtaqueVTT = function() {
     window.clearHighlightTargetCells(); window.updateTacticalBoard();
 };
 
+// =========================================================
+// 3. EXECUÇÃO DE ATAQUE BLINDADA
+// =========================================================
 window.executarAtaque = function(tx, ty) {
     try {
+        let isTurnoAtivo = window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem.length > 0;
+        let agenteAtual = isTurnoAtivo ? window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] : window.jogadorAtual;
+        
         let arma = window.combatState.weapon; if(!arma) return;
         let grid = window.submapasGlobais[window.currentSubMapKey] || {};
-        let px = -1, py = -1; Object.keys(grid).forEach(cid => { if(grid[cid] === window.jogadorAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
+        let px = -1, py = -1; Object.keys(grid).forEach(cid => { if(grid[cid] === agenteAtual) { let p = cid.split("_"); px = parseInt(p[0]); py = parseInt(p[1]); } });
         
-        let range = parseInt(arma.wpnRange) || 1;
-        let dist = Math.max(Math.abs(tx - px), Math.abs(ty - py));
-        if(dist > range) { window.showNeonToast("Fora de alcance!"); return; }
+        let armaCustom = arma.customPattern || "";
+        if(!armaCustom || !armaCustom.startsWith("{")) { window.showNeonToast("Habilidade Antiga. Reforje no Novo VTT Forge!"); window.cancelarAtaqueVTT(); return; }
+
+        let u = window.usersGlobais[agenteAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u);
+        let erCost = parseInt(arma.erCost) || 0;
+        let paCost = parseInt(arma.paCost) || 1; // Puxa o custo de PA da arma (padrão 1)
         
-        let invKeyToDel = (arma.isConsumable && arma.invKey) ? arma.invKey : null; let nomeDaArmaUsada = arma.nome;
-
-        if (arma.wpnStyle === 'teleport') {
-            let dest = `${tx}_${ty}`; if (grid[dest]) { window.showNeonToast("Destino ocupado!"); return; }
-            let updates = {}; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${px}_${py}`] = null; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${dest}`] = window.jogadorAtual; window.db.ref().update(updates);
-            window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Usou habilidade: <span class="neon-blue">${arma.nome}</span> (Moveu-se)` });
-            window.cancelarAtaqueVTT(); 
-            if(invKeyToDel) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${invKeyToDel}`).remove(); window.showNeonToast(`${nomeDaArmaUsada} consumido!`); }
-            if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT(); 
-            return;
-        }
-
-        if (arma.wpnStyle === 'trap') {
-            let dest = `${tx}_${ty}`; if (grid[dest]) { window.showNeonToast("Local ocupado! Armadilhas devem ir no chão."); return; }
-            let d20Atk = Math.floor(Math.random() * 20) + 1; let isCrit = (d20Atk === 20);
-
-            let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice = 1; if(isNaN(sides)) sides = 4;
-            let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalDmg = dmgRoll + (parseInt(arma.wpnBonus) || 0);
-            if(isCrit) { let critRule = arma.wpnCrit || "2x"; if(critRule === "2x") totalDmg *= 2; else if(critRule === "3x") totalDmg *= 3; else if(critRule === "4x") totalDmg *= 4; else if(critRule === "+12") totalDmg += 12; else if(critRule === "+10") totalDmg += 10; else if(critRule === "+5") totalDmg += 5; }
-
-            let trapId = Date.now().toString();
-            let trapData = { owner: window.jogadorAtual, name: arma.nome, dmgRoll: totalDmg, effect: arma.wpnEffect || "", effectVal: parseInt(arma.wpnEffectVal) || 1, turnos: 5, x: tx, y: ty };
-            window.db.ref(`tokyoRpg/submapsTraps/${window.currentSubMapKey}/${trapId}`).set(trapData);
-            window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Plantou secretamente uma <span class="neon-blue">${arma.nome}</span>.` });
+        if(!window.isMaster) {
+            if(paCost > window.pontosAcao) { window.showNeonToast(`Falta PA! (Requer ${paCost})`); window.cancelarAtaqueVTT(); return; }
+            if(erCost > 0 && r.integridade < erCost) { window.showNeonToast(`Falta ER! (Requer ${erCost}%)`); window.cancelarAtaqueVTT(); return; }
             
-            window.cancelarAtaqueVTT(); 
-            if(invKeyToDel) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${invKeyToDel}`).remove(); window.showNeonToast(`${nomeDaArmaUsada} consumido!`); }
-            if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT(); 
-            return;
+            window.pontosAcao -= paCost;
+            window.setElText("movRestantes", `PA: ${window.pontosAcao}`);
+            if(erCost > 0) window.db.ref(`tokyoRpg/users/${agenteAtual}/rpg/integridade`).set(Math.max(0, r.integridade - erCost));
+        }
+            if(r.integridade < erCost && !window.isMaster) { window.showNeonToast(`Falta ER! (Requer ${erCost}%)`); window.cancelarAtaqueVTT(); return; }
+            if(!window.isMaster) window.db.ref(`tokyoRpg/users/${agenteAtual}/rpg/integridade`).set(Math.max(0, r.integridade - erCost));
+        
+
+        let updatesDB = {};
+        
+        // Puxa a máscara de efeito explodida no mapa real!
+        let affectedMap = window.getAffectedCellsMap(tx, ty, px, py, armaCustom);
+        
+        // TROCA MARCADA: Se achar o alvo na mesa com a marca, troca!
+        let isSwapMarked = Object.values(affectedMap).some(sq => sq.e === 'TrocaMarcada');
+        if (isSwapMarked) {
+            let markedTarget = null; let markedCell = null;
+            Object.keys(grid).forEach(cell => {
+                let p = grid[cell]; let st = window.turnosVTTGlobal?.status?.[p];
+                if (st && st["Marcado"] && st["Marcado"].turnos > 0 && st["Marcado"].caster === agenteAtual) { markedTarget = p; markedCell = cell; }
+            });
+
+            if (markedTarget) {
+                updatesDB[`tokyoRpg/submaps/${window.currentSubMapKey}/${px}_${py}`] = markedTarget;
+                updatesDB[`tokyoRpg/submaps/${window.currentSubMapKey}/${markedCell}`] = agenteAtual;
+                updatesDB[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${markedTarget}/Marcado`] = null; 
+                window.db.ref('tokyoRpg/mapDados').push({ nome: agenteAtual, texto: `🔀 Trocou de lugar com <span class="neon-blue">${markedTarget}</span>!` }); 
+                window.db.ref().update(updatesDB); window.cancelarAtaqueVTT(); 
+                if (isTurnoAtivo && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === agenteAtual) window.passarTurnoVTT(); 
+                return; 
+            } else { window.showNeonToast("Nenhum alvo marcado no mapa!"); window.cancelarAtaqueVTT(); return; }
         }
 
-        let affectedCells = window.getAffectedCells(tx, ty, px, py, arma.wpnStyle, range);
-        let targets = []; let nomeArmaSafe = (arma.nome || "").toLowerCase(); let isHeal = (arma.wpnStyle === 'heal' || nomeArmaSafe.includes('cura') || nomeArmaSafe.includes('bandagem') || nomeArmaSafe.includes('medkit'));
-        affectedCells.forEach(cid => { let occ = grid[cid]; if(occ) { if (isHeal || arma.wpnStyle === 'self_aoe') targets.push(occ); else if (occ !== window.jogadorAtual) targets.push(occ); } });
-        if(targets.length === 0) { window.showNeonToast("Nenhum alvo atingido."); window.cancelarAtaqueVTT(); return; }
+        let targets = []; let hasActionInMap = false;
 
-        let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u); let attrMod = arma.wpnStyle === 'melee' ? (r.for + buffs.for) : (r.man + buffs.man);
-        let d20Atk = Math.floor(Math.random() * 20) + 1; let totalAtk = d20Atk + attrMod; let isCrit = (d20Atk === 20);
+        Object.keys(affectedMap).forEach(cid => {
+            hasActionInMap = true;
+            let occ = grid[cid]; let squareData = affectedMap[cid];
+            
+            // TP e TRAP (Lê a variável 't' que foi salva no JSON)
+            if(squareData.t === 'tp') {
+                if (!grid[cid]) {
+                    updatesDB[`tokyoRpg/submaps/${window.currentSubMapKey}/${px}_${py}`] = null; 
+                    updatesDB[`tokyoRpg/submaps/${window.currentSubMapKey}/${cid}`] = agenteAtual;
+                    window.db.ref('tokyoRpg/mapDados').push({ nome: agenteAtual, texto: `✨ Se teleportou!` }); 
+                }
+            }
+            if(squareData.t === 't') {
+                if (!grid[cid]) {
+                    let tId = `TRAP_${agenteAtual}_${Date.now()}_${cid}`;
+                    updatesDB[`tokyoRpg/submapsTraps/${window.currentSubMapKey}/${tId}`] = { 
+                        x: parseInt(cid.split("_")[0]), y: parseInt(cid.split("_")[1]), owner: agenteAtual, name: arma.nome, effect: squareData.e, effectVal: squareData.v, turnos: squareData.tr, dmgRoll: 0 
+                    };
+                }
+            }
 
-        let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice = 1; if(isNaN(sides)) sides = 4;
-        let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalDmg = dmgRoll + (parseInt(arma.wpnBonus) || 0);
+            if(occ) { 
+                let isHeal = (squareData.t === 'c');
+                if (isHeal || occ !== agenteAtual) { targets.push({ name: occ, data: squareData, cid: cid }); }
+            } 
+        });
 
-        if(isCrit && !isHeal) { let critRule = arma.wpnCrit || "2x"; if(critRule === "2x") totalDmg *= 2; else if(critRule === "3x") totalDmg *= 3; else if(critRule === "4x") totalDmg *= 4; else if(critRule === "+12") totalDmg += 12; else if(critRule === "+10") totalDmg += 10; else if(critRule === "+5") totalDmg += 5; }
+        if(targets.length === 0 && !isSwapMarked && !hasActionInMap) { window.showNeonToast("Ação inválida."); window.cancelarAtaqueVTT(); return; }
 
-        let atkId = Date.now().toString();
-        let combatEvent = { attacker: window.jogadorAtual, weaponName: arma.nome, atkRoll: totalAtk, isCrit: isCrit, dmgRoll: totalDmg, wpnEffect: arma.wpnEffect || "", wpnEffectVal: parseInt(arma.wpnEffectVal) || 1, atkX: px, atkY: py, targets: targets, isHeal: isHeal, timestamp: Date.now(), mapKey: window.currentSubMapKey };
-        window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${atkId}`).set(combatEvent);
-        let logTxt = isHeal ? `Usou Consumível/Cura: ${arma.nome} (Restaura ${totalDmg})` : `Usa ${arma.nome}: <span class="dice-result-box">${totalAtk}</span>${isCrit ? ' [CRÍTICO!]' : ''} (Poder Final: ${totalDmg})`;
-        window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: logTxt });
+        let attrKey = arma.attr || 'int'; let attrMod = r[attrKey] + (buffs[attrKey]||0); let d20Atk = Math.floor(Math.random() * 20) + 1; let totalAtk = d20Atk + attrMod; let isCrit = (d20Atk === 20);
+        let dmgDiceStr = arma.wpnDice || '1d4'; let [numDice, sides] = dmgDiceStr.split('d').map(Number); if(isNaN(numDice)) numDice=1; if(isNaN(sides)) sides=4;
+        let dmgRoll = 0; for(let i=0; i<numDice; i++) dmgRoll += Math.floor(Math.random() * sides) + 1; let totalPoder = dmgRoll + (parseInt(arma.wpnBonus) || 0); if(isCrit) totalPoder *= 2; 
 
-        window.cancelarAtaqueVTT(); 
-        if(invKeyToDel) { window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila/${invKeyToDel}`).remove(); window.showNeonToast(`${nomeDaArmaUsada} foi consumido!`); }
-        if (window.turnosVTTGlobal && window.turnosVTTGlobal.ordem && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === window.jogadorAtual) window.passarTurnoVTT(); 
+        let atkTime = Date.now();
+        targets.forEach((tgtObj, idx) => {
+            let isHeal = (tgtObj.data.t === 'c');
+            updatesDB[`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${atkTime + idx}`] = { 
+                attacker: agenteAtual, weaponName: arma.nome, atkRoll: totalAtk, isCrit: isCrit, dmgRoll: totalPoder, 
+                wpnEffect: tgtObj.data.e === "Nenhum" ? "" : tgtObj.data.e, 
+                wpnEffectVal: tgtObj.data.v, 
+                wpnEffectTurnos: tgtObj.data.tr, 
+                atkX: px, atkY: py, targets: [tgtObj.name], isHeal: isHeal, timestamp: atkTime + idx, mapKey: window.currentSubMapKey 
+            };
+        });
+
+if(targets.length > 0) window.db.ref('tokyoRpg/mapDados').push({ nome: agenteAtual, texto: `Usou <span class="neon-blue">${arma.nome}</span> (Dado: <span class="dice-result-box">${totalAtk}</span>${isCrit?' [CRÍTICO!]':''}) contra ${targets.length} alvo(s)!` });
         
-    } catch (err) { console.error("Erro critico no combate:", err); window.showNeonToast("Ação cancelada (Erro Interno)"); window.cancelarAtaqueVTT(); }
+        window.db.ref().update(updatesDB); window.cancelarAtaqueVTT(); 
+        
+        // Passa o turno APENAS se o PA zerou (Dá tempo do alvo ver a animação de ataque)
+        if (isTurnoAtivo && window.turnosVTTGlobal.ordem[window.turnosVTTGlobal.atual] === agenteAtual) {
+            if (window.pontosAcao <= 0 && !window.isMaster) setTimeout(() => window.passarTurnoVTT(), 1500);
+        }
+        
+    } catch (err) { console.error(err); window.showNeonToast("Erro Interno"); window.cancelarAtaqueVTT(); }
 };
-
 // === AS TRÊS FUNÇÕES QUE TINHAM SUMIDO E QUEBRARAM O RECEPTOR ===
 window.focarCameraVTT = function(x, y) {
     let board = document.getElementById("tacticalBoard"); if(!board) return;
@@ -829,8 +1081,8 @@ window.reagirAtaque = function(tipo) {
     if(!window.pendingAttack) return;
     let atk = window.pendingAttack.data; let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let buffs = window.calcularBuffsMoveis(u);
     let finalDmg = atk.dmgRoll || 0; let reactionText = ""; let defRollVal = 0; let resultText = ""; let winnerId = "atk";
-
     let isImune = false; let isReflect = false; let shieldVal = 0;
+
     if(window.turnosVTTGlobal?.status?.[window.jogadorAtual]) {
         let st = window.turnosVTTGlobal.status[window.jogadorAtual];
         if(st["Imunidade"] && st["Imunidade"].turnos > 0) isImune = true;
@@ -845,14 +1097,12 @@ window.reagirAtaque = function(tipo) {
         let atkUsr = window.usersGlobais[atk.attacker]; if(atkUsr) { let atkRpg = window.getSafeRpg(atkUsr); window.db.ref(`tokyoRpg/users/${atk.attacker}/rpg/hp`).set(Math.max(0, atkRpg.hp - (atk.dmgRoll||0))); window.db.ref('tokyoRpg/mapDados').push({ nome: "SISTEMA", texto: `<span class="neon-purple">${atk.attacker} tomou ${atk.dmgRoll} do Reflexo!</span>` }); }
     }
     else if(tipo === 'esquiva') {
-        let d20 = Math.floor(Math.random() * 20) + 1; 
-        let agiTotal = r.agi + buffs.agi; defRollVal = d20 + agiTotal;
+        let d20 = Math.floor(Math.random() * 20) + 1; let agiTotal = r.agi + buffs.agi; defRollVal = d20 + agiTotal;
         if (d20 === 1) { finalDmg = atk.dmgRoll || 0; winnerId = 'atk'; reactionText = `Tentou Esquivar (<span class="neon-blue">1</span>). Tomou <span class="neon-red">${finalDmg}</span> de dano crítico.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
         else if(defRollVal > atk.atkRoll) { finalDmg = 0; winnerId = 'def'; reactionText = `Rolou Esquiva (<span class="neon-green">${defRollVal}</span>) e evitou!`; resultText = "ESQUIVOU COM SUCESSO!"; } 
         else { finalDmg = Math.max(0, finalDmg - shieldVal); reactionText = `Tentou Esquivar (<span class="neon-red">${defRollVal}</span>) mas falhou! Tomou <span class="neon-red">${finalDmg}</span> de dano. ${shieldVal>0?'(Escudo ajudou) ':''}`; resultText = `SOFREU ${finalDmg} DE DANO!`; }
     } else if(tipo === 'defender') {
-        let d20 = Math.floor(Math.random() * 20) + 1; 
-        let vigTotal = r.vig + buffs.vig; let defArmor = window.calcularDefesa(u); defRollVal = d20 + vigTotal;
+        let d20 = Math.floor(Math.random() * 20) + 1; let vigTotal = r.vig + buffs.vig; let defArmor = window.calcularDefesa(u); defRollVal = d20 + vigTotal;
         if (d20 === 1) { finalDmg = Math.max(0, (atk.dmgRoll || 0) - shieldVal); winnerId = 'atk'; reactionText = `Rolou Defesa (<span class="neon-blue">1</span>). Armadura ignorada. Tomou <span class="neon-red">${finalDmg}</span> de dano.`; resultText = `FALHA CRÍTICA! SOFREU ${finalDmg} DE DANO!`; } 
         else if (defRollVal > atk.atkRoll) { finalDmg = 0; winnerId = 'def'; reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>) e superou o ataque. Tomou 0.`; resultText = `DEFESA PERFEITA!`; } 
         else { finalDmg = Math.max(0, (atk.dmgRoll || 0) - defArmor - shieldVal); reactionText = `Rolou Defesa (<span class="neon-blue">${defRollVal}</span>). Reduziu com Armadura (${defArmor}) e Escudo (${shieldVal}). Tomou <span class="neon-red">${finalDmg}</span> de dano.`; if (finalDmg === 0) { winnerId = 'def'; resultText = `DEFESA IMPENETRÁVEL!`; } else { resultText = `DEFESA QUEBRADA! SOFREU ${finalDmg} DE DANO!`; } }
@@ -862,18 +1112,22 @@ window.reagirAtaque = function(tipo) {
     if(atk.wpnEffect && atk.wpnEffect !== "" && finalDmg > 0 && !atk.isHeal && !isImune && !isReflect) resultText += ` + ${atk.wpnEffect.toUpperCase()}`;
 
     window.db.ref('tokyoRpg/mapDados').push({ nome: window.jogadorAtual, texto: `Reação contra ${atk.attacker}: ${reactionText}` });
-    
     let atkUser = window.usersGlobais[atk.attacker];
-    
-    // AQUI: Clash Payload usa o charImgUrl primeiro para estampar a tela do VS de forma imersiva!
     let defImgDisplay = u?.charImgUrl || u?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${window.jogadorAtual}`;
     let atkImgDisplay = atkUser?.charImgUrl || atkUser?.avatarUrl || `https://api.dicebear.com/9.x/adventurer/svg?seed=${atk.attacker}`;
 
-    let clashPayload = { ts: Date.now(), atkName: atk.attacker || "Desconhecido", atkAv: atkImgDisplay, atkAction: `${atk.isHeal ? 'Usou' : 'Ataque'} c/ ${atk.weaponName || 'Arma'}`, atkRoll: atk.atkRoll || 0, defName: window.jogadorAtual, defAv: defImgDisplay, defAction: atk.isHeal ? 'RECEBEU' : tipo.toUpperCase(), defRoll: defRollVal || 0, dmg: finalDmg || 0, winner: winnerId, resultText: resultText, effect: atk.wpnEffect || "", effectVal: atk.wpnEffectVal || 1, atkX: atk.atkX !== undefined ? atk.atkX : -1, atkY: atk.atkY !== undefined ? atk.atkY : -1, isHeal: atk.isHeal || false, mapKey: window.currentSubMapKey };
+    let clashPayload = { 
+        ts: Date.now(), atkName: atk.attacker || "Desconhecido", atkAv: atkImgDisplay, atkAction: `${atk.isHeal ? 'Usou' : 'Ataque'} c/ ${atk.weaponName || 'Arma'}`, 
+        atkRoll: atk.atkRoll || 0, defName: window.jogadorAtual, defAv: defImgDisplay, defAction: atk.isHeal ? 'RECEBEU' : tipo.toUpperCase(), 
+        defRoll: defRollVal || 0, dmg: finalDmg || 0, winner: winnerId, resultText: resultText, 
+        effect: atk.wpnEffect || "", 
+        effectVal: atk.wpnEffectVal || 1, 
+        effectTurnos: atk.wpnEffectTurnos || 1, // NOVO CAMPO
+        atkX: atk.atkX !== undefined ? atk.atkX : -1, atkY: atk.atkY !== undefined ? atk.atkY : -1, isHeal: atk.isHeal || false, mapKey: window.currentSubMapKey 
+    };
 
     document.getElementById("reactionModal").style.display = "none";
     window.db.ref('tokyoRpg/currentClash').set(clashPayload);
-    
     if(window.currentSubMapKey && window.pendingAttack.id) window.db.ref(`tokyoRpg/submapsCombat/${window.currentSubMapKey}/${window.pendingAttack.id}`).remove().catch(()=>{});
     window.pendingAttack = null;
 };
@@ -943,6 +1197,7 @@ window.processClashQueue = function() {
             setTimeout(() => {
                 ov.style.display = "none"; window.isClashing = false;
                 let grid = window.submapasGlobais[window.currentSubMapKey] || {}; let defCid = Object.keys(grid).find(key => grid[key] === c.defName);
+                let conf = window.submapasConfig[window.currentSubMapKey] || {};
                 
                 if(defCid) {
                     let cellEl = document.getElementById(`cell_${defCid}`);
@@ -965,29 +1220,36 @@ window.processClashQueue = function() {
                 if(c.defName === window.jogadorAtual) {
                     if(c.dmg > 0 && !c.isHeal) { let board = document.getElementById("tacticalBoard"); if(board) { board.classList.add("shake-camera"); setTimeout(() => board.classList.remove("shake-camera"), 500); } }
 
-                    let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let updates = {}; let conf = window.submapasConfig[window.currentSubMapKey] || {}; let safeDmg = parseInt(c.dmg) || 0;
+                    let u = window.usersGlobais[window.jogadorAtual]; let r = window.getSafeRpg(u); let updates = {}; let safeDmg = parseInt(c.dmg) || 0;
 
                     if (c.isHeal) { updates[`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`] = Math.min(r.hpMax || 100, r.hp + safeDmg); } 
                     else if (safeDmg > 0) {
                         updates[`tokyoRpg/users/${window.jogadorAtual}/rpg/hp`] = Math.max(0, r.hp - safeDmg);
 
-                        if(c.effect === "Empurrão" && c.atkX !== -1 && c.atkY !== -1 && defCid) {
-                            let [defX, defY] = defCid.split("_").map(Number); let dx = defX - c.atkX; let dy = defY - c.atkY;
-                            let pushX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let pushY = dy === 0 ? 0 : (dy > 0 ? 1 : -1); let power = c.effectVal || 1; let finalX = defX, finalY = defY; 
-                            for(let step=1; step<=power; step++) { let testX = defX + (pushX * step); let testY = defY + (pushY * step); let isObs = conf.cells && conf.cells[`${testX}_${testY}`] ? conf.cells[`${testX}_${testY}`].obs : false; if(!grid[`${testX}_${testY}`] && !isObs && testX >= 0 && testY >= 0 && testX < (conf.cols||16) && testY < (conf.rows||12)) { finalX = testX; finalY = testY; } else { break; } }
-                            if(finalX !== defX || finalY !== defY) { updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${defCid}`] = null; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${finalX}_${finalY}`] = c.defName; }
-                        }
-                        else if(c.effect === "Puxão" && c.atkX !== -1 && c.atkY !== -1 && defCid) {
-                            let [defX, defY] = defCid.split("_").map(Number); let dx = c.atkX - defX; let dy = c.atkY - defY;
-                            let pullX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let pullY = dy === 0 ? 0 : (dy > 0 ? 1 : -1); let power = c.effectVal || 1; let finalX = defX, finalY = defY; 
-                            for(let step=1; step<=power; step++) { let testX = defX + (pullX * step); let testY = defY + (pullY * step); if(testX === c.atkX && testY === c.atkY) break; let isObs = conf.cells && conf.cells[`${testX}_${testY}`] ? conf.cells[`${testX}_${testY}`].obs : false; if(!grid[`${testX}_${testY}`] && !isObs) { finalX = testX; finalY = testY; } else { break; } }
-                            if(finalX !== defX || finalY !== defY) { updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${defCid}`] = null; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${finalX}_${finalY}`] = c.defName; }
+                        if(c.effect === "Empurrão" || c.effect === "Empurrao" || c.effect === "Puxão" || c.effect === "Puxao") {
+                            if(c.atkX !== -1 && c.atkY !== -1 && defCid) {
+                                let [defX, defY] = defCid.split("_").map(Number); let dx = defX - c.atkX; let dy = defY - c.atkY;
+                                let modX = dx === 0 ? 0 : (dx > 0 ? 1 : -1); let modY = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
+                                if(c.effect.includes("Pux")) { modX *= -1; modY *= -1; }
+                                let power = c.effectVal || 1; let finalX = defX, finalY = defY; 
+                                for(let step=1; step<=power; step++) { let testX = defX + (modX * step); let testY = defY + (modY * step); let isObs = conf.cells && conf.cells[`${testX}_${testY}`] ? conf.cells[`${testX}_${testY}`].obs : false; if(!grid[`${testX}_${testY}`] && !isObs && testX >= 0 && testY >= 0 && testX < (conf.cols||16) && testY < (conf.rows||12)) { finalX = testX; finalY = testY; } else { break; } }
+                                if(finalX !== defX || finalY !== defY) { updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${defCid}`] = null; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${finalX}_${finalY}`] = c.defName; }
+                            }
                         }
                         else if(c.effect === "Troca" && c.atkX !== -1 && c.atkY !== -1 && defCid) { updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${defCid}`] = c.atkName; updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${c.atkX}_${c.atkY}`] = c.defName; }
+                        
+                        let isDoT = ["Queimadura", "Veneno", "Sangramento", "Corrupcao", "Maldicao", "Infeccao", "Acido", "Decadencia", "ChoqueEletrico", "CongelamentoInterno", "Hemorragia", "Necrose"].includes(c.effect);
+                        let isCC = ["Atordoamento", "Congelado", "Paralisia", "Silencio", "Desarmado", "Cego", "Confusao", "Medo", "Provocacao", "Enraizado", "Petrificacao", "Sono", "Hipnose", "Aprisionamento", "LentidaoExtrema"].includes(c.effect);
+                        let isBuff = ["Regeneracao", "RegeneracaoMana", "Escudo", "Reflexao", "Imunidade", "Invisibilidade"].includes(c.effect);
 
-                        if(["Sangramento", "Queimadura", "Veneno", "Regeneração", "Escudo"].includes(c.effect)) { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/${c.effect}`] = { dano: c.effectVal || Math.max(1, Math.floor(safeDmg / 2)), turnos: 3 }; }
-    if(["Atordoamento", "Derrubado", "Imunidade", "Reflexão"].includes(c.effect)) { updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/${c.effect}`] = { turnos: 1 }; }
-                        if(c.effect === "Derrubado") updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/Derrubado`] = { turnos: 1 };
+                        // AQUI USAMOS O NOVO CAMPO `c.effectTurnos`
+                        let duracaoReal = c.effectTurnos || 3;
+                        let forcaReal = c.effectVal || Math.max(1, Math.floor(safeDmg / 2));
+
+                        if (isDoT) updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/${c.effect}`] = { dano: forcaReal, turnos: duracaoReal };
+                        if (isCC) updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/${c.effect}`] = { turnos: c.effectTurnos || 1 };
+                        if (isBuff) updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/${c.effect}`] = { dano: c.effectVal || 0, turnos: duracaoReal };
+                        if (c.effect === "Derrubar" || c.effect === "Derrubado") updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/status/${c.defName}/Derrubado`] = { turnos: 1 };
                     }
                     if(Object.keys(updates).length > 0) window.db.ref().update(updates);
                 }
@@ -2077,7 +2339,7 @@ window.onload = function() {
         window.db.ref('tokyoRpg/casasGrid').on('value', s => { window.casaGlobais = s.val() || {}; if(typeof window.drawCasaBoard === "function") window.drawCasaBoard(); });
         window.db.ref('tokyoRpg/submaps').on('value', s => { window.submapasGlobais = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
         window.db.ref('tokyoRpg/submapsTraps').on('value', s => { window.submapasTraps = s.val() || {}; if(typeof window.updateTacticalBoard === "function") window.updateTacticalBoard(); });
-        
+        window.db.ref('tokyoRpg/jobConfig').on('value', s => { window.jobConfigGlobais = s.val() || {}; if(window.currentViewingJob) window.abrirArvoreJob(window.currentViewingJob.subjob, window.currentViewingJob.cat, !window.usersGlobais[window.jogadorAtual]?.job?.locked); });
         window.db.ref('tokyoRpg/currentRoll').on('value', s => { let d = s.val(); if(d && d.ts > Date.now() - 5000) { if(typeof window.mostrarDadoOverlay === "function") window.mostrarDadoOverlay(d.nome, d.form, d.results); } });
         window.db.ref('tokyoRpg/mapDados').limitToLast(10).on('value', s => { let d = s.val(); let b = document.getElementById("diceLog"); if(!b) return; b.innerHTML=""; if(d){ Object.values(d).forEach(x => b.innerHTML += `<div style="margin-bottom:5px;"><strong class="neon-blue">${x.nome}:</strong> ${x.texto}</div>`); b.scrollTop = b.scrollHeight; }});
         
@@ -2830,3 +3092,2502 @@ setInterval(() => {
         }
     });
 }, 2500); // Roda a cada 2.5s
+
+// =========================================================
+// SISTEMA DE CLASSES E TRABALHOS (SKILL TREE TBS)
+// =========================================================
+window.jobConfigGlobais = {}; 
+window.currentViewingJob = null; 
+
+window.categoriasTrabalho = {
+    "Artista": ["Ilusionista", "Popstar", "Pintor"],
+    "Bélico": ["Soldado", "Agente", "Sniper"],
+    "Street": ["Grafiter", "Magician", "Traçador"],
+    "Social": ["Firesman", "Enginer", "Guard"],
+    "Tecnologicals": ["Cientist", "Hacker", "Medic"]
+};
+
+window.switchMyGambleTab = function(tabName) {
+    document.getElementById("btnNavPerfil").classList.remove("active");
+    document.getElementById("btnNavTrabalho").classList.remove("active");
+    
+    document.getElementById("view-perfil").style.display = "none";
+    document.getElementById("view-trabalho").style.display = "none";
+
+    if (tabName === 'perfil') {
+        document.getElementById("btnNavPerfil").classList.add("active");
+        document.getElementById("view-perfil").style.display = "flex";
+    } else {
+        document.getElementById("btnNavTrabalho").classList.add("active");
+        document.getElementById("view-trabalho").style.display = "flex";
+        window.renderizarTrabalhos();
+    }
+};
+
+window.renderizarTrabalhos = function() {
+    if(!window.jogadorAtual) return;
+    
+    let u = window.usersGlobais[window.jogadorAtual] || {};
+    let mPanel = document.getElementById("masterJobPanel");
+    if(window.isMaster && mPanel) mPanel.style.display = "block";
+
+    let jobData = u.job || { locked: false, pts: 0 };
+    let lblPts = document.getElementById("lblPontosTrabalho");
+    if(lblPts) lblPts.innerText = jobData.pts || 0;
+
+    if(jobData.locked && jobData.subjob) {
+        document.getElementById("jobSelectionScreen").style.display = "none";
+        window.abrirArvoreJob(jobData.subjob, jobData.category, false);
+    } else {
+        document.getElementById("jobSelectionScreen").style.display = "block";
+        document.getElementById("jobTreeScreen").style.display = "none";
+    }
+};
+
+window.abrirCategoriaJob = function(cat) {
+    let container = document.getElementById("jobCardsContainer");
+    container.innerHTML = "";
+    
+    let subjobs = window.categoriasTrabalho[cat];
+    if(!subjobs) return;
+
+    subjobs.forEach(sub => {
+        let imgName = sub.toLowerCase().replace(/ç/g, 'c').replace(/ /g, '_');
+        container.innerHTML += `
+            <div class="job-card" onclick="window.abrirArvoreJob('${sub}', '${cat}', true)">
+                <div style="width: 100%; height: 180px; background: #1a1a1a; border-bottom: 2px solid #ff66b2; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden;">
+                    <span style="font-size: 40px; color: #444; position: absolute; z-index: 1;">💼</span>
+                    <img src="img/jobs/${imgName}.png" style="width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 2;" onerror="this.style.display='none'">
+                </div>
+                <h3>${sub}</h3>
+            </div>
+        `;
+    });
+};
+
+// CORREÇÃO: BOTÃO VOLTAR FUNCIONANDO AGORA!
+window.voltarSelecaoJob = function() {
+    document.getElementById("jobTreeScreen").style.display = "none";
+    document.getElementById("jobSelectionScreen").style.display = "block";
+    window.currentViewingJob = null;
+};
+
+// =========================================================
+// NOVA HUD DE DETALHES DE HABILIDADE (TELA EXPANSÍVEL)
+// (MATEMÁTICA DEFINITIVA: IDENTIFICAÇÕES ÚNICAS, CENTRAGEM E FORMAS PRECISAS)
+// =========================================================
+
+// 1. INJETOR AUTOMÁTICO DO MODAL (Cria a tela sem precisar mexer no index.html)
+if(!document.getElementById("modalSkillDetails")) {
+    let divModal = document.createElement("div");
+    divModal.id = "modalSkillDetails";
+    divModal.className = "modal-overlay";
+    divModal.style.zIndex = "100000";
+    divModal.style.display = "none";
+    // Clicar fora fecha a janela
+    divModal.onclick = function(e) { if(e.target === this) window.fecharDetalhesSkill(); };
+    
+    divModal.innerHTML = `
+        <div class="modal-content" style="border-color: var(--accent-blue); width: 95%; max-width: 450px; padding: 20px; position: relative; background: rgba(10,10,15,0.98); box-shadow: 0 0 40px rgba(0, 229, 255, 0.3);">
+            <button onclick="window.fecharDetalhesSkill()" style="position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: #aaa; font-size: 20px; cursor: pointer; transition: 0.2s;">✖</button>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center;">
+                <div id="detSkillIcon" style="width: 80px; height: 80px; background: #111; border: 2px solid var(--accent-blue); border-radius: 8px; background-size: cover; background-position: center; flex-shrink: 0; box-shadow: 0 0 15px rgba(0,229,255,0.3);"></div>
+                <div style="flex: 1; text-align: left;">
+                    <h2 id="detSkillName" style="color: var(--accent-blue); font-size: 22px; margin: 0 0 5px 0; text-transform: uppercase; text-shadow: 0 0 10px var(--accent-blue);">---</h2>
+                    <div style="font-size: 14px; color: var(--accent-gold); font-weight: bold;">Custo: <span id="detSkillPT" style="font-size: 18px;">1</span> PT</div>
+                    <div style="font-size: 12px; color: #00ff66; margin-top:2px;">Energia: <span id="detSkillER">0</span>%</div>
+                </div>
+            </div>
+
+            <div id="detSkillDesc" style="font-size: 13px; color: #ccc; text-align: justify; margin-bottom: 15px; line-height: 1.5; min-height: 40px; border-bottom: 1px dashed #333; padding-bottom: 15px;">---</div>
+
+            <div style="display: flex; gap: 15px; align-items: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid #222; margin-bottom: 20px;">
+                <div id="detSkillGrid" style="flex-shrink: 0;"></div>
+                <div style="flex: 1; font-size: 12px; color: #aaa; text-align: left; display: grid; grid-template-columns: 1fr; gap: 6px;">
+                    <div>⚔️ Base: <strong id="detSkillBase" style="color:#fff;">---</strong></div>
+                    <div>💠 Forma: <strong id="detSkillShapeLabel" style="color:var(--accent-blue); text-shadow: 0 0 5px var(--accent-blue);">---</strong></div>
+                    <div>🎯 Alcance: <strong id="detSkillRange" style="color:#fff;">---</strong></div>
+                    <div>🎲 Efeito: <strong id="detSkillEffect" style="color:var(--accent-red);">---</strong></div>
+                    <div>☣️ Status: <strong id="detSkillStatus" style="color:#ffaa00;">---</strong></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button id="btnLearnSkill" class="action-btn" style="flex: 2; border-color: #00ff66; background: rgba(0,255,102,0.1); color: #00ff66; font-size: 16px; padding: 12px; font-weight: bold; margin: 0;" onclick="window.comprarHabilidadeSelecionada()">APRENDER</button>
+                <button id="btnEditSkill" class="action-btn" style="flex: 1; border-color: #f00; color: #f00; font-size: 14px; display: none; margin: 0;" onclick="window.editarHabilidadeSelecionada()">⚙️ EDITAR</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(divModal);
+}
+
+window.skillSelecionadaInfo = null;
+
+// =========================================================
+// MOTOR VISUAL: DESENHA O MINI-GRID 5x5 DA HABILIDADE
+// (CORRIGIDO: CENTRALIZAÇÃO DE ALVO PARA CRUZ E DIAGONAIS)
+// =========================================================
+// =========================================================
+// TRADUTOR DA ARTE (GERA OS TEXTOS DA HUD)
+// =========================================================
+// =========================================================
+// TRADUTOR DA ARTE (GERA OS TEXTOS DA HUD COM EMOJIS)
+// =========================================================
+window.parseCustomPatternDesc = function(pattern) {
+    if (!pattern || typeof pattern !== 'string' || !pattern.trim() || !pattern.startsWith("{")) return { types: "Nenhum", effects: "Nenhum" };
+    try {
+        let pat = JSON.parse(pattern);
+        let uniqueTypes = new Set(); let uniqueEffects = new Set();
+        let typeNames = { 'd': '💥 Dano', 'c': '💚 Cura', 'i': '🐺 Invocação', 't': '🕸️ Armadilha', 'tp': '🌀 Teleporte' };
+
+        Object.values(pat.effectMask || {}).forEach(sq => {
+            if (typeNames[sq.t]) uniqueTypes.add(typeNames[sq.t]);
+            if (sq.e && sq.e !== "Nenhum") uniqueEffects.add(`${window.effectEmojis[sq.e]||''}${sq.e} (${sq.v}F|${sq.tr}t)`);
+        });
+        return { types: Array.from(uniqueTypes).join(" | ") || "Nenhum", effects: Array.from(uniqueEffects).join(" | ") || "Nenhum" };
+    } catch(e) { return { types: "Erro", effects: "Erro" }; }
+};
+
+window.gerarMiniGridHtml = function(customPattern) {
+    if (!customPattern || !customPattern.startsWith("{")) return "<div style='color:#aaa; font-size:10px;'>Sem arte Tática.</div>";
+    
+    try {
+        let pat = JSON.parse(customPattern);
+        let html = `<div style="display:grid; grid-template-columns: repeat(9, 9px); grid-template-rows: repeat(9, 9px); gap:1px; background:#000; padding:4px; border-radius:6px; border:1px solid var(--accent-purple); flex-shrink:0; box-shadow: 0 0 10px rgba(176,0,255,0.2);">`;
+        let px = 4; let py = 4; // Centro do 9x9
+
+        for(let y=0; y<9; y++) {
+            for(let x=0; x<9; x++) {
+                let color = "#1a1a1a"; let emoji = "";
+                if (x === px && y === py) { 
+                    color = pat.castType === "alvo" ? "#ffaa00" : "#00e5ff"; 
+                    emoji = pat.castType === "alvo" ? "🎯" : "🧍"; 
+                }
+                
+                let relCoord = `${x - px}_${y - py}`;
+                if (pat.effectMask && pat.effectMask[relCoord]) {
+                    let d = pat.effectMask[relCoord];
+                    if(d.t==='d') color = "#ff1a55"; else if(d.t==='c') color = "#00ff66"; else if(d.t==='i') color = "#0066ff"; else if(d.t==='t') color = "#006600"; else if(d.t==='tp') color = "#b000ff";
+                    emoji = window.effectEmojis[d.e] || "";
+                }
+                html += `<div style="background:${color}; width:100%; height:100%; border-radius:1px; display:flex; align-items:center; justify-content:center; font-size:7px;">${emoji}</div>`;
+            }
+        }
+        return html + `</div>`;
+    } catch(e) { return "<div style='color:red;'>Erro no Grid</div>"; }
+};
+
+// =========================================================
+// 2. HUD MINI-GRID: DESENHA OS QUADRADINHOS E EMOJIS NA TELA
+// =========================================================
+window.gerarMiniGridHtml = function(shape, minRange, maxRange, aoe, customPattern) {
+    let patternLimpo = customPattern;
+    if (!patternLimpo || patternLimpo.trim() === "") patternLimpo = "F:0,-1,d,Nenhum,1,1"; // Fallback visual
+
+    let html = `<div style="display:grid; grid-template-columns: repeat(11, 7px); grid-template-rows: repeat(11, 7px); gap:1px; background:#000; padding:4px; border-radius:6px; border:1px solid var(--accent-purple); flex-shrink:0; box-shadow: 0 0 10px rgba(176,0,255,0.2);">`;
+    let parts = patternLimpo.split(":"); let mode = parts[0]; let blocks = parts[1] ? parts[1].split("|") : [];
+    let px = 5; let py = mode === "F" ? 10 : 5;
+    let paintMap = {}; blocks.forEach(b => { if(!b) return; let [x, y, t, e] = b.split(","); paintMap[`${px + parseInt(x)}_${py + parseInt(y)}`] = {t, e}; });
+
+    for(let y=0; y<11; y++) {
+        for(let x=0; x<11; x++) {
+            let color = "#1a1a1a"; let emoji = "";
+            if (x === px && y === py) { color = mode === "A" ? "#ffaa00" : "#00e5ff"; emoji = mode === "A" ? "🎯" : "🧍"; }
+            else if (paintMap[`${x}_${y}`]) {
+                let d = paintMap[`${x}_${y}`];
+                if(d.t==='d') color = "#ff1a55"; else if(d.t==='c') color = "#00ff66"; else if(d.t==='i') color = "#0066ff"; else if(d.t==='t') color = "#006600"; else if(d.t==='tp') color = "#b000ff";
+                emoji = window.effectEmojis[d.e] || "";
+            }
+            html += `<div style="background:${color}; width:100%; height:100%; border-radius:1px; display:flex; align-items:center; justify-content:center; font-size:6px;">${emoji}</div>`;
+        }
+    }
+    return html + `</div>`;
+};
+
+// =========================================================
+// INJETOR DO MODAL DA MINI HUD
+// =========================================================
+if(!document.getElementById("modalSkillDetails")) {
+    let divModal = document.createElement("div"); divModal.id = "modalSkillDetails"; divModal.className = "modal-overlay"; divModal.style.zIndex = "100000"; divModal.style.display = "none";
+    divModal.onclick = function(e) { if(e.target === this) window.fecharDetalhesSkill(); };
+    divModal.innerHTML = `
+        <div class="modal-content" style="border-color: var(--accent-blue); width: 95%; max-width: 450px; padding: 20px; position: relative; background: rgba(10,10,15,0.98); box-shadow: 0 0 40px rgba(0, 229, 255, 0.3);">
+            <button onclick="window.fecharDetalhesSkill()" style="position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: #aaa; font-size: 20px; cursor: pointer; transition: 0.2s;">✖</button>
+            <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center;">
+                <div id="detSkillIcon" style="width: 80px; height: 80px; background: #111; border: 2px solid var(--accent-blue); border-radius: 8px; background-size: cover; background-position: center; flex-shrink: 0; box-shadow: 0 0 15px rgba(0,229,255,0.3);"></div>
+                <div style="flex: 1; text-align: left;">
+                    <h2 id="detSkillName" style="color: var(--accent-blue); font-size: 22px; margin: 0 0 5px 0; text-transform: uppercase; text-shadow: 0 0 10px var(--accent-blue);">---</h2>
+                    <div style="font-size: 14px; color: var(--accent-gold); font-weight: bold;">Custo: <span id="detSkillPT" style="font-size: 18px;">1</span> PT</div>
+                    <div style="font-size: 12px; color: #00ff66; margin-top:2px;">Energia: <span id="detSkillER">0</span>%</div>
+                </div>
+            </div>
+            <div id="detSkillDesc" style="font-size: 13px; color: #ccc; text-align: justify; margin-bottom: 15px; line-height: 1.5; min-height: 40px; border-bottom: 1px dashed #333; padding-bottom: 15px;">---</div>
+            <div style="display: flex; gap: 15px; align-items: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid #222; margin-bottom: 20px;">
+                <div id="detSkillGrid" style="flex-shrink: 0; display:flex; align-items:center; justify-content:center;"></div>
+                <div style="flex: 1; font-size: 12px; color: #aaa; text-align: left; display: grid; grid-template-columns: 1fr; gap: 6px;">
+                    <div>⚔️ Base: <strong id="detSkillBase" style="color:#fff;">---</strong></div>
+                    <div>💠 Forma: <strong id="detSkillShapeLabel" style="color:var(--accent-blue); text-shadow: 0 0 5px var(--accent-blue);">---</strong></div>
+                    <div>🎯 Alcance: <strong id="detSkillRange" style="color:#fff;">---</strong></div>
+                    <div>🎲 Efeito: <strong id="detSkillEffect" style="color:var(--accent-red);">---</strong></div>
+                    <div>☣️ Status: <strong id="detSkillStatus" style="color:#ffaa00;">---</strong></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="btnLearnSkill" class="action-btn" style="flex: 2; border-color: #00ff66; background: rgba(0,255,102,0.1); color: #00ff66; font-size: 16px; padding: 12px; font-weight: bold; margin: 0;" onclick="window.comprarHabilidadeSelecionada()">APRENDER</button>
+                <button id="btnEditSkill" class="action-btn" style="flex: 1; border-color: #f00; color: #f00; font-size: 14px; display: none; margin: 0;" onclick="window.editarHabilidadeSelecionada()">⚙️ EDITAR</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(divModal);
+}
+
+// =========================================================
+// A TELA DA HUD E SEUS DADOS
+// =========================================================
+window.abrirDetalhesSkill = function(skillId, sData) {
+    window.skillSelecionadaInfo = { id: skillId, data: sData };
+    document.getElementById("detSkillName").innerText = sData.nome || "Vazio";
+    document.getElementById("detSkillPT").innerText = sData.pt || 1;
+    document.getElementById("detSkillER").innerText = sData.er || 0;
+    document.getElementById("detSkillDesc").innerText = sData.desc || "Habilidade ainda não forjada.";
+	document.getElementById("detSkillPT").innerText = sData.pt || 1;
+    let paEl = document.getElementById("detSkillPA"); if(paEl) paEl.innerText = sData.pa || 1;
+    document.getElementById("detSkillER").innerText = sData.er || 0;
+    
+    let iconEl = document.getElementById("detSkillIcon");
+    if(sData.img && sData.img.trim() !== "") { iconEl.style.backgroundImage = `url('${sData.img}')`; iconEl.innerText = ""; } 
+    else { iconEl.style.backgroundImage = "none"; iconEl.innerText = "✖"; iconEl.style.display = "flex"; iconEl.style.alignItems = "center"; iconEl.style.justifyContent = "center"; iconEl.style.color = "#555"; iconEl.style.fontSize = "30px"; }
+
+    let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+    document.getElementById("detSkillBase").innerText = attrNames[sData.attr] || "Mágico";
+    
+    let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+    let parsedInfo = window.parseCustomPatternDesc(sData.customPattern);
+    
+    document.getElementById("detSkillShapeLabel").innerText = isCustom ? "🖌️ Desenho 11x11" : (sData.shape || "🎯 Alvo Único");
+    
+    let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`; if (sData.aoe > 0) rangeTxt += ` (Área: ${sData.aoe})`;
+    document.getElementById("detSkillRange").innerText = isCustom ? "Livre (360º)" : (rangeTxt || "Corpo-a-corpo");
+
+    // INJETA O TEXTO TRADUZIDO DE AÇÃO E STATUS!
+    let diceTxt = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+    let actionTxt = isCustom && parsedInfo.types ? parsedInfo.types : "Nenhum";
+    document.getElementById("detSkillEffect").innerHTML = `<span style="color:#fff;">${diceTxt}</span><br><span style="color:var(--accent-red); font-size:10px;">${actionTxt}</span>`;
+    
+    let statusText = isCustom && parsedInfo.effects ? parsedInfo.effects : "Nenhum";
+    if(!isCustom && sData.status && sData.status !== "") statusText = `${sData.status} (${sData.statusVal || 1})`;
+    document.getElementById("detSkillStatus").innerHTML = statusText;
+
+    // CHAMA A FUNÇÃO DE GRID PRA DESENHAR NA HUD
+    if(window.gerarMiniGridHtml) { document.getElementById("detSkillGrid").innerHTML = window.gerarMiniGridHtml(sData.shape, sData.minRange, sData.maxRange, sData.aoe, sData.customPattern); }
+
+    let btnEdit = document.getElementById("btnEditSkill"); let btnLearn = document.getElementById("btnLearnSkill");
+    if(window.isMaster) { btnEdit.style.display = "block"; } else { btnEdit.style.display = "none"; }
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let unlockedSkills = u.job?.skills || [];
+    if (!sData.nome || sData.nome === "Vazio") { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "NÃO FORJADA"; } else if (unlockedSkills.includes(skillId)) { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "JÁ APRENDIDA"; } else { btnLearn.disabled = false; btnLearn.style.opacity = "1"; btnLearn.innerText = "APRENDER"; }
+
+    document.getElementById("modalSkillDetails").style.display = "flex";
+};
+
+// =========================================================
+// O CLIQUE DA ÁRVORE DE HABILIDADES (NÃO MEXER!)
+// =========================================================
+// =========================================================
+// O CLIQUE DA ÁRVORE DE HABILIDADES (CORRIGIDO PARA ABRIR HUD)
+// =========================================================
+window.abrirArvoreJob = function(subjob, cat, isPreview) {
+    window.currentViewingJob = { subjob: subjob, cat: cat };
+    document.getElementById("jobSelectionScreen").style.display = "none"; 
+    document.getElementById("jobTreeScreen").style.display = "flex"; 
+    document.getElementById("jobTreeTitle").innerText = subjob.toUpperCase();
+
+    let u = window.usersGlobais[window.jogadorAtual] || {}; 
+    let uJob = u.job || {};
+    
+    if(uJob.locked && uJob.subjob === subjob && !window.isMaster) { 
+        document.getElementById("btnVoltarJob").style.display = "none"; 
+        document.getElementById("jobLockWarning").style.display = "none"; 
+    } else { 
+        document.getElementById("btnVoltarJob").style.display = "block"; 
+        document.getElementById("jobLockWarning").style.display = "block"; 
+    }
+
+    let treeData = (window.jobConfigGlobais[cat] && window.jobConfigGlobais[cat][subjob]) ? window.jobConfigGlobais[cat][subjob] : {};
+    let unlockedSkills = (uJob.locked && uJob.subjob === subjob) ? (uJob.skills || []) : [];
+    let nodeIds = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','u1','u2','u3']; 
+    let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+
+    nodeIds.forEach(id => {
+        let nodeEl = document.getElementById(`node_${id}`); 
+        let tipEl = document.getElementById(`tip_${id}`);
+        let sData = treeData[id] || { nome: "Vazio", desc: "Não configurada", pt: 1 };
+        nodeEl.className = "skill-node" + (id.startsWith('u') ? " ultimate" : "");
+        
+        // A MÁGICA: O clique agora FORÇA a abertura da Mini HUD, e nunca o editor!
+        nodeEl.onclick = function(e) {
+            e.preventDefault(); // Impede qualquer comportamento padrão
+            window.abrirDetalhesSkill(id, sData); 
+        };
+
+        if(sData.img && sData.img.trim() !== "") { 
+            nodeEl.style.backgroundImage = `url('${sData.img}')`; nodeEl.innerText = ""; 
+        } else { 
+            nodeEl.style.backgroundImage = "none"; nodeEl.innerText = (sData.nome || "Vazio").substring(0, 10); 
+        }
+
+        let htmlTip = `<div class="skill-tooltip-title">${sData.nome}</div><div class="skill-tooltip-desc">${sData.desc}</div>`;
+        if (sData.nome && sData.nome !== "Vazio") {
+            htmlTip += `<div class="tbs-stats-grid"><span>⭐ PT: <strong>${sData.pt || 1}</strong></span>`;
+            if(sData.er) htmlTip += `<span>⚡ ER: <strong style="color:#00ff66;">${sData.er}</strong></span>`;
+            let nAttr = attrNames[sData.attr] || "Mágico"; htmlTip += `<span style="grid-column: span 2;">⚔️ Base: <strong>${nAttr}</strong></span>`;
+            
+            let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+            let parsedInfo = window.parseCustomPatternDesc(sData.customPattern);
+
+            let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`;
+            if (rangeTxt) htmlTip += `<span style="grid-column: span 2;">🎯 Alcance: <strong>${isCustom ? 'Livre (360º)' : rangeTxt}</strong></span>`;
+            
+            let diceTxt = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+            let actionTxt = isCustom && parsedInfo.types ? parsedInfo.types : "Nenhum";
+            htmlTip += `<span style="grid-column: span 2;">🎲 Ação Base: <strong style="color:#fff;">${diceTxt}</strong><br><strong style="color:var(--accent-red); font-size:9px;">${actionTxt}</strong></span>`;
+            
+            let statusText = isCustom && parsedInfo.effects ? parsedInfo.effects : "Nenhum";
+            if(!isCustom && sData.status && sData.status !== "") statusText = `${sData.status} (${sData.statusVal || 1})`;
+            
+            if(statusText !== "Nenhum") htmlTip += `<span style="grid-column: span 2; font-size:10px;">☣️ Status: <strong style="color:#ffaa00;">${statusText}</strong></span>`;
+            
+            htmlTip += `<div style="grid-column: span 2; display:flex; justify-content:center; margin-top:5px;">`;
+            htmlTip += window.gerarMiniGridHtml(sData.shape, sData.minRange, sData.maxRange, sData.aoe, sData.customPattern);
+            htmlTip += `</div></div>`;
+        }
+        tipEl.innerHTML = htmlTip;
+
+        if (unlockedSkills.includes(id)) { nodeEl.classList.add("unlocked"); } 
+        else if (uJob.locked && uJob.subjob === subjob) { nodeEl.classList.add("available"); } 
+        else if (isPreview) { nodeEl.classList.add("available"); }
+    });
+};
+
+// =========================================================
+// A TELA DA HUD E SEUS DADOS
+// =========================================================
+window.abrirDetalhesSkill = function(skillId, sData) {
+    window.skillSelecionadaInfo = { id: skillId, data: sData };
+    
+    document.getElementById("detSkillName").innerText = sData.nome || "Vazio";
+    document.getElementById("detSkillPT").innerText = sData.pt || 1;
+    document.getElementById("detSkillER").innerText = sData.er || 0;
+    document.getElementById("detSkillDesc").innerText = sData.desc || "Habilidade ainda não forjada.";
+    
+    let iconEl = document.getElementById("detSkillIcon");
+    if(sData.img && sData.img.trim() !== "") { 
+        iconEl.style.backgroundImage = `url('${sData.img}')`; iconEl.innerText = ""; 
+    } else { 
+        iconEl.style.backgroundImage = "none"; iconEl.innerText = "✖"; 
+        iconEl.style.display = "flex"; iconEl.style.alignItems = "center"; 
+        iconEl.style.justifyContent = "center"; iconEl.style.color = "#555"; 
+        iconEl.style.fontSize = "30px"; 
+    }
+
+    let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+    document.getElementById("detSkillBase").innerText = attrNames[sData.attr] || "Mágico";
+    
+    let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+    let parsedInfo = window.parseCustomPatternDesc(sData.customPattern);
+    
+    document.getElementById("detSkillShapeLabel").innerText = isCustom ? "🖌️ Desenho 11x11" : (sData.shape || "🎯 Alvo Único");
+    
+    let rangeTxt = ""; 
+    if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; 
+    if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`; 
+    if (sData.aoe > 0) rangeTxt += ` (Área: ${sData.aoe})`;
+    
+    document.getElementById("detSkillRange").innerText = isCustom ? "Livre (360º)" : (rangeTxt || "Corpo-a-corpo");
+
+    // INJETA O TEXTO TRADUZIDO DE AÇÃO E STATUS!
+    let diceTxt = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+    let actionTxt = isCustom && parsedInfo.types ? parsedInfo.types : "Nenhum";
+    document.getElementById("detSkillEffect").innerHTML = `<span style="color:#fff;">${diceTxt}</span><br><span style="color:var(--accent-red); font-size:10px;">${actionTxt}</span>`;
+    
+    let statusText = isCustom && parsedInfo.effects ? parsedInfo.effects : "Nenhum";
+    if(!isCustom && sData.status && sData.status !== "") statusText = `${sData.status} (${sData.statusVal || 1})`;
+    document.getElementById("detSkillStatus").innerHTML = statusText;
+
+    // CHAMA A FUNÇÃO DE GRID PRA DESENHAR NA HUD
+    if(window.gerarMiniGridHtml) { 
+        document.getElementById("detSkillGrid").innerHTML = window.gerarMiniGridHtml(sData.shape, sData.minRange, sData.maxRange, sData.aoe, sData.customPattern); 
+    }
+
+    let btnEdit = document.getElementById("btnEditSkill"); 
+    let btnLearn = document.getElementById("btnLearnSkill");
+    
+    if(window.isMaster) { 
+        btnEdit.style.display = "block"; 
+    } else { 
+        btnEdit.style.display = "none"; 
+    }
+    
+    let u = window.usersGlobais[window.jogadorAtual] || {}; 
+    let unlockedSkills = u.job?.skills || [];
+    
+    if (!sData.nome || sData.nome === "Vazio") { 
+        btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "NÃO FORJADA"; 
+    } else if (unlockedSkills.includes(skillId)) { 
+        btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "JÁ APRENDIDA"; 
+    } else { 
+        btnLearn.disabled = false; btnLearn.style.opacity = "1"; btnLearn.innerText = "APRENDER"; 
+    }
+
+    let modal = document.getElementById("modalSkillDetails");
+    if (modal) modal.style.display = "flex";
+};
+
+// Funções de controle da HUD
+window.fecharDetalhesSkill = function() {
+    let modal = document.getElementById("modalSkillDetails");
+    if(modal) modal.style.display = "none";
+};
+
+window.editarHabilidadeSelecionada = function() {
+    window.fecharDetalhesSkill();
+    if(window.skillSelecionadaInfo) window.clicarHabilidade(window.skillSelecionadaInfo.id); 
+};
+
+window.comprarHabilidadeSelecionada = function() {
+    window.fecharDetalhesSkill();
+    if(window.skillSelecionadaInfo) window.clicarHabilidade(window.skillSelecionadaInfo.id); 
+};
+
+// =========================================================
+// 1. ABRIR O MODAL DA FORJA (MESTRE) OU COMPRAR (JOGADOR)
+// =========================================================
+window.clicarHabilidade = function(skillId) {
+    if(!window.currentViewingJob) return;
+    let sub = window.currentViewingJob.subjob; let cat = window.currentViewingJob.cat;
+
+    if(window.isMaster) {
+        let sData = (window.jobConfigGlobais[cat] && window.jobConfigGlobais[cat][sub] && window.jobConfigGlobais[cat][sub][skillId]) ? window.jobConfigGlobais[cat][sub][skillId] : null;
+        let isNew = !sData || sData.nome === "Vazio" || sData.nome === "";
+
+        let setVal = (id, val) => { let el = document.getElementById(id); if(el) el.value = val; };
+        setVal("editSkillId", skillId); setVal("editSkillName", isNew ? "" : (sData.nome || "")); setVal("editSkillImg", isNew ? "" : (sData.img || "")); setVal("editSkillDesc", isNew ? "" : (sData.desc || ""));
+        setVal("editSkillPT", isNew ? "" : (sData.pt || "")); setVal("editSkillER", isNew ? "" : (sData.er || "")); setVal("editSkillAttr", isNew ? "int" : (sData.attr || "int"));
+        setVal("editSkillMinRange", isNew ? "" : (sData.minRange || "")); setVal("editSkillMaxRange", isNew ? "" : (sData.maxRange || "")); 
+        setVal("editSkillDice", isNew ? "" : (sData.dice || "")); setVal("editSkillBonus", isNew ? "" : (sData.bonus || "")); 
+        setVal("editSkillCustomPattern", isNew ? "" : (sData.customPattern || ""));
+        
+        let modal = document.getElementById("modalEditSkill"); if(modal) modal.style.display = "flex"; return;
+    }
+
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let uJob = u.job || { locked: false, pts: 0, skills: [] };
+    if(uJob.locked && uJob.subjob !== sub) { window.showNeonToast("Você já possui outra classe!"); return; }
+    if(uJob.skills && uJob.skills.includes(skillId)) { window.showNeonToast("Você já tem essa habilidade!"); return; }
+
+    let sData = (window.jobConfigGlobais[cat] && window.jobConfigGlobais[cat][sub] && window.jobConfigGlobais[cat][sub][skillId]) ? window.jobConfigGlobais[cat][sub][skillId] : null;
+    if(!sData || !sData.nome || sData.nome === "Vazio") { window.showNeonToast("Habilidade não forjada."); return; }
+    let custo = parseInt(sData.pt) || 1; if((uJob.pts || 0) < custo) { window.showNeonToast(`Precisa de ${custo} PT!`); return; }
+
+    if(confirm(uJob.locked ? `Dominar [${sData.nome}] por ${custo} PT?` : `Gastar ${custo} PT irá TRAVAR você como [${sub}]. Confirmar?`)) {
+        let ptsRestantes = (uJob.pts || 0) - custo; let novasSkills = uJob.skills ? [...uJob.skills] : []; novasSkills.push(skillId);
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/job`).set({ locked: true, category: cat, subjob: sub, pts: ptsRestantes, skills: novasSkills });
+
+        // Tenta puxar o maxRange do JSON
+        let mRange = sData.maxRange || 4;
+        if(sData.customPattern && sData.customPattern.startsWith("{")) {
+            try { let pat = JSON.parse(sData.customPattern); if(pat.maxRange) mRange = pat.maxRange; } catch(e){}
+        }
+
+        let skillPayload = {
+            nome: "✨ " + sData.nome, tipo: "Skill", desc: sData.desc, img: sData.img, eq: true, w: 0, h: 0, isVTT: true,
+            wpnRange: mRange, minRange: sData.minRange || 0,
+            customPattern: sData.customPattern || "", // O JSON É SALVO NA MOCHILA AQUI!
+            wpnDice: sData.dice, wpnBonus: sData.bonus, attr: sData.attr, erCost: sData.er
+        };
+        window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/mochila`).push(skillPayload).then(() => { window.showNeonToast(`Adquirida!`); window.renderizarTrabalhos(); });
+    }
+};
+
+// =========================================================
+// 2. SALVAR AS CONFIGURAÇÕES NA FORJA (SEGURO)
+// =========================================================
+window.salvarEdicaoMestre = function() {
+    try {
+        if(!window.isMaster || !window.currentViewingJob) return;
+
+        let skillId = document.getElementById("editSkillId").value;
+        let cat = window.currentViewingJob.cat; 
+        let sub = window.currentViewingJob.subjob;
+        
+        let getVal = (id, def) => { let el = document.getElementById(id); return el ? el.value : def; };
+        let getInt = (id, def) => { let el = document.getElementById(id); return el && el.value ? parseInt(el.value) : def; };
+
+        let payload = {
+            nome: getVal("editSkillName", "").trim() || "Nova Habilidade",
+            img: getVal("editSkillImg", "").trim() || "",
+            desc: getVal("editSkillDesc", "").trim() || "Sem descrição.",
+            pt: getInt("editSkillPT", 1), er: getInt("editSkillER", 0), attr: getVal("editSkillAttr", "int"),
+            minRange: getInt("editSkillMinRange", 0), maxRange: getInt("editSkillMaxRange", 1),
+            customPattern: getVal("editSkillCustomPattern", ""), // A ARTE É SALVA AQUI!
+            dice: getVal("editSkillDice", "").trim() || "1d4", bonus: getInt("editSkillBonus", 0)
+        };
+
+        // Salva na memória ativa do Mestre
+        if(!window.jobConfigGlobais[cat]) window.jobConfigGlobais[cat] = {};
+        if(!window.jobConfigGlobais[cat][sub]) window.jobConfigGlobais[cat][sub] = {};
+        window.jobConfigGlobais[cat][sub][skillId] = payload;
+
+        let updates = {};
+        updates[`tokyoRpg/jobConfig/${cat}/${sub}/${skillId}`] = payload;
+
+        // Vasculha TODAS as mochilas e injeta a skill atualizada com o desenho novo!
+        window.db.ref('tokyoRpg/users').once('value').then(snap => {
+            let usrs = snap.val(); 
+            if(usrs) { 
+                Object.keys(usrs).forEach(uKey => { 
+                    let inv = usrs[uKey].mochila; 
+                    if(inv) { 
+                        Object.keys(inv).forEach(mKey => { 
+                            let nomeMochila = (inv[mKey].nome || "").replace("✨ ", "").replace("🧪 ", "").trim();
+                            let nomePayload = payload.nome.trim();
+                            if(nomeMochila === nomePayload) { 
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/customPattern`] = payload.customPattern;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnRange`] = payload.maxRange;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/desc`] = payload.desc;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/isVTT`] = true;
+                            } 
+                        }); 
+                    } 
+                }); 
+            }
+            
+            // Dispara tudo pro Firebase
+            window.db.ref().update(updates).then(() => {
+                window.showNeonToast("Habilidade Forjada e Transmitida ao VTT!"); 
+                let modal = document.getElementById("modalEditSkill"); if(modal) modal.style.display = "none";
+                window.abrirArvoreJob(sub, cat, true); // Recarrega os visuais
+                
+                // Se a mira estiver aberta no mapa, reseta para pegar o desenho novo na hora!
+                let wpnDiv = document.getElementById("wpnSelectDiv");
+                if(window.currentSubMapKey && wpnDiv && wpnDiv.style.display === "flex") {
+                    window.iniciarAtaqueVTT(); 
+                }
+            });
+        });
+    } catch (err) { window.showNeonToast("Erro na Forja."); console.error(err); }
+};
+
+// =========================================================
+// 3. EQUIPAR TESTE PARA O MESTRE (SEGURO)
+// =========================================================
+window.testarSkillMestre = function() {
+    let getVal = (id, def) => { let el = document.getElementById(id); return el ? el.value : def; };
+    let getInt = (id, def) => { let el = document.getElementById(id); return el && el.value ? parseInt(el.value) : def; };
+
+    let payload = {
+        nome: "🧪 " + (getVal("editSkillName", "").trim() || "Teste"), 
+        tipo: "Skill", desc: getVal("editSkillDesc", "").trim(),
+        eq: true, w: 0, h: 0, isVTT: true,
+        wpnStyle: getVal("editSkillShape", "Alvo"), 
+        customPattern: getVal("editSkillCustomPattern", ""),
+        wpnRange: getInt("editSkillMaxRange", 1), 
+        minRange: getInt("editSkillMinRange", 0), 
+        aoe: getInt("editSkillAoE", 0),
+        wpnDice: getVal("editSkillDice", "").trim() || "1d4", 
+        wpnBonus: getInt("editSkillBonus", 0), 
+        wpnEffect: getVal("editSkillStatus", ""), 
+        wpnEffectVal: getInt("editSkillStatusVal", 1), 
+        wpnEffectTurnos: getInt("editSkillStatusTurnos", 1), 
+        attr: getVal("editSkillAttr", "int"), 
+        erCost: getInt("editSkillER", 0)
+    };
+
+    window.db.ref(`tokyoRpg/users/MESTRE/mochila`).push(payload).then(() => { 
+        window.showNeonToast("Skill injetada na mochila do Mestre!"); 
+        let modal = document.getElementById("modalEditSkill");
+        if(modal) modal.style.display = "none"; 
+    });
+};
+
+// 4. ATUALIZAR HUD DE DETALHES DA SKILL (Para mostrar Força e Duração separadas)
+window.abrirDetalhesSkill = function(skillId, sData) {
+    window.skillSelecionadaInfo = { id: skillId, data: sData };
+    document.getElementById("detSkillName").innerText = sData.nome || "Vazio";
+    document.getElementById("detSkillPT").innerText = sData.pt || 1;
+    document.getElementById("detSkillER").innerText = sData.er || 0;
+    
+    let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+    let translatedDesc = sData.desc || "Habilidade ainda não forjada.";
+    document.getElementById("detSkillDesc").innerText = translatedDesc;
+    
+    let iconEl = document.getElementById("detSkillIcon");
+    if(sData.img && sData.img.trim() !== "") { iconEl.style.backgroundImage = `url('${sData.img}')`; iconEl.innerText = ""; } 
+    else { iconEl.style.backgroundImage = "none"; iconEl.innerText = "✖"; iconEl.style.display = "flex"; iconEl.style.alignItems = "center"; iconEl.style.justifyContent = "center"; iconEl.style.color = "#555"; iconEl.style.fontSize = "30px"; }
+
+    let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+    document.getElementById("detSkillBase").innerText = attrNames[sData.attr] || "Mágico";
+    
+    document.getElementById("detSkillShapeLabel").innerText = isCustom ? "🖌️ Pintada Manualmente" : (sData.shape || "🎯 Alvo Único");
+    
+    let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`; if (sData.aoe > 0) rangeTxt += ` (Área: ${sData.aoe})`;
+    document.getElementById("detSkillRange").innerText = isCustom ? "Livre (360º)" : (rangeTxt || "Corpo-a-corpo");
+
+    // LÓGICA DE DANO BASE E STATUS: Lê do Pintor Tático se existir!
+    let dmgVal = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+    document.getElementById("detSkillEffect").innerText = dmgVal.trim() !== "" ? dmgVal : "Nenhum";
+    
+    let statusText = "Nenhum";
+    if (isCustom) {
+        let uniqueStatuses = new Set();
+        let parts = sData.customPattern.split(":");
+        if (parts[1]) {
+            parts[1].split("|").forEach(b => {
+                if(!b) return;
+                let [x, y, t, e, v, tr] = b.split(",");
+                if (e && e !== "Nenhum") uniqueStatuses.add(`${window.effectEmojis[e]||''}${e} (${v} F | ${tr}t)`);
+            });
+        }
+        if (uniqueStatuses.size > 0) statusText = Array.from(uniqueStatuses).join(" 🔹 ");
+    } else if (sData.status && sData.status !== "") { 
+        statusText = `${sData.status} (Força: ${sData.statusVal || 1} | Duração: ${sData.statusTurnos || 1}t)`; 
+    }
+    document.getElementById("detSkillStatus").innerText = statusText;
+
+    // INJETA O PATTERN PARA GERAR A IMAGEM
+    if(window.gerarMiniGridHtml) { document.getElementById("detSkillGrid").innerHTML = window.gerarMiniGridHtml(sData.customPattern || ""); }
+
+    let btnEdit = document.getElementById("btnEditSkill"); let btnLearn = document.getElementById("btnLearnSkill");
+    if(window.isMaster) { btnEdit.style.display = "block"; } else { btnEdit.style.display = "none"; }
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let unlockedSkills = u.job?.skills || [];
+    if (!sData.nome || sData.nome === "Vazio") { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "NÃO FORJADA"; } else if (unlockedSkills.includes(skillId)) { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "JÁ APRENDIDA"; } else { btnLearn.disabled = false; btnLearn.style.opacity = "1"; btnLearn.innerText = "APRENDER"; }
+
+    document.getElementById("modalSkillDetails").style.display = "flex";
+};
+
+// Faz o mesmo para o balãozinho (Tooltip) da árvore!
+window.abrirArvoreJob = function(subjob, cat, isPreview) {
+    window.currentViewingJob = { subjob: subjob, cat: cat };
+    document.getElementById("jobSelectionScreen").style.display = "none"; document.getElementById("jobTreeScreen").style.display = "flex"; document.getElementById("jobTreeTitle").innerText = subjob.toUpperCase();
+
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let uJob = u.job || {};
+    if(uJob.locked && uJob.subjob === subjob && !window.isMaster) { document.getElementById("btnVoltarJob").style.display = "none"; document.getElementById("jobLockWarning").style.display = "none"; } 
+    else { document.getElementById("btnVoltarJob").style.display = "block"; document.getElementById("jobLockWarning").style.display = "block"; }
+
+    let treeData = (window.jobConfigGlobais[cat] && window.jobConfigGlobais[cat][subjob]) ? window.jobConfigGlobais[cat][subjob] : {};
+    let unlockedSkills = (uJob.locked && uJob.subjob === subjob) ? (uJob.skills || []) : [];
+    let nodeIds = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','u1','u2','u3']; let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+
+    nodeIds.forEach(id => {
+        let nodeEl = document.getElementById(`node_${id}`); let tipEl = document.getElementById(`tip_${id}`);
+        let sData = treeData[id] || { nome: "Vazio", desc: "Não configurada", pt: 1 };
+        nodeEl.className = "skill-node" + (id.startsWith('u') ? " ultimate" : "");
+        
+        if(sData.img && sData.img.trim() !== "") { nodeEl.style.backgroundImage = `url('${sData.img}')`; nodeEl.innerText = ""; } 
+        else { nodeEl.style.backgroundImage = "none"; nodeEl.innerText = (sData.nome || "Vazio").substring(0, 10); }
+
+        let htmlTip = `<div class="skill-tooltip-title">${sData.nome}</div><div class="skill-tooltip-desc">${sData.desc}</div>`;
+        if (sData.nome && sData.nome !== "Vazio") {
+            htmlTip += `<div class="tbs-stats-grid"><span>⭐ PT: <strong>${sData.pt || 1}</strong></span>`;
+            if(sData.er) htmlTip += `<span>⚡ ER: <strong style="color:#00ff66;">${sData.er}</strong></span>`;
+            let nAttr = attrNames[sData.attr] || "Mágico"; htmlTip += `<span style="grid-column: span 2;">⚔️ Base: <strong>${nAttr}</strong></span>`;
+            
+            let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+            let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`;
+            if (rangeTxt) htmlTip += `<span style="grid-column: span 2;">🎯 Alcance: <strong>${isCustom ? 'Livre (360º)' : rangeTxt}</strong></span>`;
+            
+            let diceTxt = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+            if(diceTxt.trim() !== "") htmlTip += `<span style="grid-column: span 2;">🎲 Efeito Base: <strong style="color:var(--accent-red);">${diceTxt}</strong></span>`;
+            
+            // LÊ OS EFEITOS PINTADOS PARA O TOOLTIP
+            let statusText = "Nenhum";
+            if (isCustom) {
+                let uniqueStatuses = new Set();
+                let parts = sData.customPattern.split(":");
+                if (parts[1]) {
+                    parts[1].split("|").forEach(b => {
+                        if(!b) return; let [x, y, t, e, v, tr] = b.split(",");
+                        if (e && e !== "Nenhum") uniqueStatuses.add(`${window.effectEmojis[e]||''}${e} (${v}F|${tr}t)`);
+                    });
+                }
+                if (uniqueStatuses.size > 0) statusText = Array.from(uniqueStatuses).join(" ");
+            } else if (sData.status && sData.status !== "") { 
+                statusText = `${sData.status} (${sData.statusVal || 1})`; 
+            }
+            if(statusText !== "Nenhum") htmlTip += `<span style="grid-column: span 2; font-size:9px;">☣️ Status: <strong style="color:#ffaa00;">${statusText}</strong></span>`;
+            
+            // INJETA O MINIGRID
+            htmlTip += `<div style="grid-column: span 2; display:flex; justify-content:center; margin-top:5px;">`;
+            htmlTip += window.gerarMiniGridHtml(sData.customPattern || "");
+            htmlTip += `</div></div>`;
+        }
+        tipEl.innerHTML = htmlTip;
+
+        if (unlockedSkills.includes(id)) { nodeEl.classList.add("unlocked"); } 
+        else if (uJob.locked && uJob.subjob === subjob) { nodeEl.classList.add("available"); } 
+        else if (isPreview) { nodeEl.classList.add("available"); }
+    });
+};
+
+// =========================================================
+// CORREÇÃO: SALVAR HABILIDADE BLINDADO CONTRA ERROS
+// =========================================================
+window.salvarEdicaoMestre = function() {
+    try {
+        if(!window.isMaster || !window.currentViewingJob) {
+            window.showNeonToast("Erro: Classe não selecionada!");
+            return;
+        }
+
+        let skillId = document.getElementById("editSkillId").value;
+        let cat = window.currentViewingJob.cat; 
+        let sub = window.currentViewingJob.subjob;
+        
+        // Coleta blindada (Se o campo estiver vazio, ele assume o padrão e não crasha)
+        let payload = {
+            nome: document.getElementById("editSkillName").value.trim() || "Nova Habilidade",
+            img: document.getElementById("editSkillImg").value.trim() || "",
+            desc: document.getElementById("editSkillDesc").value.trim() || "Sem descrição.",
+            pt: parseInt(document.getElementById("editSkillPT").value) || 1,
+            er: parseInt(document.getElementById("editSkillER").value) || 0,
+            attr: document.getElementById("editSkillAttr").value || "int",
+            minRange: parseInt(document.getElementById("editSkillMinRange").value) || 0,
+            maxRange: parseInt(document.getElementById("editSkillMaxRange").value) || 1,
+            aoe: parseInt(document.getElementById("editSkillAoE").value) || 0,
+            shape: document.getElementById("editSkillShape").value || "Alvo",
+            dice: document.getElementById("editSkillDice").value.trim() || "1d4",
+            bonus: parseInt(document.getElementById("editSkillBonus").value) || 0,
+            status: document.getElementById("editSkillStatus").value || "",
+            statusVal: parseInt(document.getElementById("editSkillStatusVal").value) || 1
+        };
+
+        if(payload.shape === "summon") {
+            payload.summonHP = parseInt(document.getElementById("editSkillSummonHP").value) || 50;
+            payload.summonTurnos = parseInt(document.getElementById("editSkillSummonTurnos").value) || 3;
+        }
+
+        window.db.ref(`tokyoRpg/jobConfig/${cat}/${sub}/${skillId}`).set(payload).then(() => {
+            window.showNeonToast("Node Forjado e Salvo no Banco!"); 
+            document.getElementById("modalEditSkill").style.display = "none";
+        }).catch(err => {
+            console.error("Erro Firebase:", err);
+            window.showNeonToast("Erro de conexão ao salvar!");
+        });
+
+    } catch (err) {
+        console.error("Erro no Javascript ao Salvar:", err);
+        window.showNeonToast("Erro ao ler formulário. Preencha os números corretamente.");
+    }
+};
+
+// Também protegemos a leitura para o caso de um Node ter salvado pela metade antes
+// =========================================================
+// 1. MOTOR VISUAL: DESENHA O MINI-GRID (AGORA LÊ O DESENHO!)
+// =========================================================
+window.gerarMiniGridHtml = function(customPattern) {
+    if (!customPattern || typeof customPattern !== 'string' || !customPattern.startsWith("{")) return "<div style='color:#aaa; font-size:10px;'>Sem arte Tática JSON.</div>";
+    
+    try {
+        let pat = JSON.parse(customPattern);
+        let html = `<div style="display:grid; grid-template-columns: repeat(9, 9px); grid-template-rows: repeat(9, 9px); gap:1px; background:#000; padding:4px; border-radius:6px; border:1px solid var(--accent-purple); flex-shrink:0; box-shadow: 0 0 10px rgba(176,0,255,0.2);">`;
+        let px = 4; let py = 4; // Centro do 9x9
+
+        for(let y=0; y<9; y++) {
+            for(let x=0; x<9; x++) {
+                let color = "#1a1a1a"; let emoji = "";
+                if (x === px && y === py) { 
+                    color = pat.castType === "alvo" ? "#ffaa00" : "#00e5ff"; 
+                    emoji = pat.castType === "alvo" ? "🎯" : "🧍"; 
+                }
+                
+                let relCoord = `${x - px}_${y - py}`;
+                if (pat.effectMask && pat.effectMask[relCoord]) {
+                    let d = pat.effectMask[relCoord];
+                    if(d.t==='d') color = "#ff1a55"; else if(d.t==='c') color = "#00ff66"; else if(d.t==='i') color = "#0066ff"; else if(d.t==='t') color = "#006600"; else if(d.t==='tp') color = "#b000ff";
+                    emoji = window.effectEmojis[d.e] || "";
+                }
+                html += `<div style="background:${color}; width:100%; height:100%; border-radius:1px; display:flex; align-items:center; justify-content:center; font-size:7px;">${emoji}</div>`;
+            }
+        }
+        return html + `</div>`;
+    } catch(e) { return "<div style='color:red;'>Erro no Grid</div>"; }
+};
+
+window.abrirMiniHudNova = function(skillId, sData) {
+    document.getElementById("hudNovaName").innerText = sData.nome || "Vazio";
+    document.getElementById("hudNovaPT").innerText = sData.pt || 1;
+    document.getElementById("hudNovaER").innerText = sData.er || 0;
+    
+    let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+    document.getElementById("hudNovaDesc").innerText = sData.desc || "Habilidade ainda não forjada.";
+    
+    let iconEl = document.getElementById("hudNovaIcon");
+    if(sData.img && sData.img.trim() !== "") { iconEl.style.backgroundImage = `url('${sData.img}')`; iconEl.innerText = ""; } 
+    else { iconEl.style.backgroundImage = "none"; iconEl.innerText = "✖"; iconEl.style.display = "flex"; iconEl.style.alignItems = "center"; iconEl.style.justifyContent = "center"; iconEl.style.color = "#555"; iconEl.style.fontSize = "30px"; }
+
+    let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+    document.getElementById("hudNovaBase").innerText = attrNames[sData.attr] || "Mágico";
+    
+    let drawType = "🖌️ Sem Desenho";
+    if(isCustom && sData.customPattern.startsWith("{")) {
+        try {
+            let pat = JSON.parse(sData.customPattern);
+            if(pat.castType === "alvo") drawType = "🎯 Disparo Ranged";
+            if(pat.castType === "direcional") drawType = "⬆️ Frente/Giro";
+            if(pat.castType === "aura") drawType = "🔄 Aura/Self";
+            
+            let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; if (pat.maxRange > 0) rangeTxt += `Máx ${pat.maxRange}`;
+            document.getElementById("hudNovaRange").innerText = pat.castType === "alvo" ? (rangeTxt || "Corpo-a-corpo") : "Livre (Grid)";
+        } catch(e){}
+    }
+    document.getElementById("hudNovaShape").innerText = drawType;
+
+    let parsedInfo = window.parseCustomPatternDesc(sData.customPattern);
+    let diceTxt = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+    let actionTxt = isCustom && parsedInfo.types ? parsedInfo.types : "Nenhum";
+    document.getElementById("hudNovaEffect").innerHTML = `<span style="color:#fff;">${diceTxt}</span><br><span style="color:var(--accent-red); font-size:10px;">${actionTxt}</span>`;
+    
+    let statusText = isCustom && parsedInfo.effects ? parsedInfo.effects : "Nenhum";
+    document.getElementById("hudNovaStatus").innerHTML = statusText;
+
+    // AQUI ESTAVA O ERRO! AGORA PASSA SÓ 1 PARÂMETRO!
+    if(window.gerarMiniGridHtml) { document.getElementById("hudNovaGrid").innerHTML = window.gerarMiniGridHtml(sData.customPattern); }
+
+    let btnEdit = document.getElementById("hudNovaBtnEdit"); let btnLearn = document.getElementById("hudNovaBtnLearn");
+    btnEdit.style.display = window.isMaster ? "block" : "none";
+    btnEdit.onclick = () => { document.getElementById("miniHudNovaContainer").style.display = "none"; window.clicarHabilidade(skillId); };
+
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let unlockedSkills = u.job?.skills || [];
+    if (!sData.nome || sData.nome === "Vazio") { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "NÃO FORJADA"; } else if (unlockedSkills.includes(skillId)) { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "JÁ APRENDIDA"; } else { btnLearn.disabled = false; btnLearn.style.opacity = "1"; btnLearn.innerText = "APRENDER"; }
+    btnLearn.onclick = () => { document.getElementById("miniHudNovaContainer").style.display = "none"; window.clicarHabilidade(skillId); };
+
+    document.getElementById("miniHudNovaContainer").style.display = "flex";
+};
+
+// =========================================================
+// 2. ABRIR TELA DE DETALHES (INJETANDO O DESENHO LÁ DENTRO)
+// =========================================================
+window.abrirDetalhesSkill = function(skillId, sData) {
+    window.skillSelecionadaInfo = { id: skillId, data: sData };
+    document.getElementById("detSkillName").innerText = sData.nome || "Vazio";
+    document.getElementById("detSkillPT").innerText = sData.pt || 1;
+    document.getElementById("detSkillER").innerText = sData.er || 0;
+    
+    let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+    let translatedDesc = sData.desc || "Habilidade ainda não forjada.";
+    if (sData.shape === 'self' || sData.shape === 'self_buff') { translatedDesc += " (Com efeitos de cura saindo dele)"; }
+    document.getElementById("detSkillDesc").innerText = translatedDesc;
+    
+    let iconEl = document.getElementById("detSkillIcon");
+    if(sData.img && sData.img.trim() !== "") { iconEl.style.backgroundImage = `url('${sData.img}')`; iconEl.innerText = ""; } 
+    else { iconEl.style.backgroundImage = "none"; iconEl.innerText = "✖"; iconEl.style.display = "flex"; iconEl.style.alignItems = "center"; iconEl.style.justifyContent = "center"; iconEl.style.color = "#555"; iconEl.style.fontSize = "30px"; }
+
+    let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+    document.getElementById("detSkillBase").innerText = attrNames[sData.attr] || "Mágico";
+    
+    let shapeNames = { 'self': '💖 Em Si Mesmo', 'Alvo': '🎯 Alvo Único', 'melee': '⚔️ Corpo-a-Corpo', 'ranged': '🏹 À Distância', 'heal': '💊 Cura/Buff', 'cross': '➕ Cruz', 'big_cross': '🕂 Cruz Grande', 'line': '📏 Linha Perfurante', 'alternating_line': '➖ Linha Alternada', 'x_shape': '❌ Diagonais', 'cone': '🍕 Cone Frontal', 'aoe': '💥 Quadrado (AoE)', 'self_aoe': '🌪️ Aura (Self-AoE)', 'trap': '🕸️ Armadilha (Chão)', 'summon': '🐺 Invocação', 'teleport': '🌀 Teleporte', 't_shape': '┳ Formato T', 'self_buff': '🌟 Buff Pessoal' };
+    document.getElementById("detSkillShapeLabel").innerText = isCustom ? "🖌️ Pintada Manualmente" : (shapeNames[sData.shape || "Alvo"] || "🎯 Alvo Único");
+    
+    let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`; if (sData.aoe > 0) rangeTxt += ` (Área: ${sData.aoe})`;
+    document.getElementById("detSkillRange").innerText = isCustom ? "Livre (360º)" : (rangeTxt || "Corpo-a-corpo");
+
+    document.getElementById("detSkillEffect").innerText = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "") || "Nenhum";
+    let statusText = "Nenhum";
+    if (sData.status && sData.status !== "") { statusText = `${sData.status} (Força: ${sData.statusVal || 1} | Duração: ${sData.statusTurnos || 1}t)`; }
+    document.getElementById("detSkillStatus").innerText = statusText;
+
+    // AQUI ELE CHAMA O MOTOR VISUAL PASSANDO O SEU DESENHO!
+    if(window.gerarMiniGridHtml) { 
+        document.getElementById("detSkillGrid").innerHTML = window.gerarMiniGridHtml(sData.shape || "Alvo", sData.minRange || 0, sData.maxRange || 1, sData.aoe || 0, sData.customPattern); 
+    }
+
+    let btnEdit = document.getElementById("btnEditSkill"); let btnLearn = document.getElementById("btnLearnSkill");
+    if(window.isMaster) { btnEdit.style.display = "block"; } else { btnEdit.style.display = "none"; }
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let unlockedSkills = u.job?.skills || [];
+    if (!sData.nome || sData.nome === "Vazio") { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "NÃO FORJADA"; } else if (unlockedSkills.includes(skillId)) { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "JÁ APRENDIDA"; } else { btnLearn.disabled = false; btnLearn.style.opacity = "1"; btnLearn.innerText = "APRENDER"; }
+
+    document.getElementById("modalSkillDetails").style.display = "flex";
+};
+
+// =========================================================
+// 3. ABRIR ÁRVORE (BALÃO DO MOUSE EXIBE O DESENHO TAMBÉM)
+// =========================================================
+window.abrirArvoreJob = function(subjob, cat, isPreview) {
+    window.currentViewingJob = { subjob: subjob, cat: cat };
+    document.getElementById("jobSelectionScreen").style.display = "none"; document.getElementById("jobTreeScreen").style.display = "flex"; 
+    
+    let titleEl = document.getElementById("jobTreeTitle");
+    if (window.isMaster) {
+        let selHtml = `<select onchange="let v=this.value.split('|'); window.abrirArvoreJob(v[1], v[0], true)" style="background:#000; color:var(--accent-blue); border:1px solid var(--accent-blue); padding:5px 10px; border-radius:4px; font-weight:bold; font-size:16px; outline:none; cursor:pointer;">`;
+        Object.keys(window.categoriasTrabalho).forEach(c => {
+            selHtml += `<optgroup label="--- ${c.toUpperCase()} ---">`;
+            window.categoriasTrabalho[c].forEach(s => { let selected = (s === subjob) ? "selected" : ""; selHtml += `<option value="${c}|${s}" ${selected}>${s.toUpperCase()}</option>`; });
+            selHtml += `</optgroup>`;
+        });
+        selHtml += `</select>`; titleEl.innerHTML = selHtml;
+    } else { titleEl.innerText = subjob.toUpperCase(); }
+
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let uJob = u.job || {};
+    if(uJob.locked && uJob.subjob === subjob && !window.isMaster) { document.getElementById("btnVoltarJob").style.display = "none"; document.getElementById("jobLockWarning").style.display = "none"; } 
+    else { document.getElementById("btnVoltarJob").style.display = "block"; document.getElementById("jobLockWarning").style.display = "block"; }
+
+    let treeData = (window.jobConfigGlobais[cat] && window.jobConfigGlobais[cat][subjob]) ? window.jobConfigGlobais[cat][subjob] : {};
+    let unlockedSkills = (uJob.locked && uJob.subjob === subjob) ? (uJob.skills || []) : [];
+    let nodeIds = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','u1','u2','u3']; let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+
+    nodeIds.forEach(id => {
+        let nodeEl = document.getElementById(`node_${id}`); let tipEl = document.getElementById(`tip_${id}`);
+        let sData = treeData[id] || { nome: "Vazio", desc: "Não configurada", pt: 1 };
+        nodeEl.className = "skill-node" + (id.startsWith('u') ? " ultimate" : "");
+        
+        nodeEl.onclick = function(e) { e.preventDefault(); e.stopPropagation(); window.abrirMiniHudNova(id, sData); };
+
+        let displayName = "";
+        if(sData.img && sData.img.trim() !== "") { nodeEl.style.backgroundImage = `url('${sData.img}')`; } 
+        else { nodeEl.style.backgroundImage = "none"; displayName = (sData.nome || "Vazio").substring(0, 10); }
+        nodeEl.innerHTML = `<span style="text-shadow: 0 0 5px #000, 0 0 5px #000; pointer-events:none; position:relative; z-index:5;">${displayName}</span>`;
+
+        let htmlTip = `<div class="skill-tooltip-title">${sData.nome}</div><div class="skill-tooltip-desc">${sData.desc}</div>`;
+        if (sData.nome && sData.nome !== "Vazio") {
+            htmlTip += `<div class="tbs-stats-grid"><span>⭐ PT: <strong>${sData.pt || 1}</strong></span>`;
+            if(sData.er) htmlTip += `<span>⚡ ER: <strong style="color:#00ff66;">${sData.er}</strong></span>`;
+            let nAttr = attrNames[sData.attr] || "Mágico"; htmlTip += `<span style="grid-column: span 2;">⚔️ Base: <strong>${nAttr}</strong></span>`;
+            
+            let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+            let parsedInfo = window.parseCustomPatternDesc(sData.customPattern);
+
+            let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; 
+            // Tenta puxar o maxRange do JSON
+            if (isCustom && sData.customPattern.startsWith("{")) { try { let pat = JSON.parse(sData.customPattern); if(pat.maxRange) rangeTxt += `Máx ${pat.maxRange}`; } catch(e){} }
+            if (rangeTxt) htmlTip += `<span style="grid-column: span 2;">🎯 Alcance: <strong>${rangeTxt}</strong></span>`;
+            
+            let diceTxt = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+            let actionTxt = isCustom && parsedInfo.types ? parsedInfo.types : "Nenhum";
+            htmlTip += `<span style="grid-column: span 2;">🎲 Ação Base: <strong style="color:#fff;">${diceTxt}</strong><br><strong style="color:var(--accent-red); font-size:9px;">${actionTxt}</strong></span>`;
+            
+            let statusText = isCustom && parsedInfo.effects ? parsedInfo.effects : "Nenhum";
+            if(statusText !== "Nenhum") htmlTip += `<span style="grid-column: span 2; font-size:10px;">☣️ Status: <strong style="color:#ffaa00;">${statusText}</strong></span>`;
+            
+            // AQUI ESTAVA O ERRO TAMBÉM! AGORA CHAMA SÓ COM O DESENHO!
+            htmlTip += `<div style="grid-column: span 2; display:flex; justify-content:center; margin-top:5px;">`;
+            htmlTip += window.gerarMiniGridHtml(sData.customPattern);
+            htmlTip += `</div></div>`;
+        }
+        tipEl.innerHTML = htmlTip;
+
+        if (unlockedSkills.includes(id)) { nodeEl.classList.add("unlocked"); } 
+        else if (uJob.locked && uJob.subjob === subjob) { nodeEl.classList.add("available"); } 
+        else if (isPreview) { nodeEl.classList.add("available"); }
+    });
+};
+
+// =========================================================
+// SISTEMA DE INICIATIVA INTELIGENTE E PARAR COMBATE
+// =========================================================
+
+// Função que o jogador clica para alternar se ele vai lutar ou não
+window.toggleVttReady = function() {
+    let isReady = window.usersGlobais[window.jogadorAtual]?.vttReady || false;
+    let novoStatus = !isReady;
+    
+    window.db.ref(`tokyoRpg/users/${window.jogadorAtual}/vttReady`).set(novoStatus).then(() => {
+        window.showNeonToast(novoStatus ? "⚔️ Você entrou na fila de combate!" : "Você saiu da fila de combate.");
+    });
+};
+
+// Observador para pintar o botão de Verde ou Cinza
+setInterval(() => {
+    if(!window.db || !window.jogadorAtual) return;
+    let btn = document.getElementById("btnToggleVttReady");
+    let mPanel = document.getElementById("mestreIniciativaPainel");
+    
+    if(btn) {
+        let isReady = window.usersGlobais[window.jogadorAtual]?.vttReady || false;
+        if(isReady) {
+            btn.style.borderColor = "#00ff66"; btn.style.color = "#00ff66";
+            btn.innerHTML = "✅ PRONTO PRO COMBATE";
+        } else {
+            btn.style.borderColor = "#aaa"; btn.style.color = "#aaa";
+            btn.innerHTML = "❌ FORA DO COMBATE";
+        }
+    }
+    
+    if(mPanel) mPanel.style.display = window.isMaster ? "flex" : "none";
+}, 1000);
+
+// Novo Motor de Iniciativa do Mestre (Filtra só quem tá pronto!)
+window.iniciarIniciativaVTT = function() {
+    if(!window.isMaster) return;
+    
+    let grid = window.submapasGlobais[window.currentSubMapKey] || {};
+    let onGrid = Object.values(grid);
+    
+    // Filtra: Tem que estar no grid E com a chave vttReady ligada
+    let participantes = onGrid.filter(n => window.usersGlobais[n] && window.usersGlobais[n].vttReady === true);
+    
+    // Se o Mestre apertou Pronto e está no Grid, ele luta também!
+    if(participantes.length === 0) { 
+        window.showNeonToast("Nenhum agente confirmou participação!"); 
+        return; 
+    }
+    
+    let ini = []; 
+    participantes.forEach(n => { 
+        let r = Math.floor(Math.random() * 20) + 1; 
+        
+        let agi = (window.usersGlobais[n]?.rpg?.agi || 1); 
+        let buffs = window.calcularBuffsMoveis(window.usersGlobais[n]);
+        let totalAgi = agi + (buffs.agi || 0);
+        
+        let sum = r + totalAgi; 
+        ini.push({ n: n, v: sum }); 
+        
+        window.db.ref('tokyoRpg/mapDados').push({ 
+            nome: "SISTEMA", 
+            texto: `Iniciativa de ${n}: <span class="dice-result-box">${r}</span> + ${totalAgi} = <strong>${sum}</strong>` 
+        });
+    });
+    
+    ini.sort((a,b) => b.v - a.v); 
+    window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}`).set({ ordem: ini.map(x => x.n), atual: 0 }); 
+    window.showNeonToast("Turnos Definidos!");
+};
+
+// O Botão de Parada de Emergência do Mestre
+window.pararCombateVTT = function() {
+    if(!window.isMaster) return;
+    if(confirm("Deseja realmente encerrar este combate e limpar a barra de iniciativa?")) {
+        window.db.ref(`tokyoRpg/turnosVTT/${window.currentSubMapKey}`).remove().then(() => {
+            window.showNeonToast("🛑 Combate Encerrado!");
+            
+            // Opcional: Desmarca todo mundo para o próximo combate começar zerado
+            let updates = {};
+            Object.keys(window.usersGlobais).forEach(u => {
+                if(window.usersGlobais[u].vttReady) {
+                    updates[`tokyoRpg/users/${u}/vttReady`] = false;
+                }
+            });
+            window.db.ref().update(updates);
+        });
+    }
+};
+
+// BOTÃO PRO MESTRE ROUBAR A SKILL E TESTAR NO VTT (Infinito)
+window.testarSkillMestre = function() {
+    let payload = {
+        nome: "🧪 " + document.getElementById("editSkillName").value.trim(), tipo: "Skill", desc: document.getElementById("editSkillDesc").value.trim(),
+        eq: true, w: 0, h: 0, isVTT: true,
+        wpnStyle: document.getElementById("editSkillShape").value, wpnRange: parseInt(document.getElementById("editSkillMaxRange").value)||1, 
+        minRange: parseInt(document.getElementById("editSkillMinRange").value)||0, wpnDice: document.getElementById("editSkillDice").value.trim(), 
+        wpnBonus: parseInt(document.getElementById("editSkillBonus").value)||0, wpnEffect: document.getElementById("editSkillStatus").value, 
+        wpnEffectVal: parseInt(document.getElementById("editSkillStatusVal").value)||1, attr: document.getElementById("editSkillAttr").value, erCost: parseInt(document.getElementById("editSkillER").value)||0
+    };
+    window.db.ref(`tokyoRpg/users/MESTRE/mochila`).push(payload).then(() => {
+        window.showNeonToast("Skill injetada na mochila do Mestre!");
+        document.getElementById("modalEditSkill").style.display = "none";
+    });
+};
+
+window.abrirCategoriaJob = function(cat) {
+    let container = document.getElementById("jobCardsContainer");
+    container.innerHTML = "";
+    
+    let subjobs = window.categoriasTrabalho[cat];
+    if(!subjobs) return;
+
+    subjobs.forEach(sub => {
+        // Formata o nome para buscar a imagem local (Ex: Pintor -> pintor.png)
+        let imgName = sub.toLowerCase().replace(/ç/g, 'c').replace(/ /g, '_');
+        
+        // Cria a carta com um quadrado cinza de fundo caso a imagem ainda não exista
+        container.innerHTML += `
+            <div class="job-card" onclick="window.abrirArvoreJob('${sub}', '${cat}', true)">
+                <div style="width: 100%; height: 180px; background: #1a1a1a; border-bottom: 2px solid #ff66b2; display: flex; justify-content: center; align-items: center; position: relative; overflow: hidden;">
+                    
+                    <span style="font-size: 40px; color: #444; position: absolute; z-index: 1;">💼</span>
+                    
+                    <img src="img/jobs/${imgName}.png" style="width: 100%; height: 100%; object-fit: cover; position: relative; z-index: 2;" onerror="this.style.display='none'">
+                    
+                </div>
+                <h3>${sub}</h3>
+            </div>
+        `;
+    });
+};
+
+// =========================================================
+// SINCRONIZAÇÃO VIVA DAS HABILIDADES PARA OS JOGADORES
+// =========================================================
+let jobSyncInterval = setInterval(() => {
+    if(window.db) {
+        clearInterval(jobSyncInterval);
+        window.db.ref('tokyoRpg/jobConfig').on('value', s => { 
+            window.jobConfigGlobais = s.val() || {}; 
+            // Se o jogador estiver olhando a árvore na hora, atualiza pra ele!
+            if(window.currentViewingJob) {
+                let uJob = window.usersGlobais[window.jogadorAtual]?.job || {};
+                window.abrirArvoreJob(window.currentViewingJob.subjob, window.currentViewingJob.cat, !uJob.locked); 
+            }
+        });
+    }
+}, 1000);
+
+// =========================================================
+// PODER DO MESTRE: APAGAR TOKENS DO TABULEIRO
+// =========================================================
+window.deletarTokenVTT = function(occupier, cid, e) {
+    e.stopPropagation(); // Impede de clicar no chão sem querer
+    e.preventDefault();
+    
+    if(!confirm(`Deseja remover [${occupier}] do tabuleiro? Se for uma invocação, ela será morta.`)) return;
+
+    let updates = {};
+    // 1. Tira do mapa
+    updates[`tokyoRpg/submaps/${window.currentSubMapKey}/${cid}`] = null;
+
+    // 2. Se for invocação, mata e tira da fila de turnos
+    let occData = window.usersGlobais[occupier];
+    if(occData && occData.isSummon) {
+        updates[`tokyoRpg/users/${occupier}/status`] = "morto";
+        if(window.turnosVTTGlobal && window.turnosVTTGlobal.ordem) {
+             let novaOrdem = window.turnosVTTGlobal.ordem.filter(x => x !== occupier);
+             updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/ordem`] = novaOrdem;
+             // Ajusta o ponteiro do turno se necessário
+             let prox = window.turnosVTTGlobal.atual;
+             if(prox >= novaOrdem.length) prox = 0;
+             updates[`tokyoRpg/turnosVTT/${window.currentSubMapKey}/atual`] = prox;
+        }
+    }
+
+    window.db.ref().update(updates).then(() => {
+        window.showNeonToast("🗑️ Alvo desintegrado pelo Mestre!");
+        window.updateTacticalBoard();
+    });
+};
+
+// =========================================================
+// HUD TÁTICA: GERADOR DE MINI-GRID PARA O TOOLTIP
+// =========================================================
+window.gerarMiniGridHtml = function(shape) {
+    let html = `<div style="display:grid; grid-template-columns: repeat(5, 8px); grid-template-rows: repeat(5, 8px); gap:1px; background:#0a0a0a; padding:4px; border-radius:4px; border:1px solid var(--accent-blue); width: fit-content; flex-shrink: 0; box-shadow: inset 0 0 5px #000;">`;
+    
+    for(let y=0; y<5; y++) {
+        for(let x=0; x<5; x++) {
+            let color = "#222"; // Fundo vazio
+            let isHit = false;
+
+            // LÓGICA DAS FORMAS (O alvo central fica no x=2, y=2)
+            if(['Alvo', 'melee', 'ranged', 'heal', 'trap', 'summon', 'teleport'].includes(shape)) {
+                if(x===2 && y===2) isHit = true;
+            } else if(['cross', 'big_cross'].includes(shape)) {
+                if((x===2 && y>0 && y<4) || (y===2 && x>0 && x<4)) isHit = true;
+            } else if(shape === 'x_shape') {
+                if(Math.abs(x-2) === Math.abs(y-2) && x>0 && x<4) isHit = true;
+            } else if(['aoe', 'self_aoe'].includes(shape)) {
+                if(Math.abs(x-2)<=1 && Math.abs(y-2)<=1) isHit = true;
+            } else if(shape === 'cone') {
+                if(y===2 && x===2) isHit = true;
+                if(y===1 && x>=1 && x<=3) isHit = true;
+                if(y===0) isHit = true;
+            } else if(['line', 'alternating_line'].includes(shape)) {
+                if(x===2 && y<=3) isHit = true;
+            } else if(shape === 't_shape') {
+                if(x===2 && y<=2) isHit = true;
+                if(y===0 && x>=1 && x<=3) isHit = true;
+            } else if(['self', 'self_buff'].includes(shape)) {
+                if(x===2 && y===4) isHit = true; // Atinge a si mesmo
+            }
+
+            // PINTA O JOGADOR (AZUL) E OS ALVOS (VERMELHO OU VERDE)
+            if(x===2 && y===4 && shape !== 'self_aoe') color = "#00e5ff"; // Onde o jogador está parado
+            if(shape === 'self_aoe' && x===2 && y===2) color = "#00e5ff"; // No self_aoe o jogador é o centro
+            
+            if(isHit) {
+                if(shape.includes('heal') || shape.includes('buff') || shape === 'self') color = "#00ff66"; // Cura é verde
+                else color = "#ff1a55"; // Dano é Vermelho
+            }
+
+            html += `<div style="background:${color}; width:100%; height:100%; border-radius:1px;"></div>`;
+        }
+    }
+    html += `</div>`;
+    return html;
+};
+
+// =========================================================
+// VACINA ANTI-BUG: FORÇAR A HUD TÁTICA A PULAR PRA FORA
+// =========================================================
+let estiloTooltip = document.createElement('style');
+estiloTooltip.innerHTML = `
+    .skill-node { 
+        position: relative !important; 
+        overflow: visible !important; /* ISSO PERMITE O BALÃO SAIR DA CAIXA! */
+    }
+    .skill-tooltip {
+        display: none !important;
+        position: absolute;
+        bottom: 115%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 330px;
+        background: rgba(10, 10, 15, 0.98);
+        border: 1px solid #00e5ff;
+        border-radius: 8px;
+        padding: 15px;
+        z-index: 9999999 !important; /* Por cima de tudo na tela */
+        box-shadow: 0 15px 35px rgba(0,0,0,0.95), 0 0 20px rgba(0, 229, 255, 0.4);
+        text-align: left;
+        pointer-events: none;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .skill-node:hover .skill-tooltip {
+        display: flex !important; /* Mágica de aparecer no mouse! */
+        animation: fadeInTooltip 0.2s ease-in-out forwards;
+    }
+    .skill-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 8px;
+        border-style: solid;
+        border-color: #00e5ff transparent transparent transparent;
+    }
+    @keyframes fadeInTooltip {
+        from { opacity: 0; transform: translate(-50%, 10px); }
+        to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .tbs-stats-grid { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr; 
+        gap: 6px; 
+        width: 100%; 
+    }
+    .tbs-stats-grid span { 
+        background: #000; 
+        padding: 5px; 
+        border: 1px dashed #333; 
+        border-radius: 4px; 
+        font-size: 10px; 
+        color: #ccc; 
+    }
+    .tbs-stats-grid span strong { color: #fff; }
+`;
+document.head.appendChild(estiloTooltip);
+
+// =========================================================
+// NOVA HUD DE DETALHES DE HABILIDADE (TELA EXPANSÍVEL)
+// (MODIFICADO PARA USAR ALCANCE E ÁREA DIRETAMENTE NO MINIGRID)
+// =========================================================
+
+// 1. INJETOR AUTOMÁTICO DO MODAL (Cria a tela sem precisar mexer no index.html)
+if(!document.getElementById("modalSkillDetails")) {
+    let divModal = document.createElement("div");
+    divModal.id = "modalSkillDetails";
+    divModal.className = "modal-overlay";
+    divModal.style.zIndex = "100000";
+    divModal.style.display = "none";
+    // Clicar fora fecha a janela
+    divModal.onclick = function(e) { if(e.target === this) window.fecharDetalhesSkill(); };
+    
+    divModal.innerHTML = `
+        <div class="modal-content" style="border-color: var(--accent-blue); width: 95%; max-width: 450px; padding: 20px; position: relative; background: rgba(10,10,15,0.98); box-shadow: 0 0 40px rgba(0, 229, 255, 0.3);">
+            <button onclick="window.fecharDetalhesSkill()" style="position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: #aaa; font-size: 20px; cursor: pointer; transition: 0.2s;">✖</button>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center;">
+                <div id="detSkillIcon" style="width: 80px; height: 80px; background: #111; border: 2px solid var(--accent-blue); border-radius: 8px; background-size: cover; background-position: center; flex-shrink: 0; box-shadow: 0 0 15px rgba(0,229,255,0.3);"></div>
+                <div style="flex: 1; text-align: left;">
+                    <h2 id="detSkillName" style="color: var(--accent-blue); font-size: 22px; margin: 0 0 5px 0; text-transform: uppercase; text-shadow: 0 0 10px var(--accent-blue);">---</h2>
+                    <div style="font-size: 14px; color: var(--accent-gold); font-weight: bold;">Custo: <span id="detSkillPT" style="font-size: 18px;">1</span> PT</div>
+                    <div style="font-size: 12px; color: #00ff66; margin-top:2px;">Energia: <span id="detSkillER">0</span>%</div>
+                </div>
+            </div>
+
+            <div id="detSkillDesc" style="font-size: 13px; color: #ccc; text-align: justify; margin-bottom: 15px; line-height: 1.5; min-height: 40px; border-bottom: 1px dashed #333; padding-bottom: 15px;">---</div>
+
+            <div style="display: flex; gap: 15px; align-items: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid #222; margin-bottom: 20px;">
+                <div id="detSkillGrid" style="flex-shrink: 0;"></div>
+                <div style="flex: 1; font-size: 12px; color: #aaa; text-align: left; display: grid; grid-template-columns: 1fr; gap: 6px;">
+                    <div>⚔️ Base: <strong id="detSkillBase" style="color:#fff;">---</strong></div>
+                    <div>💠 Forma: <strong id="detSkillShapeLabel" style="color:var(--accent-blue); text-shadow: 0 0 5px var(--accent-blue);">---</strong></div>
+                    <div>🎯 Alcance: <strong id="detSkillRange" style="color:#fff;">---</strong></div>
+                    <div>🎲 Efeito: <strong id="detSkillEffect" style="color:var(--accent-red);">---</strong></div>
+                    <div>☣️ Status: <strong id="detSkillStatus" style="color:#ffaa00;">---</strong></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button id="btnLearnSkill" class="action-btn" style="flex: 2; border-color: #00ff66; background: rgba(0,255,102,0.1); color: #00ff66; font-size: 16px; padding: 12px; font-weight: bold; margin: 0;" onclick="window.comprarHabilidadeSelecionada()">APRENDER</button>
+                <button id="btnEditSkill" class="action-btn" style="flex: 1; border-color: #f00; color: #f00; font-size: 14px; display: none; margin: 0;" onclick="window.editarHabilidadeSelecionada()">⚙️ EDITAR</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(divModal);
+}
+
+window.skillSelecionadaInfo = null;
+
+// =========================================================
+// NOVA HUD DE DETALHES DE HABILIDADE (TELA EXPANSÍVEL)
+// (CORRIGIDO: RECONHECE O PULAR E AOE CORRETAMENTE)
+// =========================================================
+
+// 1. INJETOR AUTOMÁTICO DO MODAL (Cria a tela sem precisar mexer no index.html)
+if(!document.getElementById("modalSkillDetails")) {
+    let divModal = document.createElement("div");
+    divModal.id = "modalSkillDetails";
+    divModal.className = "modal-overlay";
+    divModal.style.zIndex = "100000";
+    divModal.style.display = "none";
+    // Clicar fora fecha a janela
+    divModal.onclick = function(e) { if(e.target === this) window.fecharDetalhesSkill(); };
+    
+    divModal.innerHTML = `
+        <div class="modal-content" style="border-color: var(--accent-blue); width: 95%; max-width: 450px; padding: 20px; position: relative; background: rgba(10,10,15,0.98); box-shadow: 0 0 40px rgba(0, 229, 255, 0.3);">
+            <button onclick="window.fecharDetalhesSkill()" style="position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: #aaa; font-size: 20px; cursor: pointer; transition: 0.2s;">✖</button>
+            
+            <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: center;">
+                <div id="detSkillIcon" style="width: 80px; height: 80px; background: #111; border: 2px solid var(--accent-blue); border-radius: 8px; background-size: cover; background-position: center; flex-shrink: 0; box-shadow: 0 0 15px rgba(0,229,255,0.3);"></div>
+                <div style="flex: 1; text-align: left;">
+                    <h2 id="detSkillName" style="color: var(--accent-blue); font-size: 22px; margin: 0 0 5px 0; text-transform: uppercase; text-shadow: 0 0 10px var(--accent-blue);">---</h2>
+                    <div style="font-size: 14px; color: var(--accent-gold); font-weight: bold;">Custo: <span id="detSkillPT" style="font-size: 18px;">1</span> PT</div>
+                    <div style="font-size: 12px; color: #00ff66; margin-top:2px;">Energia: <span id="detSkillER">0</span>%</div>
+                </div>
+            </div>
+
+            <div id="detSkillDesc" style="font-size: 13px; color: #ccc; text-align: justify; margin-bottom: 15px; line-height: 1.5; min-height: 40px; border-bottom: 1px dashed #333; padding-bottom: 15px;">---</div>
+
+            <div style="display: flex; gap: 15px; align-items: center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid #222; margin-bottom: 20px;">
+                <div id="detSkillGrid" style="flex-shrink: 0;"></div>
+                <div style="flex: 1; font-size: 12px; color: #aaa; text-align: left; display: grid; grid-template-columns: 1fr; gap: 6px;">
+                    <div>⚔️ Base: <strong id="detSkillBase" style="color:#fff;">---</strong></div>
+                    <div>💠 Forma: <strong id="detSkillShapeLabel" style="color:var(--accent-blue); text-shadow: 0 0 5px var(--accent-blue);">---</strong></div>
+                    <div>🎯 Alcance: <strong id="detSkillRange" style="color:#fff;">---</strong></div>
+                    <div>🎲 Efeito: <strong id="detSkillEffect" style="color:var(--accent-red);">---</strong></div>
+                    <div>☣️ Status: <strong id="detSkillStatus" style="color:#ffaa00;">---</strong></div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button id="btnLearnSkill" class="action-btn" style="flex: 2; border-color: #00ff66; background: rgba(0,255,102,0.1); color: #00ff66; font-size: 16px; padding: 12px; font-weight: bold; margin: 0;" onclick="window.comprarHabilidadeSelecionada()">APRENDER</button>
+                <button id="btnEditSkill" class="action-btn" style="flex: 1; border-color: #f00; color: #f00; font-size: 14px; display: none; margin: 0;" onclick="window.editarHabilidadeSelecionada()">⚙️ EDITAR</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(divModal);
+}
+
+window.skillSelecionadaInfo = null;
+
+// 2. O MOTOR VISUAL CORRIGIDO (Deve vir antes da função que o chama)
+// =========================================================
+// MOTOR VISUAL: DESENHA O MINI-GRID 5x5 DA HABILIDADE
+// (CORRIGIDO: RECONHECE O PULAR E AOE CORRETAMENTE)
+// =========================================================
+window.gerarMiniGridHtml = function(shape, minRange, maxRange, aoe) {
+    let html = `<div style="display:grid; grid-template-columns: repeat(5, 10px); grid-template-rows: repeat(5, 10px); gap:2px; background:#000; padding:6px; border-radius:6px; border:1px solid #333; flex-shrink:0;">`;
+    
+    // O JOGADOR ESTÁ SEMPRE EM (2, 4) (Meio da linha inferior) para habilidades direcionadas para frente
+    const playerX = 2;
+    const playerY = 4;
+    
+    // O ALVO CENTRAL ESTÁ À DISTÂNCIA DO MAXRANGE À FRENTE DO JOGADOR
+    const targetY = Math.max(0, playerY - maxRange);
+    const targetX = 2;
+
+    for(let y=0; y<5; y++) {
+        for(let x=0; x<5; x++) {
+            let color = "#1a1a1a"; // Fundo vazio
+
+            // Distância para o jogador (direção)
+            const distY_p = playerY - y;
+            const distX_p = Math.abs(playerX - x);
+
+            // Distância para o centro do impacto (área radial ao redor do alvo central)
+            const distY_t = Math.abs(targetY - y);
+            const distX_t = Math.abs(targetX - x);
+
+            // 1. ZONA DE ALCANCE (ZONA QUE O ATAQUE PULA OU ALCANÇA)
+            // Se o quadrado está na linha central à frente do jogador e dentro do range
+            if (distX_p === 0 && distY_p >= 1 && distY_p <= maxRange) {
+                // Se a distância está DENTRO do que pula (marrom escuro)
+                if (distY_p <= minRange) {
+                    color = "#4c0019"; // Zona pulada ou alcançada (Marrom/Vermelho Escuro)
+                } 
+            }
+
+            // 2. ÁREA DE IMPACTO (AOE)
+            // Lógica radial baseada no AoE, centralizada no target central, respeitando o pulo.
+            // (y < playerY garante que a explosão não vá para trás do jogador no minigrid)
+            if (distY_t <= aoe && distX_t <= aoe && y < playerY) {
+                
+                // Impede AoE de explodir para dentro da zona de pular
+                let canHit = true;
+                if (distY_p <= minRange) canHit = false;
+
+                if (canHit) {
+                    color = "#ff1a55"; // Vermelho Vivo para zona de impacto
+                }
+            }
+
+            // 3. TRATAMENTOS ESPECIAIS (FORMAS DIRECIONAIS E COLOCAÇÃO)
+            // Lógica especial para 'line' (não usa AoE radial, mas segue a linha reta respeitando o pulo)
+            if (shape === 'line' && distX_p === 0 && distY_p > minRange && distY_p <= maxRange) {
+                color = "#ff1a55"; 
+            }
+            // Lógica especial para 'cone' ( हार्डकोडेड visual 5x5)
+            else if (shape === 'cone') {
+                if (y === 2 && x === 2 && distY_p > minRange) color = "#ff1a55";
+                if (y === 1 && x >= 1 && x <= 3 && distY_p > minRange) color = "#ff1a55";
+                if (y === 0 && x >= 0 && x <= 4 && distY_p > minRange) color = "#ff1a55";
+            }
+            // Lógica especial para 'trap', 'summon', 'teleport', 'Alvo' (Pinta apenas um quadrado vermelho vivo no target central)
+            else if (['summon', 'trap', 'teleport', 'Alvo', 'melee', 'ranged'].includes(shape)) {
+                color = "#1a1a1a"; // Reset
+                if(x===targetX && y===targetY && distY_p > minRange) color = "#ff1a55";
+            }
+            // Lógica especial para 'self_aoe', 'self', 'self_buff' (O jogador é o centro da AoE/Cura)
+            else if (['self_aoe', 'self', 'self_buff'].includes(shape)) {
+                color = "#1a1a1a"; // Reset
+                const distY_s = Math.abs(playerY - y);
+                const distX_s = Math.abs(playerX - x);
+                if (distY_s <= aoe && distX_s <= aoe) {
+                    color = "#00ff66"; // Área de cura/buff pessoal
+                }
+            }
+
+            // 4. CURA/BUFF (SOBRESCREVE VERMELHO POR VERDE)
+            if(['self', 'self_buff', 'self_aoe', 'heal'].includes(shape) || (shape && shape.includes('heal')) || (shape && shape.includes('buff'))) {
+                if (color === "#ff1a55") color = "#00ff66";
+            }
+
+            // 5. JOGADOR (AZUL) NO CENTRO DA TELA (SEMPRE ÚLTIMO)
+            if(x===playerX && y===playerY) color = "#00e5ff"; 
+
+            html += `<div style="background:${color}; width:100%; height:100%; border-radius:2px;"></div>`;
+        }
+    }
+    html += `</div>`;
+    return html;
+};
+
+// 3. FUNÇÃO QUE PREENCHE E ABRE A TELA DA HABILIDADE (CONSERVAÇÃO)
+window.abrirDetalhesSkill = function(skillId, sData) {
+    window.skillSelecionadaInfo = { id: skillId, data: sData };
+    
+    // Preenche os dados visuais
+    document.getElementById("detSkillName").innerText = sData.nome || "Vazio";
+    document.getElementById("detSkillPT").innerText = sData.pt || 1;
+    document.getElementById("detSkillER").innerText = sData.er || 0;
+    document.getElementById("detSkillDesc").innerText = sData.desc || "Habilidade ainda não forjada.";
+    
+    let iconEl = document.getElementById("detSkillIcon");
+    if(sData.img && sData.img.trim() !== "") { 
+        iconEl.style.backgroundImage = `url('${sData.img}')`; 
+        iconEl.innerText = ""; 
+    } else { 
+        iconEl.style.backgroundImage = "none"; 
+        iconEl.innerText = "✖"; 
+        iconEl.style.display = "flex"; 
+        iconEl.style.alignItems = "center"; 
+        iconEl.style.justifyContent = "center"; 
+        iconEl.style.color = "#555"; 
+        iconEl.style.fontSize = "30px";
+    }
+
+    let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+    document.getElementById("detSkillBase").innerText = attrNames[sData.attr] || "Mágico";
+    
+    // TRADUTOR DE FORMAS PARA O DISPLAY NOVO!
+    let shapeNames = {
+        'self': '💖 Em Si Mesmo',
+        'Alvo': '🎯 Alvo Único',
+        'melee': '⚔️ Corpo-a-Corpo',
+        'ranged': '🏹 À Distância',
+        'heal': '💊 Cura/Buff',
+        'cross': '➕ Cruz Padrão',
+        'big_cross': '🕂 Cruz Grande',
+        'line': '📏 Linha Perfurante',
+        'alternating_line': '➖ Linha Alternada',
+        'x_shape': '❌ Diagonais',
+        'cone': '🍕 Cone Frontal',
+        'aoe': '💥 Quadrado (AoE)',
+        'self_aoe': '🌪️ Aura (Ao Redor)',
+        'trap': '🕸️ Armadilha (Chão)',
+        'summon': '🐺 Invocação',
+        'teleport': '🌀 Teleporte',
+        't_shape': '┳ Formato T',
+        'self_buff': '🌟 Buff Pessoal'
+    };
+    document.getElementById("detSkillShapeLabel").innerText = shapeNames[sData.shape || "Alvo"] || "🎯 Alvo Único";
+    
+    let rangeTxt = "";
+    if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `;
+    if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`;
+    if (sData.aoe > 0) rangeTxt += ` (Área: ${sData.aoe})`;
+    document.getElementById("detSkillRange").innerText = rangeTxt || "Corpo-a-corpo";
+
+    let dmgVal = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+    document.getElementById("detSkillEffect").innerText = dmgVal.trim() !== "" ? dmgVal : "Nenhum";
+    document.getElementById("detSkillStatus").innerText = sData.status ? `${sData.status} (${sData.statusVal || 1})` : "Nenhum";
+
+    // AGORA SIM: Gera o Minitabuleiro chamando com os parâmetros corretos!
+    if(window.gerarMiniGridHtml) {
+        document.getElementById("detSkillGrid").innerHTML = window.gerarMiniGridHtml(sData.shape || "Alvo", sData.minRange || 0, sData.maxRange || 1, sData.aoe || 0);
+    }
+
+    let btnEdit = document.getElementById("btnEditSkill");
+    let btnLearn = document.getElementById("btnLearnSkill");
+    
+    // Mestre tem o botão de atalho para a forja
+    if(window.isMaster) {
+        btnEdit.style.display = "block";
+    } else {
+        btnEdit.style.display = "none";
+    }
+
+    // Lógica do Botão Aprender
+    let u = window.usersGlobais[window.jogadorAtual] || {};
+    let uJob = u.job || {};
+    let unlockedSkills = uJob.skills || [];
+    
+    if (!sData.nome || sData.nome === "Vazio") {
+        btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "NÃO FORJADA";
+    } else if (unlockedSkills.includes(skillId)) {
+        btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "JÁ APRENDIDA";
+    } else {
+        btnLearn.disabled = false; btnLearn.style.opacity = "1"; btnLearn.innerText = "APRENDER";
+    }
+
+    // Abre a tela!
+    document.getElementById("modalSkillDetails").style.display = "flex";
+};
+
+// Funções de clique dos botões da HUD
+window.fecharDetalhesSkill = function() {
+    document.getElementById("modalSkillDetails").style.display = "none";
+};
+
+window.editarHabilidadeSelecionada = function() {
+    window.fecharDetalhesSkill();
+    window.clicarHabilidade(window.skillSelecionadaInfo.id); 
+};
+
+window.comprarHabilidadeSelecionada = function() {
+    window.fecharDetalhesSkill();
+    window.clicarHabilidade(window.skillSelecionadaInfo.id); 
+};
+
+// 3. A NOVA ATUALIZAÇÃO DA ÁRVORE (Substitui a velha por completo!)
+// =========================================================
+// ABRIR ÁRVORE (AGORA COM DROPDOWN DE TROCA RÁPIDA PRO MESTRE)
+// =========================================================
+window.abrirArvoreJob = function(subjob, cat, isPreview) {
+    window.currentViewingJob = { subjob: subjob, cat: cat };
+    
+    document.getElementById("jobSelectionScreen").style.display = "none";
+    document.getElementById("jobTreeScreen").style.display = "flex";
+    
+    let titleEl = document.getElementById("jobTreeTitle");
+
+    // MÁGICA: Se for Mestre, o título vira um Select pra trocar de classe na hora!
+    if (window.isMaster) {
+        let selHtml = `<select onchange="let v=this.value.split('|'); window.abrirArvoreJob(v[1], v[0], true)" style="background:#000; color:var(--accent-blue); border:1px solid var(--accent-blue); padding:5px 10px; border-radius:4px; font-weight:bold; font-size:16px; outline:none; cursor:pointer;">`;
+        Object.keys(window.categoriasTrabalho).forEach(c => {
+            selHtml += `<optgroup label="--- ${c.toUpperCase()} ---">`;
+            window.categoriasTrabalho[c].forEach(s => {
+                let selected = (s === subjob) ? "selected" : "";
+                selHtml += `<option value="${c}|${s}" ${selected}>${s.toUpperCase()}</option>`;
+            });
+            selHtml += `</optgroup>`;
+        });
+        selHtml += `</select>`;
+        titleEl.innerHTML = selHtml;
+    } else {
+        // Se for jogador normal, só mostra o nome mesmo
+        titleEl.innerText = subjob.toUpperCase();
+    }
+
+    let u = window.usersGlobais[window.jogadorAtual] || {};
+    let uJob = u.job || {};
+    
+    if(uJob.locked && uJob.subjob === subjob && !window.isMaster) {
+        document.getElementById("btnVoltarJob").style.display = "none";
+        document.getElementById("jobLockWarning").style.display = "none";
+    } else {
+        document.getElementById("btnVoltarJob").style.display = "block";
+        document.getElementById("jobLockWarning").style.display = "block";
+    }
+
+    let treeData = (window.jobConfigGlobais[cat] && window.jobConfigGlobais[cat][subjob]) ? window.jobConfigGlobais[cat][subjob] : {};
+    let unlockedSkills = (uJob.locked && uJob.subjob === subjob) ? (uJob.skills || []) : [];
+
+    let nodeIds = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','u1','u2','u3'];
+
+    nodeIds.forEach(id => {
+        let nodeEl = document.getElementById(`node_${id}`);
+        let sData = treeData[id] || { nome: "Vazio", desc: "Habilidade não configurada", pt: 1 };
+        
+        nodeEl.className = "skill-node" + (id.startsWith('u') ? " ultimate" : "");
+        
+        let displayName = "";
+        if(sData.img && sData.img.trim() !== "") {
+            nodeEl.style.backgroundImage = `url('${sData.img}')`;
+        } else {
+            nodeEl.style.backgroundImage = "none";
+            displayName = (sData.nome || "Vazio").substring(0, 10);
+        }
+
+        nodeEl.innerHTML = `<span style="text-shadow: 0 0 5px #000, 0 0 5px #000; pointer-events:none; position:relative; z-index:5;">${displayName}</span>`;
+        nodeEl.onclick = () => window.abrirDetalhesSkill(id, sData);
+
+        if (unlockedSkills.includes(id)) { nodeEl.classList.add("unlocked"); } 
+        else if (uJob.locked && uJob.subjob === subjob) { nodeEl.classList.add("available"); } 
+        else if (isPreview) { nodeEl.classList.add("available"); }
+    });
+};
+
+// =========================================================
+// PAINEL DE TESTE RÁPIDO DE CLASSES NO VTT (EXCLUSIVO DO MESTRE)
+// =========================================================
+
+// 1. Injetor Automático do Menu na barra do Mestre
+setInterval(() => {
+    if(!window.isMaster) return;
+    let painelMestre = document.getElementById("mestreVTT");
+    
+    // Se o painel do Mestre está na tela e ainda não tem o menu de testes, ele cria:
+    if(painelMestre && painelMestre.style.display !== "none" && !document.getElementById("masterClassTestWrapper")) {
+        let w = document.createElement("div");
+        w.id = "masterClassTestWrapper";
+        w.style.display = "flex";
+        w.style.alignItems = "center";
+        w.style.gap = "5px";
+        w.style.marginLeft = "10px";
+        w.style.borderLeft = "1px dashed var(--accent-purple)";
+        w.style.paddingLeft = "10px";
+
+        let selHtml = `<span style="font-size:10px; color:#00ff66; font-weight:bold;">🎭 MUDAR CLASSE:</span>
+        <select id="masterTestClassSelect" onchange="window.mudarClasseMestreVTT(this.value)" style="background:#000; color:#00ff66; border:1px solid #00ff66; padding:2px; font-size:10px; border-radius:4px; max-width: 110px; cursor:pointer; outline:none;">
+            <option value="">Selecione...</option>`;
+        
+        if(window.categoriasTrabalho) {
+            Object.keys(window.categoriasTrabalho).forEach(c => {
+                selHtml += `<optgroup label="--- ${c.toUpperCase()} ---">`;
+                window.categoriasTrabalho[c].forEach(s => {
+                    selHtml += `<option value="${c}|${s}">${s}</option>`;
+                });
+                selHtml += `</optgroup>`;
+            });
+        }
+        
+        selHtml += `</select>
+        <button class="action-btn" style="border-color:#f00; color:#f00; padding: 2px 6px; font-size:10px; margin:0;" onclick="window.limparMochilaMestre()" title="Apagar todas as skills de teste">🗑️ Limpar</button>`;
+        
+        w.innerHTML = selHtml;
+        painelMestre.appendChild(w);
+    }
+}, 1500);
+
+// 2. Função para o Mestre limpar a própria barra de ataque
+window.limparMochilaMestre = function() {
+    if(!window.isMaster) return;
+    if(confirm("Deseja apagar TODAS as habilidades e itens da sua mochila de testes?")) {
+        window.db.ref(`tokyoRpg/users/MESTRE/mochila`).remove().then(() => {
+            window.showNeonToast("🗑️ Mochila de Testes esvaziada!");
+            // Fecha a barra de ataque se ela estiver aberta pra limpar a tela
+            let btnCnc = document.getElementById("btnCancelAtk");
+            if(btnCnc && btnCnc.style.display !== "none") window.cancelarAtaqueVTT();
+        });
+    }
+};
+
+// 3. Função que puxa todas as magias da classe escolhida pra mochila na hora!
+window.mudarClasseMestreVTT = function(val) {
+    if(!val || !window.isMaster) return;
+    let parts = val.split("|"); let cat = parts[0]; let sub = parts[1];
+    let skills = window.jobConfigGlobais[cat]?.[sub] || {};
+    let novaMochila = {}; let count = 0;
+    
+    Object.keys(skills).forEach(k => {
+        let s = skills[k];
+        if(s.nome && s.nome !== "Vazio") {
+            count++;
+            let pushId = "teste_" + k; 
+            
+            // Puxa o range direto do JSON se existir!
+            let mRange = s.maxRange || 4;
+            if(s.customPattern && s.customPattern.startsWith("{")) {
+                try { let pat = JSON.parse(s.customPattern); if(pat.maxRange) mRange = pat.maxRange; } catch(e){}
+            }
+
+            novaMochila[pushId] = {
+                nome: "🧪 " + s.nome, tipo: "Skill", desc: s.desc,
+                eq: true, w: 0, h: 0, isVTT: true,
+                wpnRange: mRange, minRange: s.minRange || 0, 
+                customPattern: s.customPattern || "", // O JSON VEM PRA MOCHILA AQUI!
+                wpnDice: s.dice || "1d4", wpnBonus: s.bonus || 0, attr: s.attr || "int", erCost: s.er || 0,
+            };
+        }
+    });
+    
+    if (count === 0) {
+        window.showNeonToast(`A classe ${sub} ainda não tem habilidades forjadas!`);
+        document.getElementById("masterTestClassSelect").value = ""; return;
+    }
+
+    window.db.ref(`tokyoRpg/users/MESTRE/mochila`).set(novaMochila).then(() => {
+        window.showNeonToast(`✅ ${count} Habilidades carregadas no VTT!`);
+        document.getElementById("masterTestClassSelect").value = ""; 
+        let btnCnc = document.getElementById("btnCancelAtk");
+        if(btnCnc && btnCnc.style.display !== "none") window.cancelarAtaqueVTT();
+    });
+};
+
+// =========================================================
+// 1. ABRIR O MODAL DA FORJA (MESTRE) OU COMPRAR (JOGADOR)
+// =========================================================
+window.salvarEdicaoMestre = function() {
+    try {
+        if(!window.isMaster || !window.currentViewingJob) return;
+
+        let skillId = document.getElementById("editSkillId").value;
+        let cat = window.currentViewingJob.cat; 
+        let sub = window.currentViewingJob.subjob;
+        
+        let getVal = (id, def) => { let el = document.getElementById(id); return el ? el.value : def; };
+        let getInt = (id, def) => { let el = document.getElementById(id); return el && el.value ? parseInt(el.value) : def; };
+
+        let payload = {
+            nome: getVal("editSkillName", "").trim() || "Nova Habilidade", img: getVal("editSkillImg", "").trim() || "", desc: getVal("editSkillDesc", "").trim() || "Sem descrição.",
+            pt: getInt("editSkillPT", 1), er: getInt("editSkillER", 0), attr: getVal("editSkillAttr", "int"),
+            minRange: getInt("editSkillMinRange", 0), maxRange: getInt("editSkillMaxRange", 1), aoe: getInt("editSkillAoE", 0),
+            shape: getVal("editSkillShape", "Alvo"), 
+            customPattern: getVal("editSkillCustomPattern", ""), // AQUI VAI A ARTE
+            dice: getVal("editSkillDice", "").trim() || "", bonus: getInt("editSkillBonus", 0),
+            status: getVal("editSkillStatus", ""), statusVal: getInt("editSkillStatusVal", 1), statusTurnos: getInt("editSkillStatusTurnos", 1)
+        };
+
+        if(payload.shape === "summon") {
+            payload.summonHP = getInt("editSkillSummonHP", 50); payload.summonTurnos = getInt("editSkillSummonTurnos", 3); payload.summonLimit = getInt("editSkillSummonLimit", 1);
+        }
+
+        if(!window.jobConfigGlobais[cat]) window.jobConfigGlobais[cat] = {};
+        if(!window.jobConfigGlobais[cat][sub]) window.jobConfigGlobais[cat][sub] = {};
+        window.jobConfigGlobais[cat][sub][skillId] = payload;
+
+        let updates = {};
+        updates[`tokyoRpg/jobConfig/${cat}/${sub}/${skillId}`] = payload;
+
+        // A MÁGICA: Varre todos os usuários e atualiza as magias que já estão na mochila!
+        window.db.ref('tokyoRpg/users').once('value').then(snap => {
+            let usrs = snap.val(); 
+            if(usrs) { 
+                Object.keys(usrs).forEach(uKey => { 
+                    let inv = usrs[uKey].mochila; 
+                    if(inv) { 
+                        Object.keys(inv).forEach(mKey => { 
+                            // Verifica se é a mesma skill pelo nome limpo (ignorando o brilho "✨ " ou o "🧪 ")
+                            let nomeMochila = (inv[mKey].nome || "").replace("✨ ", "").replace("🧪 ", "").trim();
+                            let nomePayload = payload.nome.trim();
+                            
+                            if(nomeMochila === nomePayload) { 
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/customPattern`] = payload.customPattern;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnStyle`] = payload.shape;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnRange`] = payload.maxRange;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/minRange`] = payload.minRange;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/aoe`] = payload.aoe;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnEffect`] = payload.status;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnEffectVal`] = payload.statusVal;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/wpnEffectTurnos`] = payload.statusTurnos;
+                                updates[`tokyoRpg/users/${uKey}/mochila/${mKey}/desc`] = payload.desc;
+                            } 
+                        }); 
+                    } 
+                }); 
+            }
+            
+            window.db.ref().update(updates).then(() => {
+                window.showNeonToast("Habilidade Forjada e Mochilas Atualizadas!"); 
+                let modal = document.getElementById("modalEditSkill"); if(modal) modal.style.display = "none";
+                window.abrirArvoreJob(sub, cat, true);
+                
+                // Se a barra de ataque do VTT estiver aberta, recarrega pra pegar o desenho novo!
+                if(window.currentSubMapKey && document.getElementById("wpnSelectDiv") && document.getElementById("wpnSelectDiv").style.display === "flex") {
+                    window.iniciarAtaqueVTT();
+                }
+            });
+        });
+
+    } catch (err) { window.showNeonToast("Erro ao salvar."); console.error(err); }
+};
+
+// =========================================================
+// 2. SALVAR AS CONFIGURAÇÕES NA FORJA (SEGURO E BLINDADO)
+// =========================================================
+window.salvarEdicaoMestre = function() {
+    try {
+        if(!window.isMaster || !window.currentViewingJob) return;
+
+        let skillId = document.getElementById("editSkillId").value;
+        let cat = window.currentViewingJob.cat; 
+        let sub = window.currentViewingJob.subjob;
+        
+        let getVal = (id, def) => { let el = document.getElementById(id); return el ? el.value : def; };
+        let getInt = (id, def) => { let el = document.getElementById(id); return el && el.value ? parseInt(el.value) : def; };
+
+        let payload = {
+            nome: getVal("editSkillName", "").trim() || "Nova Habilidade",
+            img: getVal("editSkillImg", "").trim() || "",
+            desc: getVal("editSkillDesc", "").trim() || "Sem descrição.",
+            pt: getInt("editSkillPT", 1),
+            er: getInt("editSkillER", 0),
+            attr: getVal("editSkillAttr", "int"),
+            minRange: getInt("editSkillMinRange", 0),
+            maxRange: getInt("editSkillMaxRange", 1),
+            aoe: getInt("editSkillAoE", 0),
+            shape: getVal("editSkillShape", "Alvo"),
+            customPattern: getVal("editSkillCustomPattern", ""),
+            dice: getVal("editSkillDice", "").trim() || "1d4",
+            bonus: getInt("editSkillBonus", 0),
+            status: getVal("editSkillStatus", ""),
+            statusVal: getInt("editSkillStatusVal", 1),
+            statusTurnos: getInt("editSkillStatusTurnos", 1)
+        };
+
+        if(payload.shape === "summon") {
+            payload.summonHP = getInt("editSkillSummonHP", 50);
+            payload.summonTurnos = getInt("editSkillSummonTurnos", 3);
+            payload.summonLimit = getInt("editSkillSummonLimit", 1);
+        }
+
+        window.db.ref(`tokyoRpg/jobConfig/${cat}/${sub}/${skillId}`).set(payload).then(() => {
+            window.showNeonToast("Node Forjado e Salvo no Banco!"); 
+            let modal = document.getElementById("modalEditSkill");
+            if(modal) modal.style.display = "none";
+        });
+
+    } catch (err) { window.showNeonToast("Erro ao salvar."); console.error(err); }
+};
+
+// =========================================================
+// 3. EQUIPAR TESTE PARA O MESTRE (SEGURO)
+// =========================================================
+window.testarSkillMestre = function() {
+    let getVal = (id, def) => { let el = document.getElementById(id); return el ? el.value : def; };
+    let getInt = (id, def) => { let el = document.getElementById(id); return el && el.value ? parseInt(el.value) : def; };
+
+    let payload = {
+        nome: "🧪 " + (getVal("editSkillName", "").trim() || "Teste"), 
+        tipo: "Skill", desc: getVal("editSkillDesc", "").trim(),
+        eq: true, w: 0, h: 0, isVTT: true,
+        wpnStyle: getVal("editSkillShape", "Alvo"), 
+        customPattern: getVal("editSkillCustomPattern", ""),
+        wpnRange: getInt("editSkillMaxRange", 1), 
+        minRange: getInt("editSkillMinRange", 0), 
+        aoe: getInt("editSkillAoE", 0),
+        wpnDice: getVal("editSkillDice", "").trim() || "1d4", 
+        wpnBonus: getInt("editSkillBonus", 0), 
+        wpnEffect: getVal("editSkillStatus", ""), 
+        wpnEffectVal: getInt("editSkillStatusVal", 1), 
+        wpnEffectTurnos: getInt("editSkillStatusTurnos", 1), 
+        attr: getVal("editSkillAttr", "int"), 
+        erCost: getInt("editSkillER", 0)
+    };
+
+    window.db.ref(`tokyoRpg/users/MESTRE/mochila`).push(payload).then(() => { 
+        window.showNeonToast("Skill injetada na mochila do Mestre!"); 
+        let modal = document.getElementById("modalEditSkill");
+        if(modal) modal.style.display = "none"; 
+    });
+};
+
+// =========================================================
+// O SUPER MOTOR DO PINTOR, COMBATE VTT E FORJA (V. DEFINITIVA 2.0)
+// =========================================================
+
+// 1. INJETA O 'X' E O CLIQUE FORA NA FORJA DE HABILIDADE
+setTimeout(() => {
+    let modalE = document.getElementById("modalEditSkill");
+    if (modalE) {
+        modalE.onclick = function(e) { if(e.target === this) this.style.display = 'none'; };
+        let content = modalE.querySelector(".modal-content");
+        if (content && !document.getElementById("closeModalEditSkillBtn")) {
+            content.style.position = "relative";
+            let btn = document.createElement("button");
+            btn.id = "closeModalEditSkillBtn"; btn.innerHTML = "✖";
+            btn.style.cssText = "position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: #aaa; font-size: 20px; cursor: pointer; transition: 0.2s; z-index: 100;";
+            btn.onclick = (e) => { e.preventDefault(); modalE.style.display = "none"; };
+            content.appendChild(btn);
+        }
+    }
+}, 1000);
+
+// 2. DICIONÁRIO DE EMOJIS E TRADUTOR DA ARTE PARA O HUD
+window.effectEmojis = {
+    "Nenhum": "", "Queimadura": "🔥", "Veneno": "🧪", "Sangramento": "🩸", "Corrupcao": "🌌", "Maldicao": "☠️", "Infeccao": "🦠", "Acido": "🧪", "Decadencia": "🥀", "ChoqueEletrico": "⚡", "CongelamentoInterno": "❄️", "Hemorragia": "🩸", "Necrose": "💀", "Atordoamento": "💫", "Congelado": "🧊", "Paralisia": "⚡", "Silencio": "🤐", "Desarmado": "❌", "Cego": "👁️", "Confusao": "😵‍💫", "Medo": "😱", "Provocacao": "🤬", "Enraizado": "⚓", "Petrificacao": "🗿", "Sono": "💤", "Hipnose": "🌀", "Aprisionamento": "⛓️", "LentidaoExtrema": "🐢", "Regeneracao": "💚", "RegeneracaoMana": "💙", "Escudo": "🛡️", "Reflexao": "🪞", "Imunidade": "🌟", "Invisibilidade": "👻", "Empurrão": "🫸", "Puxão": "🪝", "Troca": "🔄", "Derrubado": "📉", "Teleporte": "🌀",
+    "Marcado": "🎯", "TrocaMarcada": "🔀" // NOVOS EFEITOS AQUI!
+};
+
+window.parseCustomPatternDesc = function(pattern) {
+    if (!pattern || !pattern.trim() || !pattern.includes(":")) return { types: "", effects: "" };
+    let blocks = pattern.split(":")[1].split("|");
+    let uniqueTypes = new Set(); let uniqueEffects = new Set();
+    let typeNames = { 'd': '💥 Dano', 'c': '💚 Cura', 'i': '🐺 Invocação', 't': '🕸️ Armadilha', 'tp': '🌀 Teleporte' };
+
+    blocks.forEach(b => {
+        if(!b) return; let [x, y, t, e, v, tr] = b.split(",");
+        if (typeNames[t]) uniqueTypes.add(typeNames[t]);
+        if (e && e !== "Nenhum") uniqueEffects.add(`${window.effectEmojis[e]||''}${e} (${v}F|${tr}t)`);
+    });
+    return { types: Array.from(uniqueTypes).join(" | "), effects: Array.from(uniqueEffects).join(" | ") };
+};
+
+// 3. CONSTRUTOR DO MINIGRID 
+window.gerarMiniGridHtml = function(shape, minRange, maxRange, aoe, customPattern) {
+    if (customPattern && customPattern.trim() !== "") {
+        let html = `<div style="display:grid; grid-template-columns: repeat(11, 7px); grid-template-rows: repeat(11, 7px); gap:1px; background:#000; padding:4px; border-radius:6px; border:1px solid #b000ff; flex-shrink:0; box-shadow: 0 0 10px rgba(176,0,255,0.2);">`;
+        let parts = customPattern.split(":"); let mode = parts[0]; let blocks = parts[1] ? parts[1].split("|") : [];
+        let px = 5; let py = mode === "F" ? 10 : 5;
+        let paintMap = {}; blocks.forEach(b => { if(!b) return; let [x, y, t, e] = b.split(","); paintMap[`${px + parseInt(x)}_${py + parseInt(y)}`] = {t, e}; });
+
+        for(let y=0; y<11; y++) {
+            for(let x=0; x<11; x++) {
+                let color = "#1a1a1a"; let emoji = "";
+                if (x === px && y === py) { 
+                    color = mode === "A" ? "#ffaa00" : "#00e5ff"; // Se for Alvo, o centro é Dourado, se for Player é Azul
+                    emoji = mode === "A" ? "🎯" : "🧍"; 
+                }
+                else if (paintMap[`${x}_${y}`]) {
+                    let d = paintMap[`${x}_${y}`];
+                    if(d.t==='d') color = "#ff1a55"; else if(d.t==='c') color = "#00ff66"; else if(d.t==='i') color = "#0066ff"; else if(d.t==='t') color = "#006600"; else if(d.t==='tp') color = "#b000ff";
+                    emoji = window.effectEmojis[d.e] || "";
+                }
+                html += `<div style="background:${color}; width:100%; height:100%; border-radius:1px; display:flex; align-items:center; justify-content:center; font-size:6px;">${emoji}</div>`;
+            }
+        }
+        return html + `</div>`;
+    }
+    
+    // BACKUP: A matemática padrão 5x5 se a skill não tiver desenho
+    minRange = parseInt(minRange) || 0; maxRange = parseInt(maxRange) || 1; aoe = parseInt(aoe) || 0; shape = shape || "Alvo";
+    let html = `<div style="display:grid; grid-template-columns: repeat(5, 10px); grid-template-rows: repeat(5, 10px); gap:2px; background:#000; padding:6px; border-radius:6px; border:1px solid #333; flex-shrink:0;">`;
+    let isSelfCentered = ['self', 'self_buff', 'self_aoe'].includes(shape); let isAoEShape = ['cross', 'big_cross', 'x_shape', 'aoe', 'trap', 'summon', 'Alvo', 'heal'].includes(shape);
+    const px = 2; const py = isSelfCentered ? 2 : 4; const tx = 2; let ty = 1; 
+    if (isSelfCentered) { ty = py; } else if (isAoEShape) { ty = 2; } else { ty = Math.max(0, py - maxRange); }
+
+    for(let y=0; y<5; y++) {
+        for(let x=0; x<5; x++) {
+            let color = "#1a1a1a"; let isHit = false; let isPath = false; let hitType = null; 
+            const dy = py - y; const dx = Math.abs(px - x); const dTy = Math.abs(ty - y); const dTx = Math.abs(tx - x); 
+            if (!isSelfCentered && dx === 0 && dy > 0 && dy <= maxRange) isPath = true;
+
+            if (shape === 'self' || shape === 'self_buff') { if (x === px && y === py) { isHit = true; hitType = 'cura'; } }
+            else if (shape === 'self_aoe') { if (dx <= aoe && Math.abs(py - y) <= aoe) { isHit = true; hitType = 'dano'; } } 
+            else if (shape === 'line' || shape === 'alternating_line') { if (dx === 0 && dy > 0 && dy <= maxRange) { if (shape === 'alternating_line' && dy % 2 === 0) { } else { isHit = true; hitType = 'dano'; } } } 
+            else if (shape === 'cross' || shape === 'big_cross') { if ((dTx === 0 && dTy <= aoe) || (dTy === 0 && dTx <= aoe)) { isHit = true; hitType = 'dano'; } } 
+            else if (shape === 'x_shape') { if (dTx === dTy && dTx <= aoe && dTx > 0) { isHit = true; hitType = 'dano'; } if (x === tx && y === ty) { isHit = true; hitType = 'dano'; } } 
+            else if (shape === 'cone') { if (y === ty && x === tx) { isHit = true; hitType = 'dano'; } if (y === ty + 1 && dx <= 1) { isHit = true; hitType = 'dano'; } if (y === ty + 2 && dx <= 2) { isHit = true; hitType = 'dano'; } } 
+            else if (shape === 'summon') { if (x === tx && y === ty) { isHit = true; hitType = 'invocacao'; } }
+            else if (shape === 'trap') { if (x === tx && y === ty) { isHit = true; hitType = 'armadilha'; } }
+            else { if (aoe === 0) { if (x === tx && y === ty) { isHit = true; hitType = 'dano'; } } else { if (dTx <= aoe && dTy <= aoe) { isHit = true; hitType = 'dano'; } } }
+
+            if (!isSelfCentered && isHit) { if (dy > 0 && dy <= minRange) { isHit = false; } }
+            if (isPath && !isHit && dy <= minRange && dy > 0) color = "#4c0019"; 
+            if (isHit) { color = hitType === 'cura' ? "#00ff66" : (hitType === 'invocacao' ? "#0066ff" : (hitType === 'armadilha' ? "#006600" : "#ff1a55")); }
+            if(['self', 'self_buff', 'self_aoe', 'heal'].includes(shape) || (shape && shape.includes('heal')) || (shape && shape.includes('buff'))) { if (color === "#ff1a55") color = "#00ff66"; }
+            if (x === px && y === py) color = "#00e5ff"; 
+            html += `<div style="background:${color}; width:100%; height:100%; border-radius:2px;"></div>`;
+        }
+    }
+    return html + `</div>`;
+};
+
+// 4. ATUALIZAR JANELONA DE DETALHES COM O TRADUTOR
+window.abrirDetalhesSkill = function(skillId, sData) {
+    window.skillSelecionadaInfo = { id: skillId, data: sData };
+    document.getElementById("detSkillName").innerText = sData.nome || "Vazio";
+    document.getElementById("detSkillPT").innerText = sData.pt || 1;
+    document.getElementById("detSkillER").innerText = sData.er || 0;
+    
+    let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+    document.getElementById("detSkillDesc").innerText = sData.desc || "Habilidade ainda não forjada.";
+    
+    let iconEl = document.getElementById("detSkillIcon");
+    if(sData.img && sData.img.trim() !== "") { iconEl.style.backgroundImage = `url('${sData.img}')`; iconEl.innerText = ""; } 
+    else { iconEl.style.backgroundImage = "none"; iconEl.innerText = "✖"; iconEl.style.display = "flex"; iconEl.style.alignItems = "center"; iconEl.style.justifyContent = "center"; iconEl.style.color = "#555"; iconEl.style.fontSize = "30px"; }
+
+    let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+    document.getElementById("detSkillBase").innerText = attrNames[sData.attr] || "Mágico";
+    
+    let parsedInfo = window.parseCustomPatternDesc(sData.customPattern);
+    
+    // Mostra se o desenho é Direcional (F), Aura (S) ou Ranged AoE (A)
+    let drawType = "🖌️ Desenho Custom";
+    if(isCustom) {
+        if(sData.customPattern.startsWith("A")) drawType = "🎯 Disparo em Área (Desenho)";
+        if(sData.customPattern.startsWith("F")) drawType = "⬆️ Direcional/Reta (Desenho)";
+        if(sData.customPattern.startsWith("S")) drawType = "🔄 Aura Pessoal (Desenho)";
+    }
+    document.getElementById("detSkillShapeLabel").innerText = isCustom ? drawType : (sData.shape || "🎯 Alvo Único");
+    
+    let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`; if (sData.aoe > 0) rangeTxt += ` (Área: ${sData.aoe})`;
+    document.getElementById("detSkillRange").innerText = isCustom ? (sData.customPattern.startsWith("A") ? `Distância do Tiro: ${sData.maxRange}` : "Livre (Ao Redor)") : (rangeTxt || "Corpo-a-corpo");
+
+    let diceTxt = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+    let actionTxt = isCustom && parsedInfo.types ? parsedInfo.types : "Nenhum";
+    document.getElementById("detSkillEffect").innerHTML = `<span style="color:#fff;">${diceTxt}</span><br><span style="color:var(--accent-red); font-size:10px;">${actionTxt}</span>`;
+    
+    let statusText = isCustom && parsedInfo.effects ? parsedInfo.effects : "Nenhum";
+    if(!isCustom && sData.status && sData.status !== "") statusText = `${sData.status} (${sData.statusVal || 1})`;
+    document.getElementById("detSkillStatus").innerHTML = statusText;
+
+    if(window.gerarMiniGridHtml) { document.getElementById("detSkillGrid").innerHTML = window.gerarMiniGridHtml(sData.shape, sData.minRange, sData.maxRange, sData.aoe, sData.customPattern); }
+
+    let btnEdit = document.getElementById("btnEditSkill"); let btnLearn = document.getElementById("btnLearnSkill");
+    if(window.isMaster) { btnEdit.style.display = "block"; } else { btnEdit.style.display = "none"; }
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let unlockedSkills = u.job?.skills || [];
+    if (!sData.nome || sData.nome === "Vazio") { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "NÃO FORJADA"; } else if (unlockedSkills.includes(skillId)) { btnLearn.disabled = true; btnLearn.style.opacity = "0.3"; btnLearn.innerText = "JÁ APRENDIDA"; } else { btnLearn.disabled = false; btnLearn.style.opacity = "1"; btnLearn.innerText = "APRENDER"; }
+
+    document.getElementById("modalSkillDetails").style.display = "flex";
+};
+
+// 5. BALÃOZINHO DA ÁRVORE (TOOLTIP)
+window.abrirArvoreJob = function(subjob, cat, isPreview) {
+    window.currentViewingJob = { subjob: subjob, cat: cat };
+    document.getElementById("jobSelectionScreen").style.display = "none"; document.getElementById("jobTreeScreen").style.display = "flex"; document.getElementById("jobTreeTitle").innerText = subjob.toUpperCase();
+
+    let u = window.usersGlobais[window.jogadorAtual] || {}; let uJob = u.job || {};
+    if(uJob.locked && uJob.subjob === subjob && !window.isMaster) { document.getElementById("btnVoltarJob").style.display = "none"; document.getElementById("jobLockWarning").style.display = "none"; } 
+    else { document.getElementById("btnVoltarJob").style.display = "block"; document.getElementById("jobLockWarning").style.display = "block"; }
+
+    let treeData = (window.jobConfigGlobais[cat] && window.jobConfigGlobais[cat][subjob]) ? window.jobConfigGlobais[cat][subjob] : {};
+    let unlockedSkills = (uJob.locked && uJob.subjob === subjob) ? (uJob.skills || []) : [];
+    let nodeIds = ['s1','s2','s3','s4','s5','s6','s7','s8','s9','s10','s11','u1','u2','u3']; let attrNames = { 'for': '💪 Força', 'agi': '⚡ Agilidade', 'int': '🧠 Inteligência', 'vig': '🛡️ Vigor', 'man': '🎯 Manuseio' };
+
+    nodeIds.forEach(id => {
+        let nodeEl = document.getElementById(`node_${id}`); let tipEl = document.getElementById(`tip_${id}`);
+        let sData = treeData[id] || { nome: "Vazio", desc: "Não configurada", pt: 1 };
+        nodeEl.className = "skill-node" + (id.startsWith('u') ? " ultimate" : "");
+        
+        nodeEl.onclick = function(e) { e.preventDefault(); e.stopPropagation(); window.abrirDetalhesSkill(id, sData); };
+
+        if(sData.img && sData.img.trim() !== "") { nodeEl.style.backgroundImage = `url('${sData.img}')`; nodeEl.innerText = ""; } 
+        else { nodeEl.style.backgroundImage = "none"; nodeEl.innerText = (sData.nome || "Vazio").substring(0, 10); }
+
+        let htmlTip = `<div class="skill-tooltip-title">${sData.nome}</div><div class="skill-tooltip-desc">${sData.desc}</div>`;
+        if (sData.nome && sData.nome !== "Vazio") {
+            htmlTip += `<div class="tbs-stats-grid"><span>⭐ PT: <strong>${sData.pt || 1}</strong></span>`;
+            if(sData.er) htmlTip += `<span>⚡ ER: <strong style="color:#00ff66;">${sData.er}</strong></span>`;
+            let nAttr = attrNames[sData.attr] || "Mágico"; htmlTip += `<span style="grid-column: span 2;">⚔️ Base: <strong>${nAttr}</strong></span>`;
+            
+            let isCustom = (sData.customPattern && sData.customPattern.trim() !== "");
+            let parsedInfo = window.parseCustomPatternDesc(sData.customPattern);
+
+            let rangeTxt = ""; if (sData.minRange > 0) rangeTxt += `Pula ${sData.minRange} | `; if (sData.maxRange > 0) rangeTxt += `Máx ${sData.maxRange}`;
+            if (rangeTxt) htmlTip += `<span style="grid-column: span 2;">🎯 Alcance: <strong>${isCustom ? (sData.customPattern.startsWith("A") ? 'Tiro Livre' : 'Livre (360º)') : rangeTxt}</strong></span>`;
+            
+            let diceTxt = (sData.dice || "") + (sData.bonus ? ` +${sData.bonus}` : "");
+            let actionTxt = isCustom && parsedInfo.types ? parsedInfo.types : "Nenhum";
+            htmlTip += `<span style="grid-column: span 2;">🎲 Ação Base: <strong style="color:#fff;">${diceTxt}</strong><br><strong style="color:var(--accent-red); font-size:9px;">${actionTxt}</strong></span>`;
+            
+            let statusText = isCustom && parsedInfo.effects ? parsedInfo.effects : "Nenhum";
+            if(!isCustom && sData.status && sData.status !== "") statusText = `${sData.status} (${sData.statusVal || 1}F | ${sData.statusTurnos || 1}t)`;
+            
+            if(statusText !== "Nenhum") htmlTip += `<span style="grid-column: span 2; font-size:10px;">☣️ Status: <strong style="color:#ffaa00;">${statusText}</strong></span>`;
+            
+            htmlTip += `<div style="grid-column: span 2; display:flex; justify-content:center; margin-top:5px;">`;
+            htmlTip += window.gerarMiniGridHtml(sData.shape, sData.minRange, sData.maxRange, sData.aoe, sData.customPattern);
+            htmlTip += `</div></div>`;
+        }
+        tipEl.innerHTML = htmlTip;
+
+        if (unlockedSkills.includes(id)) { nodeEl.classList.add("unlocked"); } 
+        else if (uJob.locked && uJob.subjob === subjob) { nodeEl.classList.add("available"); } 
+        else if (isPreview) { nodeEl.classList.add("available"); }
+    });
+};
+
+// 6. SALVAR A FORJA E AVISAR O FIREBASE E A RAM
+window.salvarEdicaoMestre = function() {
+    try {
+        if(!window.isMaster || !window.currentViewingJob) return;
+
+        let skillId = document.getElementById("editSkillId").value;
+        let cat = window.currentViewingJob.cat; 
+        let sub = window.currentViewingJob.subjob;
+        
+        let getVal = (id, def) => { let el = document.getElementById(id); return el ? el.value : def; };
+        let getInt = (id, def) => { let el = document.getElementById(id); return el && el.value ? parseInt(el.value) : def; };
+
+        let payload = {
+            nome: getVal("editSkillName", "").trim() || "Nova Habilidade", img: getVal("editSkillImg", "").trim() || "", desc: getVal("editSkillDesc", "").trim() || "Sem descrição.",
+            pt: getInt("editSkillPT", 1), er: getInt("editSkillER", 0), attr: getVal("editSkillAttr", "int"),
+            minRange: getInt("editSkillMinRange", 0), maxRange: getInt("editSkillMaxRange", 1), aoe: getInt("editSkillAoE", 0),
+            shape: getVal("editSkillShape", "Alvo"), customPattern: getVal("editSkillCustomPattern", ""),
+            dice: getVal("editSkillDice", "").trim() || "", bonus: getInt("editSkillBonus", 0),
+            status: getVal("editSkillStatus", ""), statusVal: getInt("editSkillStatusVal", 1), statusTurnos: getInt("editSkillStatusTurnos", 1)
+        };
+
+        if(payload.shape === "summon") {
+            payload.summonHP = getInt("editSkillSummonHP", 50); payload.summonTurnos = getInt("editSkillSummonTurnos", 3); payload.summonLimit = getInt("editSkillSummonLimit", 1);
+        }
+
+        // MÁGICA: ATUALIZA A MEMÓRIA DO SISTEMA INSTANTANEAMENTE
+        if(!window.jobConfigGlobais[cat]) window.jobConfigGlobais[cat] = {};
+        if(!window.jobConfigGlobais[cat][sub]) window.jobConfigGlobais[cat][sub] = {};
+        window.jobConfigGlobais[cat][sub][skillId] = payload;
+
+        window.db.ref(`tokyoRpg/jobConfig/${cat}/${sub}/${skillId}`).set(payload).then(() => {
+            window.showNeonToast("Node Forjado e Salvo no Banco!"); 
+            let modal = document.getElementById("modalEditSkill"); if(modal) modal.style.display = "none";
+            window.abrirArvoreJob(sub, cat, true); // Força redesenhar na hora!
+        });
+
+    } catch (err) { window.showNeonToast("Erro ao salvar."); console.error(err); }
+};
+
+// 7. O MODAL DE PINTURA TÁTICA (COM O MODO ALVO 'A')
+// =========================================================
+// 7. O MODAL DE PINTURA TÁTICA (AGORA COM RANGE EM TEMPO REAL)
+// =========================================================
+let oldForge = document.getElementById("vttForgeModal"); if(oldForge) oldForge.remove();
+
+let forgeDiv = document.createElement("div"); forgeDiv.id = "vttForgeModal"; forgeDiv.className = "modal-overlay"; forgeDiv.style.zIndex = "100005"; forgeDiv.style.display = "none";
+forgeDiv.onclick = function(e) { if(e.target === this) this.style.display = 'none'; }; 
+forgeDiv.innerHTML = `
+    <div class="modal-content" style="width: 95%; max-width: 500px; padding: 20px; background: #0a0a0f; border: 1px solid #b000ff; box-shadow: 0 0 40px rgba(176,0,255,0.4); position: relative;">
+        <button onclick="document.getElementById('vttForgeModal').style.display='none'" style="position: absolute; top: 10px; right: 15px; background: transparent; border: none; color: #aaa; font-size: 20px; cursor: pointer;">✖</button>
+        <h2 style="color:#b000ff; margin:0 0 15px 0; text-align:center; text-shadow: 0 0 10px #b000ff;">⚒️ VTT FORGE</h2>
+        
+        <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <button class="action-btn active" id="forgeType_alvo" onclick="window.setForgeType('alvo')" style="flex:1; border-color:#ffaa00; padding:5px 0;">🎯 ALVO</button>
+            <button class="action-btn" id="forgeType_direcional" onclick="window.setForgeType('direcional')" style="flex:1; border-color:var(--accent-blue); padding:5px 0;">⬆️ DIRECIONAL</button>
+            <button class="action-btn" id="forgeType_aura" onclick="window.setForgeType('aura')" style="flex:1; border-color:var(--accent-gold); padding:5px 0;">🔄 AURA</button>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-bottom:15px; background:#111; padding:10px; border-radius:8px;">
+            <div style="flex:1;">
+                <label style="font-size:10px; color:#00e5ff;">ALCANCE MÁXIMO (Grid 9x9 limita a 4):</label>
+                <input type="number" id="forgeMaxRange" value="4" min="1" max="4" style="width:100%; background:#000; border:1px solid #00e5ff; color:#fff; text-align:center; font-weight:bold; padding:5px;" oninput="window.renderForgeGrid()">
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:5px;">
+                <button class="action-btn active" id="forgeTab_mira" onclick="window.setForgeTab('mira')" style="margin:0; padding:2px; font-size:11px; border-color:#00e5ff; color:#00e5ff;">🔵 MASCARA DE MIRA</button>
+                <button class="action-btn" id="forgeTab_efeito" onclick="window.setForgeTab('efeito')" style="margin:0; padding:2px; font-size:11px; border-color:#ff1a55; color:#ff1a55;">💥 MASCARA DE EFEITO</button>
+            </div>
+        </div>
+
+        <div id="forgeEffectTools" style="background:#111; padding:10px; border-radius:8px; border:1px dashed #ff1a55; margin-bottom:15px; display:none;">
+            <div style="font-size:10px; color:#ff1a55; margin-bottom:5px;">AÇÕES DO PINCEL (Clique no Grid p/ Pintar):</div>
+            <div style="display:flex; gap:5px; flex-wrap: wrap; margin-bottom:10px;">
+                <button class="action-btn active" id="fbrush_d" style="border-color:#ff1a55; color:#ff1a55; padding:5px; margin:0; flex:1;" onclick="window.setForgeBrush('d')">🩸 Dano</button>
+                <button class="action-btn" id="fbrush_c" style="border-color:#00ff66; color:#00ff66; padding:5px; margin:0; flex:1;" onclick="window.setForgeBrush('c')">💚 Cura</button>
+                <button class="action-btn" id="fbrush_t" style="border-color:#006600; color:#006600; padding:5px; margin:0; flex:1;" onclick="window.setForgeBrush('t')">🕸️ Trap</button>
+                <button class="action-btn" id="fbrush_tp" style="border-color:#b000ff; color:#b000ff; padding:5px; margin:0; flex:1;" onclick="window.setForgeBrush('tp')">🌀 TP</button>
+                <button class="action-btn" id="fbrush_erase" style="border-color:#aaa; color:#aaa; padding:5px; margin:0; flex:1;" onclick="window.setForgeBrush('erase')">🧽 Apagar</button>
+            </div>
+            <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:5px;">
+                <select id="forgeEffectSelect" class="gamble-input" style="font-size:12px; padding:5px;">
+                    <option value="Nenhum">Nenhum Status</option>
+                    <option value="Marcado">🎯 Marcar Alvo</option><option value="TrocaMarcada">🔀 Trocar c/ Marcado</option>
+                    <option value="Queimadura">🔥 Queimadura</option><option value="Veneno">🧪 Veneno</option><option value="Empurrão">🫸 Empurrar alvo</option><option value="Puxão">🪝 Puxar alvo</option>
+                </select>
+                <input type="number" id="forgeEffectVal" placeholder="Força" class="gamble-input" style="font-size:12px; padding:5px;" value="1">
+                <input type="number" id="forgeEffectTurn" placeholder="Turnos" class="gamble-input" style="font-size:12px; padding:5px;" value="1">
+            </div>
+        </div>
+
+        <div id="forgeGridContainer" style="display:grid; grid-template-columns: repeat(9, 32px); grid-template-rows: repeat(9, 32px); gap:2px; justify-content:center; background:#000; padding:15px; border:2px solid #333; border-radius:8px; user-select:none;"></div>
+        
+        <button class="action-btn" style="width:100%; border-color:#00e5ff; background:rgba(0,229,255,0.1); color:#00e5ff; font-weight:bold; font-size:16px; margin-top:15px;" onclick="window.salvarVttForge()">✅ FORJAR SISTEMA TÁTICO</button>
+    </div>
+`;
+document.body.appendChild(forgeDiv);
+
+window.vttForgeData = { castType: 'alvo', rangeMask: [], effectMask: {} };
+window.forgeTab = 'mira'; // 'mira' ou 'efeito'
+window.forgeBrush = 'd';
+
+window.setForgeType = function(type) {
+    window.vttForgeData.castType = type;
+    ['alvo', 'direcional', 'aura'].forEach(t => { document.getElementById('forgeType_'+t).style.background = (t === type) ? "rgba(255,255,255,0.2)" : "transparent"; });
+    
+    let tabMiraBtn = document.getElementById("forgeTab_mira");
+    if (type !== 'alvo') { tabMiraBtn.style.opacity = "0.3"; window.setForgeTab('efeito'); } 
+    else { tabMiraBtn.style.opacity = "1"; window.setForgeTab('mira'); }
+    window.renderForgeGrid();
+};
+
+window.setForgeTab = function(tab) {
+    if(window.vttForgeData.castType !== 'alvo' && tab === 'mira') return; // Proíbe mira se não for Alvo
+    window.forgeTab = tab;
+    document.getElementById("forgeTab_mira").style.background = tab === 'mira' ? "rgba(0,229,255,0.2)" : "transparent";
+    document.getElementById("forgeTab_efeito").style.background = tab === 'efeito' ? "rgba(255,26,85,0.2)" : "transparent";
+    document.getElementById("forgeEffectTools").style.display = tab === 'efeito' ? "block" : "none";
+    window.renderForgeGrid();
+};
+
+window.setForgeBrush = function(brush) {
+    window.forgeBrush = brush;
+    ['d','c','t','tp','erase'].forEach(b => { let el = document.getElementById('fbrush_'+b); if(el) el.style.boxShadow = (b === brush) ? `inset 0 0 10px ${el.style.color}` : "none"; });
+};
+
+window.renderForgeGrid = function() {
+    let c = document.getElementById("forgeGridContainer"); if(!c) return; c.innerHTML = "";
+    let px = 4; let py = 4; // Centro do Grid 9x9
+    let maxRange = parseInt(document.getElementById("forgeMaxRange").value) || 4;
+
+    for(let y=0; y<9; y++) {
+        for(let x=0; x<9; x++) {
+            let cell = document.createElement("div");
+            cell.style.width = "100%"; cell.style.height = "100%"; cell.style.borderRadius = "4px"; 
+            cell.style.display = "flex"; cell.style.alignItems = "center"; cell.style.justifyContent = "center"; cell.style.fontSize = "16px";
+            
+            let dist = Math.max(Math.abs(x - px), Math.abs(y - py));
+            let isBlocked = dist > maxRange;
+            let relCoord = `${x - px}_${y - py}`; // Coordenada Relativa!
+
+            if(window.forgeTab === 'mira') {
+                if(isBlocked) { cell.style.background = "#050505"; cell.style.border = "1px solid #111"; cell.style.cursor = "not-allowed"; } 
+                else {
+                    cell.style.cursor = "pointer";
+                    if (x === px && y === py) { cell.style.background = "#00e5ff"; cell.innerText = "🧍"; cell.style.boxShadow = "0 0 10px #00e5ff"; }
+                    else {
+                        let isMasked = window.vttForgeData.rangeMask.includes(relCoord);
+                        cell.style.background = isMasked ? "rgba(0, 229, 255, 0.5)" : "#222";
+                        cell.style.border = isMasked ? "1px solid #00e5ff" : "1px dashed #444";
+                        
+                        let toggleMira = (e) => { 
+                            e.preventDefault(); 
+                            if(window.vttForgeData.rangeMask.includes(relCoord)) { window.vttForgeData.rangeMask = window.vttForgeData.rangeMask.filter(c => c !== relCoord); } 
+                            else { window.vttForgeData.rangeMask.push(relCoord); }
+                            window.renderForgeGrid(); 
+                        };
+                        cell.onmousedown = toggleMira; cell.onmouseenter = (e) => { if(e.buttons > 0) toggleMira(e); };
+                    }
+                }
+            } else { // ABA DE EFEITOS
+                // No modo alvo, a explosão não tem limite de range travado na interface visual, você desenha a explosão em volta do alvo.
+                cell.style.cursor = "crosshair"; cell.style.border = "1px solid #333";
+                
+                if (x === px && y === py) { 
+                    cell.style.background = window.vttForgeData.castType === "alvo" ? "#ffaa00" : "#00e5ff"; 
+                    cell.innerText = window.vttForgeData.castType === "alvo" ? "🎯" : "🧍"; 
+                } 
+                else {
+                    let pData = window.vttForgeData.effectMask[relCoord];
+                    if(pData) {
+                        if(pData.t === 'd') cell.style.background = "#ff1a55"; else if(pData.t === 'c') cell.style.background = "#00ff66"; else if(pData.t === 't') cell.style.background = "#006600"; else if(pData.t === 'tp') cell.style.background = "#b000ff";
+                        cell.innerText = window.effectEmojis[pData.e] || "";
+                    } else { cell.style.background = "#1a1a1a"; }
+
+                    let aplicarEfeito = (e) => { 
+                        e.preventDefault(); 
+                        if(window.forgeBrush === "erase") delete window.vttForgeData.effectMask[relCoord]; 
+                        else { window.vttForgeData.effectMask[relCoord] = { t: window.forgeBrush, e: document.getElementById("forgeEffectSelect").value, v: document.getElementById("forgeEffectVal").value || 1, tr: document.getElementById("forgeEffectTurn").value || 1 }; }
+                        window.renderForgeGrid(); 
+                    };
+                    cell.onmousedown = aplicarEfeito; cell.onmouseenter = (e) => { if(e.buttons > 0) aplicarEfeito(e); };
+                }
+            }
+            c.appendChild(cell);
+        }
+    }
+};
+
+window.abrirPintor = function() {
+    let customInput = document.getElementById("editSkillCustomPattern"); if(!customInput) return;
+    let str = customInput.value; 
+    
+    // Reseta pra base limpa se não tiver arte
+    window.vttForgeData = { castType: 'alvo', rangeMask: [], effectMask: {} };
+    
+    if(str && str.startsWith("{")) {
+        try { window.vttForgeData = JSON.parse(str); } catch(e) {}
+    }
+    
+    document.getElementById("forgeMaxRange").value = window.vttForgeData.maxRange || parseInt(document.getElementById("editSkillMaxRange").value) || 4;
+    window.setForgeType(window.vttForgeData.castType);
+    document.getElementById("vttForgeModal").style.display = "flex";
+};
+
+window.salvarVttForge = function() {
+    let customInput = document.getElementById("editSkillCustomPattern"); 
+    if(!customInput) return;
+    
+    // Puxa o range e embute no JSON
+    window.vttForgeData.maxRange = parseInt(document.getElementById("forgeMaxRange").value) || 4;
+    customInput.value = JSON.stringify(window.vttForgeData); 
+    
+    // Atualiza o input velho só pro Mestre ver
+    let nativeRange = document.getElementById("editSkillMaxRange");
+    if(nativeRange) nativeRange.value = window.vttForgeData.maxRange;
+
+    window.showNeonToast("Sistema Tático Registrado na Forja!"); 
+    document.getElementById("vttForgeModal").style.display = "none";
+    
+    // Ativa o salvar geral logo depois
+    if(window.isMaster && window.salvarEdicaoMestre) window.salvarEdicaoMestre(); 
+};
+
+// =========================================================
+// PAINEL DE TESTE RÁPIDO DE CLASSES NO VTT (EXCLUSIVO DO MESTRE)
+// =========================================================
+setInterval(() => {
+    if(!window.isMaster) return;
+    let painelMestre = document.getElementById("mestreVTT");
+    
+    // Injeta o menu se ele ainda não estiver lá
+    if(painelMestre && painelMestre.style.display !== "none" && !document.getElementById("masterClassTestWrapper")) {
+        let w = document.createElement("div");
+        w.id = "masterClassTestWrapper";
+        w.style.display = "flex"; w.style.alignItems = "center"; w.style.gap = "5px";
+        w.style.marginLeft = "10px"; w.style.borderLeft = "1px dashed var(--accent-purple)"; w.style.paddingLeft = "10px";
+
+        let selHtml = `<span style="font-size:10px; color:#00ff66; font-weight:bold;">🎭 MUDAR CLASSE:</span>
+        <select id="masterTestClassSelect" onchange="window.mudarClasseMestreVTT(this.value)" style="background:#000; color:#00ff66; border:1px solid #00ff66; padding:2px; font-size:10px; border-radius:4px; max-width: 110px; cursor:pointer; outline:none;">
+            <option value="">Selecione...</option>`;
+        
+        if(window.categoriasTrabalho) {
+            Object.keys(window.categoriasTrabalho).forEach(c => {
+                selHtml += `<optgroup label="--- ${c.toUpperCase()} ---">`;
+                window.categoriasTrabalho[c].forEach(s => { selHtml += `<option value="${c}|${s}">${s}</option>`; });
+                selHtml += `</optgroup>`;
+            });
+        }
+        
+        selHtml += `</select>
+        <button class="action-btn" style="border-color:#f00; color:#f00; padding: 2px 6px; font-size:10px; margin:0;" onclick="window.limparMochilaMestre()" title="Apagar todas as skills de teste">🗑️ Limpar</button>`;
+        
+        w.innerHTML = selHtml;
+        painelMestre.appendChild(w);
+    }
+}, 1500);
+
+window.limparMochilaMestre = function() {
+    if(!window.isMaster) return;
+    if(confirm("Deseja apagar TODAS as habilidades e itens da sua mochila de testes?")) {
+        window.db.ref(`tokyoRpg/users/MESTRE/mochila`).remove().then(() => {
+            window.showNeonToast("🗑️ Mochila de Testes esvaziada!");
+            let btnCnc = document.getElementById("btnCancelAtk");
+            if(btnCnc && btnCnc.style.display !== "none") window.cancelarAtaqueVTT();
+        });
+    }
+};
+
+window.mudarClasseMestreVTT = function(val) {
+    if(!val || !window.isMaster) return;
+    let parts = val.split("|"); let cat = parts[0]; let sub = parts[1];
+    let skills = window.jobConfigGlobais[cat]?.[sub] || {};
+    let novaMochila = {}; let count = 0;
+    
+    // Varre a classe e joga as skills na mochila do Mestre (agora puxando o Desenho 9x9!)
+    Object.keys(skills).forEach(k => {
+        let s = skills[k];
+        if(s.nome && s.nome !== "Vazio") {
+            count++;
+            let pushId = "teste_" + k; 
+            novaMochila[pushId] = {
+                nome: "🧪 " + s.nome, tipo: "Skill", desc: s.desc,
+                eq: true, w: 0, h: 0, isVTT: true,
+                wpnRange: s.maxRange || 4, minRange: s.minRange || 0, 
+                customPattern: s.customPattern || "", // O DESENHO VEM AQUI
+                wpnDice: s.dice || "1d4", wpnBonus: s.bonus || 0, attr: s.attr || "int", erCost: s.er || 0,
+            };
+        }
+    });
+    
+    if (count === 0) {
+        window.showNeonToast(`A classe ${sub} ainda não tem habilidades forjadas!`);
+        document.getElementById("masterTestClassSelect").value = ""; return;
+    }
+
+    window.db.ref(`tokyoRpg/users/MESTRE/mochila`).set(novaMochila).then(() => {
+        window.showNeonToast(`✅ ${count} Habilidades de ${sub} carregadas!`);
+        document.getElementById("masterTestClassSelect").value = ""; 
+        let btnCnc = document.getElementById("btnCancelAtk");
+        if(btnCnc && btnCnc.style.display !== "none") window.cancelarAtaqueVTT();
+    });
+};
+
+// 1. INJETOR BLINDADO DO MENU DE TESTE DO MESTRE
+setInterval(() => {
+    let wrapper = document.getElementById("masterClassTestWrapper");
+    
+    // Só aparece se for o mestre e estiver dentro de um mapa VTT
+    if(!window.isMaster || !window.currentSubMapKey) {
+        if(wrapper) wrapper.style.display = "none";
+        return;
+    }
+
+    // Se o menu não existir no HTML, o sistema cria ele flutuando na tela
+    if(!wrapper) {
+        wrapper = document.createElement("div");
+        wrapper.id = "masterClassTestWrapper";
+        wrapper.style.cssText = "position:absolute; top:70px; right:20px; z-index:9999; background:rgba(0,0,0,0.9); border:1px solid #00ff66; padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:5px; box-shadow:0 0 15px rgba(0,255,102,0.3);";
+        document.body.appendChild(wrapper);
+    }
+
+    wrapper.style.display = "flex";
+    
+    let selHtml = `<span style="font-size:11px; color:#00ff66; font-weight:bold; text-align:center;">🎭 MUDAR CLASSE VTT</span>
+    <select id="masterTestClassSelect" onchange="window.mudarClasseMestreVTT(this.value)" style="background:#111; color:#00ff66; border:1px solid #00ff66; padding:4px; font-size:12px; border-radius:4px; cursor:pointer; outline:none; margin-bottom:5px;">
+        <option value="">Selecione a Classe...</option>`;
+    
+    if(window.categoriasTrabalho) {
+        Object.keys(window.categoriasTrabalho).forEach(c => {
+            selHtml += `<optgroup label="--- ${c.toUpperCase()} ---">`;
+            window.categoriasTrabalho[c].forEach(s => { selHtml += `<option value="${c}|${s}">${s}</option>`; });
+            selHtml += `</optgroup>`;
+        });
+    }
+    
+    selHtml += `</select>
+    <button class="action-btn" style="border-color:#f00; color:#f00; padding: 4px; font-size:11px; margin:0;" onclick="window.limparMochilaMestre()" title="Apaga tudo da mochila">🗑️ Limpar Testes</button>`;
+    
+    // Só injeta o HTML se ele ainda estiver vazio (evita piscar)
+    if(wrapper.innerHTML === "") wrapper.innerHTML = selHtml;
+
+}, 1500);
+
+// 2. FUNÇÃO DE CARREGAR AS SKILLS NA HORA
+window.mudarClasseMestreVTT = function(val) {
+    if(!val || !window.isMaster) return;
+    let parts = val.split("|"); let cat = parts[0]; let sub = parts[1];
+    let skills = window.jobConfigGlobais[cat]?.[sub] || {};
+    let novaMochila = {}; let count = 0;
+    
+    Object.keys(skills).forEach(k => {
+        let s = skills[k];
+        if(s.nome && s.nome !== "Vazio") {
+            count++;
+            
+            // Puxa o range do desenho se existir
+            let mRange = s.maxRange || 4;
+            if(s.customPattern && s.customPattern.startsWith("{")) {
+                try { let pat = JSON.parse(s.customPattern); if(pat.maxRange) mRange = pat.maxRange; } catch(e){}
+            }
+
+            novaMochila["teste_" + k] = {
+                nome: "🧪 " + s.nome, tipo: "Skill", desc: s.desc,
+                eq: true, w: 0, h: 0, isVTT: true,
+                wpnRange: mRange, minRange: s.minRange || 0, 
+                customPattern: s.customPattern || "", // PUXANDO O DESENHO DA FORJA!
+                wpnDice: s.dice || "1d4", wpnBonus: s.bonus || 0, attr: s.attr || "int", erCost: s.er || 0,
+            };
+        }
+    });
+    
+    if (count === 0) {
+        window.showNeonToast(`A classe ${sub} não tem skills forjadas!`);
+        document.getElementById("masterTestClassSelect").value = ""; return;
+    }
+
+    window.db.ref(`tokyoRpg/users/MESTRE/mochila`).set(novaMochila).then(() => {
+        window.showNeonToast(`✅ ${count} Skills prontas pro combate!`);
+        document.getElementById("masterTestClassSelect").value = ""; 
+        let btnCnc = document.getElementById("btnCancelAtk");
+        if(btnCnc && btnCnc.style.display !== "none") window.cancelarAtaqueVTT();
+    });
+};
