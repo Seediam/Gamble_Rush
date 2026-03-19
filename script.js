@@ -49,40 +49,71 @@ window.socket.on("receberClash", (data) => {
     window.clashQueue.push(data.clashData);
     if(typeof window.processClashQueue === "function") window.processClashQueue();
 });
-// =========================================================
-// SENSOR DE QUEDA DO SERVIDOR (SOCKET.IO)
-// =========================================================
+window.toggleVttOfflineScreen = function(isOffline) {
+    let tabMapa = document.getElementById("tab-mapa");
+    if (!tabMapa) return;
 
-// Quando o servidor cai ou a internet do jogador desconecta do Radmin
-window.socket.on("disconnect", () => {
-    window.showNeonToast("⚠️ SINAL PERDIDO: O Mapa VTT está fora de área!");
-    console.warn("Conexão com o servidor VTT perdida.");
+    let offlineScreen = document.getElementById("vttOfflineScreen");
     
-    // Opcional: Escurece o tabuleiro para mostrar que caiu
-    let vttWrapper = document.getElementById("vttWorldWrapper");
-    if (vttWrapper) vttWrapper.style.filter = "grayscale(100%) brightness(0.5)";
+    if (isOffline) {
+        // Se a tela de bloqueio não existir, cria ela
+        if (!offlineScreen) {
+            offlineScreen = document.createElement("div");
+            offlineScreen.id = "vttOfflineScreen";
+            offlineScreen.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(5,5,10,0.85); z-index:9999; display:flex; flex-direction:column; justify-content:center; align-items:center; backdrop-filter: grayscale(100%) blur(4px);";
+            
+            offlineScreen.innerHTML = `
+                <div style="font-size: 60px; margin-bottom: 10px; filter: grayscale(100%); opacity: 0.8;">📡⚡</div>
+                <h2 style="color: #ff1a55; text-shadow: 0 0 20px #ff1a55; margin-bottom: 10px; text-align: center; font-size: 24px; font-weight: 900; letter-spacing: 2px;">SINAL PERDIDO</h2>
+                <p style="color: #aaa; text-align: center; max-width: 80%; font-size: 14px; line-height: 1.5;">O servidor de combate local está offline.<br>Você ainda pode usar o Celular e a Loja via Nuvem.</p>
+                <p style="color: #00e5ff; margin-top: 20px; font-size: 13px; font-weight: bold; animation: pulse 1.5s infinite;">Tentando conectar ao Servidor Central...</p>
+            `;
+            tabMapa.appendChild(offlineScreen);
+        }
+        offlineScreen.style.display = "flex";
+        
+        // Trava os cliques no tabuleiro
+        let vttWrapper = document.getElementById("vttWorldWrapper");
+        if (vttWrapper) vttWrapper.style.pointerEvents = "none";
+        
+    } else {
+        // Remove a tela e libera os cliques quando conecta
+        if (offlineScreen) offlineScreen.style.display = "none";
+        
+        let vttWrapper = document.getElementById("vttWorldWrapper");
+        if (vttWrapper) vttWrapper.style.pointerEvents = "auto";
+    }
+};
+
+// 1. Quando o site abre e o servidor JÁ ESTÁ OFFLINE (Erro de conexão inicial)
+window.socket.on("connect_error", () => {
+    console.warn("Falha ao tentar conectar no Servidor VTT do Radmin.");
+    window.toggleVttOfflineScreen(true);
 });
 
-// Quando o servidor volta online
+// 2. Quando o servidor cai DEPOIS de já estar jogando
+window.socket.on("disconnect", () => {
+    window.showNeonToast("⚠️ SINAL PERDIDO: O Mapa VTT caiu!");
+    window.toggleVttOfflineScreen(true);
+});
+
+// 3. Quando o servidor conecta com sucesso (Site abriu ou Servidor voltou)
 window.socket.on("connect", () => {
-    // Se ele já estava logado antes de cair, avisa que voltou e reconecta ele nos lugares certos
+    window.toggleVttOfflineScreen(false); // Libera o mapa imediatamente!
+
+    // Se ele já estava logado com um personagem
     if (window.jogadorAtual) {
         window.showNeonToast("✅ SINAL RESTABELECIDO: VTT Online!");
         
-        // Devolve a cor ao tabuleiro
-        let vttWrapper = document.getElementById("vttWorldWrapper");
-        if (vttWrapper) vttWrapper.style.filter = "none";
-
-        // Re-registra o nome no servidor Node
+        // Manda o nome pro Node.js pro log funcionar
         window.socket.emit("registrarJogador", window.jogadorAtual);
         
-        // Se ele estava no meio de uma luta/mapa, coloca ele de volta na sala invisível do Socket
+        // Se ele estava no meio de um mapa, reconecta na sala
         if (window.currentSubMapKey) {
             window.socket.emit("joinMap", window.currentSubMapKey, window.jogadorAtual);
         }
     }
 });
-// =========================================================
 // === VARIÁVEIS DE COMBATE VTT E FILA DE ANIMAÇÕES ===
 window.combatState = { active: false, weapon: null };
 window.currentCombatListener = null; window.currentCombatChange = null; window._lastCombatMap = null; window.pendingAttack = null; window.clashQueue = []; window.isClashing = false; window.lastClashTs = 0;
