@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyAccNn3N4N1Dt0YXp5DtvoXsRj40oTOrDw",
+  authDomain: "gumble-rush.firebaseapp.com",
+  databaseURL: "https://gumble-rush-default-rtdb.firebaseio.com",
+  projectId: "gumble-rush",
+  storageBucket: "gumble-rush.firebasestorage.app",
+  messagingSenderId: "837162957323",
+  appId: "1:837162957323:web:0cd24e2a65e78d7fd2e50e",
+  measurementId: "G-038Y2W1GBL"
+};
+
+  const app = initializeApp(firebaseConfig);
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Sistema do Distrito - OS V6.0 Master</title>
@@ -11,6 +27,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
     <link rel="stylesheet" href="style.css">
+	
 </head>
 <body>
 
@@ -153,14 +170,15 @@
         <div id="gameContainer">
             <div id="appContainer">
 
-                <div id="tab-mapa" class="tab-content active">
-                    <div class="vtt-grid-layout">
+               <div id="tab-mapa" class="tab-content" style="height: calc(100vh - 80px); display: flex; flex-direction: column;">
+                    <div class="vtt-grid-layout" style="display: flex; gap: 15px; flex: 1; min-height: 0;">
                         
-                        <div class="vtt-sidebar-left">
+                        <div class="vtt-sidebar-left" style="width: 260px; flex-shrink: 0; display: flex; flex-direction: column; overflow-y: auto; height: 100%; padding-right: 5px;">
+                            
                             <div class="box-faces">
                                 <img id="charFaceDisplay" src="https://api.dicebear.com/9.x/adventurer/svg?seed=Anon" class="char-face-img" onerror="this.src='https://api.dicebear.com/9.x/adventurer/svg?seed=Anon'">
                                 
-                                <select id="faceSelect" class="gamble-input" style="margin-bottom: 10px; text-align: center; border-color: var(--accent-blue);" onchange="window.mudarFaceManual()">
+                                <select id="faceSelect" class="gamble-input" style="margin-bottom: 10px; text-align: center; border-color: var(--accent-blue); font-size:12px; padding:4px;" onchange="window.mudarFaceManual()">
                                     <option value="Normal">🙂 Normal</option>
                                     <option value="Feliz">😁 Feliz</option>
                                     <option value="Raiva">😡 Raiva</option>
@@ -168,121 +186,144 @@
                                     <option value="Dano">🤕 Dano</option>
                                 </select>
                                 
-                                <button id="btnToggleMic" class="action-btn" style="width:100%; border-color: #00ff66; color: #00ff66;" onclick="window.ativarMicrofoneFace()">🎙️ Ativar Mic (Falar)</button>
+                                <button id="btnToggleMic" class="action-btn" style="width:100%; border-color: #00ff66; color: #00ff66; padding:5px; font-size:11px;" onclick="window.ativarMicrofoneFace()">🎙️ Ativar Mic (Falar)</button>
                                 
-                                <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 6px; border: 1px dashed #333;">
+                                <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 5px; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 6px; border: 1px dashed #333;">
                                     <div style="display: flex; justify-content: space-between;">
-                                        <label style="font-size: 10px; color: #aaa; font-weight: bold;">Sensibilidade do Mic:</label>
+                                        <label style="font-size: 10px; color: #aaa; font-weight: bold;">Sensibilidade:</label>
                                         <span id="lblSens" style="font-size: 10px; color: var(--accent-blue);">15</span>
                                     </div>
                                     <input type="range" id="micSensitivity" class="gamble-slider" min="1" max="100" value="15" oninput="document.getElementById('lblSens').innerText=this.value">
                                     
                                     <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                                        <label style="font-size: 10px; color: #aaa; font-weight: bold;">Volume das Vozes:</label>
+                                        <label style="font-size: 10px; color: #aaa; font-weight: bold;">Vozes:</label>
                                         <span id="lblVol" style="font-size: 10px; color: #00ff66;">100%</span>
                                     </div>
                                     <input type="range" id="globalVoiceVolume" class="gamble-slider" min="0" max="100" value="100" oninput="document.getElementById('lblVol').innerText=this.value+'%'; window.atualizarVolumeVozes();">
                                 </div>
                             </div>
 
-                            <div class="box-history">
-                                <span style="color:var(--accent-red); font-size:12px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:5px; margin-bottom: 5px;">Perícias e Histórico</span>
+                            <div class="box-history" style="margin-top: 10px; display: flex; flex-direction: column; flex: 1; min-height: 200px;">
+                                <span style="color:var(--accent-red); font-size:11px; font-weight:bold; border-bottom:1px solid #333; padding-bottom:5px; margin-bottom: 5px;">Perícias e Histórico</span>
                                 
-                                <div style="display:flex; gap:5px; margin-bottom:10px;">
-                                    <select id="comboPericias" class="gamble-input">
+                                <div style="display:flex; gap:5px; margin-bottom:5px;">
+                                    <select id="comboPericias" class="gamble-input" style="font-size:11px; padding:4px;">
                                         <option value="Luta|for">Luta (For)</option><option value="Furtividade|agi">Furtividade (Agi)</option>
                                         <option value="Armas|man">Armas (Man)</option><option value="Sobrevivência|vig">Sobrevivência (Vig)</option>
                                         <option value="Investigação|int">Investigação (Int)</option>
                                     </select>
-                                    <button class="action-btn" style="padding: 5px; margin:0;" onclick="window.rolarPericiaSelect()">Rolar</button>
+                                    <button class="action-btn" style="padding: 4px 8px; font-size:11px; margin:0;" onclick="window.rolarPericiaSelect()">Rolar</button>
                                 </div>
                                 
                                 <div class="dice-panel" style="flex: 1; display: flex; flex-direction: column;">
-                                    <div id="diceLog" style="flex:1; overflow-y:auto; font-size:11px; padding:5px; background:#000; border: 1px dashed var(--accent-red); border-radius: 4px; min-height: 100px;"></div>
+                                    <div id="diceLog" style="flex:1; overflow-y:auto; font-size:10px; padding:5px; background:#000; border: 1px dashed var(--accent-red); border-radius: 4px; min-height: 120px;"></div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="vtt-main-area">
-                            <div class="map-visual-area">
-                                <div class="map-canvas" id="mapCanvas"></div>
-                                <div class="submap-canvas" id="subMapCanvas">
-                                    <div style="display:flex; justify-content:space-between; background:rgba(0,0,0,0.85); padding:10px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-                                        <div><h2 id="subMapTitle" style="margin:0; font-size:14px;">Local</h2><p id="movRestantes" style="color:#0f0;font-size:11px;margin:0; font-weight:bold;">Passos Livres: 0</p></div>
-                                        <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0;"></div>
+                        <div class="vtt-main-area" style="flex: 1; display: flex; flex-direction: column; height: 100%; justify-content: space-between;">
+                            
+                            <div class="map-visual-area" style="flex: 1; display: flex; flex-direction: column; min-height: 0; padding-bottom: 10px;">
+                                
+                                <div class="map-canvas" id="mapCanvas" style="flex: 1; position:relative; background:#050505; border:2px solid var(--accent-blue); border-radius:8px; overflow:hidden;"></div>
+                                
+                                <div class="submap-canvas" id="subMapCanvas" style="display:none; flex-direction:column; flex: 1; overflow: hidden;">
+                                    
+                                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.85); padding:5px 8px; border-bottom:1px solid var(--accent-blue); flex-wrap:wrap; gap:5px; margin-bottom:5px; border-radius:4px; flex-shrink: 0;">
                                         
-                                        <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
-                                            <button id="btnAtacar" class="action-btn" style="border-color:#ff1a55; color:#ff1a55; padding: 5px 10px;" onclick="window.iniciarAtaqueVTT()">⚔️ Atacar</button>
-                                            <button id="btnCancelAtk" class="action-btn" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.cancelarAtaqueVTT()">✖ Cancelar</button>
-                                            <div id="wpnSelectDiv" style="display:none; gap:5px; margin-left: 5px;"></div>
-                                            <button id="btnMoverVTT" class="action-btn" style="border-color:#ffaa00;color:#ffaa00; padding: 5px 10px;" onclick="window.rolarDadoMovimento()">Mover (1d4)</button>
-                                            <button id="btnLevantarVTT" class="action-btn" style="display:none; border-color:#ffaa00; background: rgba(255, 170, 0, 0.2); color:#ffaa00; padding: 5px 10px; font-weight: bold; animation: pulse 1.5s infinite;" onclick="window.abrirModalCaraCoroa()">🪙 Levantar</button>
-                                            <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#fff; color:#fff; padding: 5px 10px;" onclick="window.passarTurnoVTT()">Fim Turno</button>
-                                            
-                                            <div id="mestreVTT" style="display:none; gap:5px; margin-left: 10px; border-left:1px solid #333; padding-left:10px; flex-wrap:wrap; align-items: center;">
-                                                <button class="action-btn" style="border-color:var(--accent-red); color:var(--accent-red); padding: 5px;" onclick="window.iniciarIniciativaVTT()">Iniciativas</button>
-                                                <input type="text" id="vttBgInp" placeholder="URL Fundo" style="width:80px; padding:5px; font-size:10px; background:#000; color:#fff;">
-                                                <button class="action-btn" style="border-color:var(--accent-blue); padding: 5px;" onclick="window.mudarBgSubMapa()">Fundo</button>
-                                                <div style="display:flex; gap:5px; align-items:center;">
-                                                    <input type="number" id="vttColsInp" value="16" title="Colunas" style="width:40px; padding:2px; font-size:10px; text-align:center; background:#000; color:#fff;"> x <input type="number" id="vttRowsInp" value="12" title="Linhas" style="width:40px; padding:2px; font-size:10px; text-align:center; background:#000; color:#fff;">
-                                                    <select id="vttShapeInp" style="padding:2px; font-size:10px; width:70px; background:#000; color:#fff; border:1px solid #333;">
-                                                        <option value="quadrado">⬛ Quadrado</option><option value="l_shape">▛ Formato L</option>
-                                                    </select>
-                                                    <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 5px;" onclick="window.salvarFormatoMapa()">Moldar</button>
-                                                </div>
+                                        <div style="display:flex; align-items:center; gap: 8px;">
+                                            <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue); padding: 2px 6px; font-size: 14px; border-radius: 4px; margin:0;" onclick="window.fecharSubMapa()" title="Voltar ao Mapa">🌍</button>
+                                            <div>
+<h2 id="subMapTitle" style="margin:0; font-size:13px; color:var(--accent-blue);">Local</h2>
+<p id="movRestantes" style="color:#0f0;font-size:10px;margin:0; font-weight:bold;">PA: 0</p>
                                             </div>
                                         </div>
-                                        <button class="action-btn" style="border-color:var(--accent-blue); color:var(--accent-blue); padding: 5px; border-radius: 50%; width: 40px; height: 40px; font-size: 20px;" onclick="window.fecharSubMapa()">🌍</button>
+                                        
+                                        <div id="turnOrderUI" class="turn-order-bar" style="display:none; flex:1; margin:0 5px; padding: 2px; min-width: 100px; height: 30px; overflow: hidden; border-color: var(--accent-gold);"></div>
+                                        
+                                        <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+                                            <button id="btnAtacar" class="action-btn" style="border-color:#ff1a55; color:#ff1a55; padding: 3px 8px; font-size: 11px; margin: 0;" onclick="window.iniciarAtaqueVTT()">⚔️ Atacar</button>
+                                            <button id="btnCancelAtk" class="action-btn" style="display:none; border-color:#fff; color:#fff; padding: 3px 8px; font-size: 11px; margin: 0;" onclick="window.cancelarAtaqueVTT()">✖ Cancelar</button>
+                                            
+                                            <div id="wpnSelectDiv" style="display:none; gap:3px; margin: 0 4px;"></div>
+                                            
+                                            <button id="btnMoverVTT" class="action-btn" style="border-color:#00e5ff;color:#00e5ff; padding: 3px 8px; font-size: 11px; margin: 0;" onclick="window.rolarPA()">🎲 Rolar PA</button>
+                                            <button id="btnLevantarVTT" class="action-btn" style="display:none; border-color:#ffaa00; background: rgba(255, 170, 0, 0.2); color:#ffaa00; padding: 3px 8px; font-size: 11px; font-weight: bold; margin: 0;" onclick="window.abrirModalCaraCoroa()">🪙 Levantar</button>
+                                            <button class="action-btn" id="btnPassTurno" style="display:none; border-color:#ffaa00; color:#ffaa00; padding: 3px 8px; font-size: 11px; margin: 0;" onclick="window.passarTurnoVTT()">⏭️ Passar</button>
+                                            
+                                            <button id="btnToggleVttReady" class="action-btn" style="border-color:#aaa; color:#aaa; font-size:10px; margin:0; padding: 3px 6px;" onclick="window.toggleVttReady()">❌ FORA COMBATE</button>
+
+                                            <div id="mestreIniciativaPainel" style="display:none; gap:3px; margin-left: 5px; border-left: 1px solid #333; padding-left: 5px;">
+                                                <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 3px 6px; font-size: 10px; margin:0;" onclick="window.iniciarIniciativaVTT()">🎲 Rolar Ini.</button>
+                                                <button class="action-btn" style="border-color:#f00; color:#f00; padding: 3px 6px; font-size: 10px; margin:0;" onclick="window.pararCombateVTT()">🛑 Parar</button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div id="vttFoodActions" class="food-action-bar"></div>
                                     
-                                    <div id="whisperBar" style="display: none; gap: 10px; padding: 8px 15px; background: #050508; border-bottom: 1px solid var(--accent-purple); align-items: center; overflow-x: auto; box-shadow: inset 0 0 15px rgba(176, 0, 255, 0.2);">
-                                        <span style="font-size: 11px; color: var(--accent-purple); font-weight: bold; white-space: nowrap;">SUSSURRO DIRETO:</span>
-                                        <div id="whisperList" style="display: flex; gap: 10px;"></div>
+                                    <div id="mestreVTT" style="display:none; gap:4px; margin-bottom: 5px; background: rgba(0,0,0,0.5); border: 1px dashed var(--accent-purple); padding: 4px; flex-wrap:wrap; align-items: center; border-radius: 4px; flex-shrink: 0;">
+                                        <span style="font-size:10px; color:var(--accent-purple); margin-right: 5px;">MAP MAKER:</span>
+                                        <input type="text" id="vttBgInp" placeholder="URL Fundo" style="width:70px; padding:2px; font-size:10px; background:#000; color:#fff;">
+                                        <button class="action-btn" style="border-color:var(--accent-blue); padding: 2px 5px; font-size:10px; margin:0;" onclick="window.mudarBgSubMapa()">Fundo</button>
+                                        <input type="number" id="vttColsInp" value="16" style="width:30px; padding:2px; font-size:10px; text-align:center; background:#000; color:#fff;"> x <input type="number" id="vttRowsInp" value="12" style="width:30px; padding:2px; font-size:10px; text-align:center; background:#000; color:#fff;">
+                                        <select id="vttShapeInp" style="padding:2px; font-size:10px; width:65px; background:#000; color:#fff; border:1px solid #333;">
+                                            <option value="quadrado">⬛ Quad.</option><option value="l_shape">▛ L</option>
+                                            <option value="u_shape">🔲 U</option><option value="cross">➕ Cruz</option>
+                                            <option value="corredor">🛤️ Via</option>
+                                        </select>
+                                        <button class="action-btn" style="border-color:#ffaa00; color:#ffaa00; padding: 2px 5px; font-size:10px; margin:0;" onclick="window.salvarFormatoMapa()">Moldar</button>
                                     </div>
 
-                                    <div class="tactical-board" id="tacticalBoard" style="overflow: hidden; position: relative; scroll-behavior: smooth;">
+                                    <div class="tactical-board" id="tacticalBoard" style="flex: 1; width: 100%; overflow: auto; border: 2px solid var(--accent-blue); border-radius: 8px; background: #050505; position: relative;">
                                         <div id="vttWorldWrapper" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
                                             <div id="roomOverlays"></div>
-                                            <div id="gridCells" class="grid-cells-container"></div>
-                                            <div id="tokensLayer" class="tokens-layer"></div>
+                                            <div id="gridCells" class="grid-cells-container" style="display: grid; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;"></div>
+                                            <div id="tokensLayer" class="tokens-layer" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:3;"></div>
                                         </div>
+                                    </div>
+
+                                    <div id="vttFoodActions" style="display:flex; justify-content:center; gap:5px; margin-top: 5px; flex-wrap:wrap; flex-shrink: 0;"></div>
+                                    <div id="whisperBar" style="display: none; gap: 10px; padding: 4px 10px; background: #050508; border-top: 1px solid var(--accent-purple); align-items: center; overflow-x: auto; flex-shrink: 0;">
+                                        <span style="font-size: 10px; color: var(--accent-purple); font-weight: bold;">SUSSURRO:</span>
+                                        <div id="whisperList" style="display: flex; gap: 5px;"></div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="box-hud-bottom">
-                                <div style="display:flex; gap: 15px;">
-                                    <div class="hud-stat-item" style="border-color: var(--accent-red);">
-                                        ❤️ HP: <input type="number" id="hpInput" value="100" onchange="window.atualizarHP()" style="width: 50px; background: transparent !important; border:none !important; color:var(--accent-red) !important; font-weight:900; padding:0; font-size:16px;"> / <span id="hpMaxLabel">100</span>
+                            <div class="box-hud-bottom" style="flex-shrink: 0; padding-top: 10px; border-top: 1px solid #333; background: var(--bg-dark);">
+                                <div style="display:flex; gap: 10px; flex-wrap: wrap;">
+                                    <div class="hud-stat-item" style="border-color: var(--accent-red); padding: 3px 8px; font-size:12px;">
+                                        ❤️ HP: <input type="number" id="hpInput" value="100" onchange="window.atualizarHP()" style="width: 40px; background: transparent !important; border:none !important; color:var(--accent-red) !important; font-weight:900; padding:0; font-size:14px; text-align:center;"> / <span id="hpMaxLabel">100</span>
                                     </div>
-                                    <div class="hud-stat-item" style="border-color: #00ff00;">
+                                    <div class="hud-stat-item" style="border-color: #00ff00; padding: 3px 8px; font-size:12px;">
                                         ⚡ ER: <span id="lblIntegVal" class="neon-green">100%</span>
                                     </div>
-                                    <div class="hud-stat-item" style="border-color: var(--accent-blue);">
+                                    <div class="hud-stat-item" style="border-color: var(--accent-blue); padding: 3px 8px; font-size:12px;">
                                         🛡️ AR: <span id="lblDef" class="neon-blue">0</span>
                                     </div>
-                                    <div class="hud-stat-item" style="border-color: var(--accent-gold);">
-                                        ⭐ Pts: <span id="lblPtsOS" class="neon-gold">0</span>
+                                    <div class="hud-stat-item" style="border-color: var(--accent-gold); padding: 3px 8px; font-size:12px;">
+                                        ⭐ PT: <span id="lblPtsOS" class="neon-gold">0</span>
+										<div style="font-size: 14px; color: var(--accent-gold); font-weight: bold;">
+    Custo: <span id="detSkillPT" style="font-size: 18px;">1</span> PT | <span id="detSkillPA" style="font-size: 18px; color:#ff1a55;">1</span> PA
+</div>
                                     </div>
                                 </div>
                                 
-                                <div style="display:flex; gap: 10px;">
-                                    <button class="action-btn" onclick="window.rolarAtributo('Força','for')" title="Força">F: <span id="valFor">1</span></button>
-                                    <button class="action-btn" onclick="window.rolarAtributo('Agilidade','agi')" title="Agilidade">A: <span id="valAgi">1</span></button>
-                                    <button class="action-btn" onclick="window.rolarAtributo('Manuseio','man')" title="Manuseio">M: <span id="valMan">1</span></button>
-                                    <button class="action-btn" onclick="window.rolarAtributo('Vigor','vig')" title="Vigor">V: <span id="valVig">1</span></button>
-                                    <button class="action-btn" onclick="window.rolarAtributo('Inteligência','int')" title="Inteligência">I: <span id="valInt">1</span></button>
+                                <div style="display:flex; gap: 5px; margin-top: 8px;">
+                                    <button class="action-btn" style="padding: 2px 6px; font-size:11px; margin:0;" onclick="window.rolarAtributo('Força','for')" title="Força">F: <span id="valFor">1</span></button>
+                                    <button class="action-btn" style="padding: 2px 6px; font-size:11px; margin:0;" onclick="window.rolarAtributo('Agilidade','agi')" title="Agilidade">A: <span id="valAgi">1</span></button>
+                                    <button class="action-btn" style="padding: 2px 6px; font-size:11px; margin:0;" onclick="window.rolarAtributo('Manuseio','man')" title="Manuseio">M: <span id="valMan">1</span></button>
+                                    <button class="action-btn" style="padding: 2px 6px; font-size:11px; margin:0;" onclick="window.rolarAtributo('Vigor','vig')" title="Vigor">V: <span id="valVig">1</span></button>
+                                    <button class="action-btn" style="padding: 2px 6px; font-size:11px; margin:0;" onclick="window.rolarAtributo('Inteligência','int')" title="Inteligência">I: <span id="valInt">1</span></button>
                                 </div>
                                 
-                                <div style="display:flex; gap: 5px;">
-                                    <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d4')">d4</button>
-                                    <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d6')">d6</button>
-                                    <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d8')">d8</button>
-                                    <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d10')">d10</button>
-                                    <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d12')">d12</button>
-                                    <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d20')">d20</button>
-                                    <button class="dice-quick-btn" onclick="window.lancarDadoCustom('1d100')">d100</button>
+                                <div style="display:flex; gap: 4px; margin-top: 8px;">
+                                    <button class="dice-quick-btn" style="padding: 2px 5px; font-size:10px;" onclick="window.lancarDadoCustom('1d4')">d4</button>
+                                    <button class="dice-quick-btn" style="padding: 2px 5px; font-size:10px;" onclick="window.lancarDadoCustom('1d6')">d6</button>
+                                    <button class="dice-quick-btn" style="padding: 2px 5px; font-size:10px;" onclick="window.lancarDadoCustom('1d8')">d8</button>
+                                    <button class="dice-quick-btn" style="padding: 2px 5px; font-size:10px;" onclick="window.lancarDadoCustom('1d10')">d10</button>
+                                    <button class="dice-quick-btn" style="padding: 2px 5px; font-size:10px;" onclick="window.lancarDadoCustom('1d12')">d12</button>
+                                    <button class="dice-quick-btn" style="padding: 2px 5px; font-size:10px;" onclick="window.lancarDadoCustom('1d20')">d20</button>
+                                    <button class="dice-quick-btn" style="padding: 2px 5px; font-size:10px;" onclick="window.lancarDadoCustom('1d100')">d100</button>
                                 </div>
                             </div>
                         </div>
@@ -290,38 +331,199 @@
                 </div>
 
                 <div id="tab-personagem" class="tab-content">
-                    <div class="profile-header-grid">
-                        <div style="grid-column: span 2; text-align:center; border-bottom:1px solid #333; padding-bottom:10px;">
-                            <img id="myAvatarImg" src="" style="width:70px; height:70px; border-radius:50%; border:2px solid var(--accent-blue); background:#111; object-fit:cover;">
-                            <h2 style="margin:5px 0 0 0;" id="fichaNome">---</h2>
-                            <p style="font-size:10px; color:#aaa;" id="fichaSerial">---</p>
-                            
-                            <div style="margin-top: 10px; display:flex; flex-direction:column; gap:5px; align-items:center;">
-                                <span style="font-size:10px; color:#00ff66; font-weight:bold;">Sua Foto no Tabuleiro e RPG</span>
-                                <div style="display:flex; gap:5px; width:100%; max-width: 250px; justify-content:center;">
-                                    <input type="text" id="customCharUrl" placeholder="URL da foto..." class="gamble-input" style="font-size:10px; padding:5px; border-color:#00ff66;">
-                                    <input type="file" id="customCharFile" accept="image/*" style="display:none;" onchange="window.uploadCharImage(event)">
-                                    <button class="action-btn" style="padding:5px 10px; font-size:10px; border-color:#00ff66; color:#00ff66;" onclick="document.getElementById('customCharFile').click()" title="Enviar do PC">📁 PC</button>
-                                    <button class="action-btn" style="padding:5px 10px; font-size:10px; border-color:#00ff66; color:#00ff66;" onclick="window.salvarCharImgUrl()">Salvar</button>
+                    <div class="igamble-nav" style="display:flex!important; margin-bottom:15px;">
+                        <button class="igamble-tab-btn active" id="btnNavPerfil" onclick="window.switchMyGambleTab('perfil')">👤 Perfil & Inv</button>
+                        <button class="igamble-tab-btn" id="btnNavTrabalho" onclick="window.switchMyGambleTab('trabalho')">💼 Trabalho (Classe)</button>
+                    </div>
+
+                    <div id="view-perfil" class="mygamble-view active">
+                        <div class="profile-header-grid">
+                            <div style="grid-column: span 2; text-align:center; border-bottom:1px solid #333; padding-bottom:10px;">
+                                <img id="myAvatarImg" src="" style="width:70px; height:70px; border-radius:50%; border:2px solid var(--accent-blue); background:#111; object-fit:cover;">
+                                <h2 style="margin:5px 0 0 0;" id="fichaNome">---</h2>
+                                <p style="font-size:10px; color:#aaa;" id="fichaSerial">---</p>
+                                
+                                <div style="margin-top: 10px; display:flex; flex-direction:column; gap:5px; align-items:center;">
+                                    <span style="font-size:10px; color:#00ff66; font-weight:bold;">Sua Foto no Tabuleiro e RPG</span>
+                                    <div style="display:flex; gap:5px; width:100%; max-width: 250px; justify-content:center;">
+                                        <input type="text" id="customCharUrl" placeholder="URL da foto..." class="gamble-input" style="font-size:10px; padding:5px; border-color:#00ff66;">
+                                        <input type="file" id="customCharFile" accept="image/*" style="display:none;" onchange="window.uploadCharImage(event)">
+                                        <button class="action-btn" style="padding:5px 10px; font-size:10px; border-color:#00ff66; color:#00ff66;" onclick="document.getElementById('customCharFile').click()" title="Enviar do PC">📁 PC</button>
+                                        <button class="action-btn" style="padding:5px 10px; font-size:10px; border-color:#00ff66; color:#00ff66;" onclick="window.salvarCharImgUrl()">Salvar</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Sobrenome</span><input type="text" id="perfilSobrenome" onchange="window.salvarPerfil('sobrenome', this.value)" style="text-align:center; border:none!important; font-weight:bold; font-size:14px; padding:5px!important;"></div>
+                            <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Idade</span><input type="number" id="perfilIdade" onchange="window.salvarPerfil('idade', this.value)" style="text-align:center; border:none!important; font-weight:bold; font-size:14px; padding:5px!important;"></div>
+                            <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Telefone</span><span id="perfilTelefone" class="neon-green" style="font-size:14px; font-weight:bold; padding:5px;">---</span></div>
+                            <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Pts Livres</span><span id="lblPtsOS" class="neon-gold" style="font-size:18px; font-weight:bold;">3</span></div>
+                        </div>
+                        
+                        <h1 style="color: #00d2ff; text-align:center; margin-top:20px;">Inventário e Equipamento</h1>
+                        <p style="text-align:center; font-size:11px; color:#aaa;">Arraste os itens da mochila para equipar no corpo.</p>
+                        
+                        <div id="statusPeso" style="text-align:center; color:var(--accent-gold); font-size:14px; font-weight:bold; margin:10px auto; background:#111; padding:5px 15px; border-radius:4px; border:1px solid var(--accent-gold); width:max-content;">Peso Atual: 0 / 10 kg</div>
+                        
+                        <div class="tetris-wrapper"><div class="tetris-grid" id="grid-personagem"></div></div>
+                        
+                        <h3 style="margin-top:30px; color:var(--accent-red); border-bottom:1px dashed var(--accent-red); padding-bottom:5px;">Mochila (Não Equipados)</h3>
+                        <div class="inv-itens-soltos" id="lista-itens-soltos"></div>
+                    </div>
+
+                    <div id="view-trabalho" class="mygamble-view" style="display:none; flex-direction:column; gap:15px; padding-bottom: 30px;">
+                        
+                        <div id="masterJobPanel" class="master-panel" style="display:none; border-color:#f00; margin-bottom:10px;">
+                            <h4 class="neon-red">MASTER: MODO DE EDIÇÃO DE ÁRVORE ATIVO</h4>
+                            <p style="font-size:10px; color:#aaa; margin:0;">Navegue pelas classes. Clique diretamente nos quadrados cinzas da árvore para editar o nome, descrição e custo daquela habilidade.</p>
+                        </div>
+
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-radius:8px; border:1px solid var(--accent-blue);">
+                            <span style="font-size:14px; font-weight:bold; color:var(--accent-blue);">Pontos de Trabalho (PT):</span>
+                            <span id="lblPontosTrabalho" style="font-size:20px; font-weight:900; color:var(--accent-gold); text-shadow:0 0 10px var(--accent-gold);">0</span>
+                        </div>
+
+                        <div id="jobSelectionScreen">
+                            <select id="categoriaJobSelect" class="gamble-input" style="border-color:#ffaa00; color:#ffaa00; font-size:16px; font-weight:bold; text-align:center; margin-bottom:20px;" onchange="window.abrirCategoriaJob(this.value)">
+                                <option value="" disabled selected>-- SELECIONE SUA CATEGORIA --</option>
+                                <option value="Artista">Artista</option>
+                                <option value="Bélico">Bélico</option>
+                                <option value="Street">Street</option>
+                                <option value="Social">Social</option>
+                                <option value="Tecnologicals">Tecnologicals</option>
+                            </select>
+
+                            <div id="jobCardsContainer" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px;">
+                                </div>
+                        </div>
+
+                        <div id="jobTreeScreen" style="display:none; flex-direction:column; align-items:center;">
+                            <div style="width:100%; display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed #333; padding-bottom:10px; margin-bottom:20px;">
+                                <button id="btnVoltarJob" class="action-btn" style="border-color:#aaa; color:#aaa; margin:0;" onclick="window.voltarSelecaoJob()">🔙 Voltar</button>
+                                <h2 id="jobTreeTitle" style="margin:0; color:var(--accent-blue);">---</h2>
+                                <div style="width:70px;"></div> </div>
+
+                            <p id="jobLockWarning" style="color:var(--accent-red); font-size:11px; text-align:center; font-weight:bold; margin-bottom:15px; animation: pulse 2s infinite;">VOCÊ ESTÁ NO MODO PREVISÃO. COMPRAR UMA HABILIDADE VAI TRAVAR ESTA CLASSE PARA VOCÊ!</p>
+
+                            <div class="skill-tree-grid" id="skillTreeGrid">
+                                <div class="skill-row">
+                                    <div class="skill-node" id="node_s1" onclick="window.clicarHabilidade('s1')"><div class="skill-tooltip" id="tip_s1"></div></div>
+                                    <div class="skill-node" id="node_s2" onclick="window.clicarHabilidade('s2')"><div class="skill-tooltip" id="tip_s2"></div></div>
+                                    <div class="skill-node" id="node_s3" onclick="window.clicarHabilidade('s3')"><div class="skill-tooltip" id="tip_s3"></div></div>
+                                </div>
+                                <div class="skill-row">
+                                    <div class="skill-node" id="node_s4" onclick="window.clicarHabilidade('s4')"><div class="skill-tooltip" id="tip_s4"></div></div>
+                                    <div class="skill-node" id="node_s5" onclick="window.clicarHabilidade('s5')"><div class="skill-tooltip" id="tip_s5"></div></div>
+                                    <div class="skill-node" id="node_s6" onclick="window.clicarHabilidade('s6')"><div class="skill-tooltip" id="tip_s6"></div></div>
+                                </div>
+                                <div class="skill-row">
+                                    <div class="skill-node" id="node_s7" onclick="window.clicarHabilidade('s7')"><div class="skill-tooltip" id="tip_s7"></div></div>
+                                    <div class="skill-node" id="node_s8" onclick="window.clicarHabilidade('s8')"><div class="skill-tooltip" id="tip_s8"></div></div>
+                                    <div class="skill-node" id="node_s9" onclick="window.clicarHabilidade('s9')"><div class="skill-tooltip" id="tip_s9"></div></div>
+                                </div>
+                                <div class="skill-row">
+                                    <div class="skill-node" id="node_s10" onclick="window.clicarHabilidade('s10')"><div class="skill-tooltip" id="tip_s10"></div></div>
+                                    <div class="skill-node" id="node_s11" onclick="window.clicarHabilidade('s11')"><div class="skill-tooltip" id="tip_s11"></div></div>
+                                </div>
+                                <div class="skill-row">
+                                    <div class="skill-node ultimate" id="node_u1" onclick="window.clicarHabilidade('u1')"><div class="skill-tooltip" id="tip_u1"></div></div>
+                                    <div class="skill-node ultimate" id="node_u2" onclick="window.clicarHabilidade('u2')"><div class="skill-tooltip" id="tip_u2"></div></div>
+                                    <div class="skill-node ultimate" id="node_u3" onclick="window.clicarHabilidade('u3')"><div class="skill-tooltip" id="tip_u3"></div></div>
                                 </div>
                             </div>
                         </div>
-                        <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Sobrenome</span><input type="text" id="perfilSobrenome" onchange="window.salvarPerfil('sobrenome', this.value)" style="text-align:center; border:none!important; font-weight:bold; font-size:14px; padding:5px!important;"></div>
-                        <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Idade</span><input type="number" id="perfilIdade" onchange="window.salvarPerfil('idade', this.value)" style="text-align:center; border:none!important; font-weight:bold; font-size:14px; padding:5px!important;"></div>
-                        <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Telefone</span><span id="perfilTelefone" class="neon-green" style="font-size:14px; font-weight:bold; padding:5px;">---</span></div>
-                        <div class="profile-stat-box"><span style="font-size:10px;color:#aaa;">Pts Livres</span><span id="lblPtsOS" class="neon-gold" style="font-size:18px; font-weight:bold;">3</span></div>
+
                     </div>
-                    
-                    <h1 style="color: #00d2ff; text-align:center; margin-top:20px;">Inventário e Equipamento</h1>
-                    <p style="text-align:center; font-size:11px; color:#aaa;">Arraste os itens da mochila para equipar no corpo.</p>
-                    
-                    <div id="statusPeso" style="text-align:center; color:var(--accent-gold); font-size:14px; font-weight:bold; margin:10px auto; background:#111; padding:5px 15px; border-radius:4px; border:1px solid var(--accent-gold); width:max-content;">Peso Atual: 0 / 10 kg</div>
-                    
-                    <div class="tetris-wrapper"><div class="tetris-grid" id="grid-personagem"></div></div>
-                    
-                    <h3 style="margin-top:30px; color:var(--accent-red); border-bottom:1px dashed var(--accent-red); padding-bottom:5px;">Mochila (Não Equipados)</h3>
-                    <div class="inv-itens-soltos" id="lista-itens-soltos"></div>
                 </div>
+
+               <div id="modalEditSkill" class="modal-overlay" style="z-index: 100000; overflow-y:auto; align-items: flex-start; padding-top: 50px;">
+                    <div class="modal-content" style="border-color: #f00; width: 95%; max-width: 600px; padding: 20px;">
+                        <h2 class="neon-red" style="font-size:18px; margin-bottom:15px;">FORJA DE HABILIDADE (TBS)</h2>
+                        <input type="hidden" id="editSkillId">
+                        
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                            <input type="text" id="editSkillName" placeholder="Nome da Habilidade" class="gamble-input" style="grid-column: span 2;">
+                            <input type="text" id="editSkillImg" placeholder="URL da Imagem/Ícone" class="gamble-input" style="grid-column: span 2;">
+                            <textarea id="editSkillDesc" placeholder="Descrição da Lore..." class="gamble-input" rows="2" style="grid-column: span 2; resize:none;"></textarea>
+							<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:10px;">
+    <input type="number" id="editSkillPT" placeholder="Custo PT" class="gamble-input" title="Pontos de Trabalho para aprender">
+    <input type="number" id="editSkillER" placeholder="Custo ER" class="gamble-input" title="Custo de Saturação/Energia">
+    <input type="number" id="editSkillPA" placeholder="Custo PA" class="gamble-input" title="Custo de Pontos de Ação">
+</div>
+                        </div>
+
+                     <div style="font-size: 11px; color: #00ff66; font-weight: bold; border-bottom: 1px dashed #00ff66; margin-bottom: 10px; padding-bottom: 5px;">DADOS E ESTADOS</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:15px;">
+                            <input type="text" id="editSkillDice" placeholder="Dados (Ex: 2d6)" class="gamble-input" style="grid-column: span 1;" title="Rolagem de dano/cura (ex: 1d6, 2d8)">
+                            <input type="number" id="editSkillBonus" placeholder="Dano/Cura Extra (+)" class="gamble-input" style="grid-column: span 2;" title="Bônus fixo somado aos dados">
+                            
+                            <select id="editSkillStatus" class="gamble-input" style="grid-column: span 1;">
+                                <option value="">Nenhum Status Extra</option>
+                                <optgroup label="🔥 Dano Contínuo (DoT)">
+                                    <option value="Queimadura">🔥 Queimadura</option>
+                                    <option value="Veneno">🧪 Veneno</option>
+                                    <option value="Sangramento">🩸 Sangramento</option>
+                                    <option value="Corrupcao">🌌 Corrupção</option>
+                                    <option value="Maldicao">☠️ Maldição</option>
+                                    <option value="Infeccao">🦠 Infecção</option>
+                                    <option value="Acido">🧪 Ácido</option>
+                                    <option value="Decadencia">🥀 Decadência</option>
+                                    <option value="ChoqueEletrico">⚡ Choque Elétrico</option>
+                                    <option value="CongelamentoInterno">❄️ Cong. Interno</option>
+                                    <option value="Hemorragia">🩸 Hemorragia</option>
+                                    <option value="Necrose">💀 Necrose</option>
+                                </optgroup>
+                                <optgroup label="❄️ Controle (CC)">
+                                    <option value="Atordoamento">💫 Atordoamento</option>
+                                    <option value="Congelado">🧊 Congelamento</option>
+                                    <option value="Paralisia">⚡ Paralisia</option>
+                                    <option value="Silencio">🤐 Silêncio</option>
+                                    <option value="Desarmado">❌ Desarmado</option>
+                                    <option value="Cego">👁️ Cego</option>
+                                    <option value="Confusao">😵‍💫 Confusão</option>
+                                    <option value="Medo">😱 Medo</option>
+                                    <option value="Provocacao">🤬 Provocação</option>
+                                    <option value="Enraizado">⚓ Enraizado</option>
+                                    <option value="Petrificacao">🗿 Petrificação</option>
+                                    <option value="Sono">💤 Sono</option>
+                                    <option value="Hipnose">🌀 Hipnose</option>
+                                    <option value="Aprisionamento">⛓️ Aprisionamento</option>
+                                    <option value="LentidaoExtrema">🐢 Lentidão Extrema</option>
+                                </optgroup>
+                                <optgroup label="🛡️ Buffs">
+                                    <option value="Regeneracao">💚 Regeneração HP</option>
+                                    <option value="Escudo">🛡️ Escudo</option>
+                                    <option value="Reflexao">🪞 Reflexão Dano</option>
+                                    <option value="Imunidade">🌟 Imunidade</option>
+                                </optgroup>
+                                <optgroup label="🧲 Movimento">
+                                    <option value="Empurrão">🫸 Empurrar</option>
+                                    <option value="Puxão">🪝 Puxar</option>
+                                    <option value="Troca">🔄 Troca de Posição</option>
+                                    <option value="Derrubado">📉 Derrubar</option>
+                                </optgroup>
+                            </select>
+                            
+                            <input type="number" id="editSkillStatusVal" placeholder="Força (Dano/Casas)" class="gamble-input" title="Dano do efeito ou quantidade de casas que empurra">
+                            <input type="number" id="editSkillStatusTurnos" placeholder="Duração (Turnos)" class="gamble-input" title="Quantos turnos o efeito ou armadilha dura">
+							
+                        </div>
+
+                        <div style="font-size: 11px; color: #00ff66; font-weight: bold; border-bottom: 1px dashed #00ff66; margin-bottom: 10px; padding-bottom: 5px;">DADOS DE COMBATE E TIPO</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:15px;">
+                            <input type="text" id="editSkillDice" placeholder="Dados (Ex: 2d6)" class="gamble-input" title="Dano/Cura Base da Magia">
+							
+                            <input type="number" id="editSkillBonus" placeholder="Bônus (+)" class="gamble-input" title="Bônus Fixo">
+                            <input type="number" id="editSkillMaxRange" placeholder="Alcance (Casas)" class="gamble-input" title="Até onde a magia chega (Range)" value="1">
+                            
+                            <input type="hidden" id="editSkillCustomPattern" value="">
+                            <button class="action-btn" style="grid-column: span 3; background: rgba(176, 0, 255, 0.1); border-color: #b000ff; color: #b000ff; margin: 0; font-size: 16px; padding: 15px; text-transform: uppercase; font-weight: 900;" onclick="event.preventDefault(); window.abrirPintor();">🖌️ ABRIR PINTOR TÁTICO</button>
+                        </div>
+                        
+                        <div id="summonExtraFields" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 5px; grid-column: span 3; margin-top: 5px;">
+                            <input type="number" id="editSkillSummonHP" placeholder="HP Invoc." class="gamble-input" title="Vida da Invocação">
+                            <input type="number" id="editSkillSummonTurnos" placeholder="Turnos Invoc." class="gamble-input" title="Quantos turnos a invocação fica viva">
+                            <input type="number" id="editSkillSummonLimit" placeholder="Limite Máx." class="gamble-input" title="Máximo dessa invocação simultânea">
+                        </div>
 
                 <div id="tab-panteao" class="tab-content">
                     <h1 class="neon-purple" style="text-align:center;">Panteão dos Deuses</h1>
