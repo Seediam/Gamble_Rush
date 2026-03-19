@@ -1,46 +1,47 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const path = require("path"); // <-- Adicionado para ler as pastas
 
 const app = express();
-app.use(cors());
 const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
-const io = new Server(server, {
-    cors: {
-        origin: "*", // Permite que seu RPG se conecte de qualquer lugar
-        methods: ["GET", "POST"]
-    }
-});
+// 👇 ISSO AQUI FAZ O SEU NODE.JS HOSPEDAR O SEU HTML, CSS E JS!
+app.use(express.static(path.join(__dirname, ''))); 
 
-// Mapeia quem está em qual sala de chamada
-io.on('connection', (socket) => {
-    console.log('Dispositivo conectado:', socket.id);
+io.on("connection", (socket) => {
+    console.log("🟢 Player conectou:", socket.id);
 
-    // Jogador entra em uma sala de chamada privada (baseada no ID da ligação)
-    socket.on('join_call', (callId) => {
-        socket.join(callId);
-        console.log(`Jogador ${socket.id} entrou na sala: ${callId}`);
-    });
-
-    // Recebe o pacote de áudio e envia APENAS para a outra pessoa na sala
-    socket.on('stream_audio', (data) => {
-        // data.callId: ID da sala
-        // data.audio: O binário do áudio
-        // data.sender: Quem enviou
-        socket.to(data.callId).emit('receber_audio', {
-            audio: data.audio,
-            sender: data.sender
+    socket.on("joinMap", (mapKey) => {
+        Array.from(socket.rooms).forEach(room => {
+            if (room !== socket.id) socket.leave(room);
         });
+        socket.join(mapKey);
+        console.log(`📍 Player entrou no mapa: ${mapKey}`);
     });
 
-    socket.on('disconnect', () => {
-        console.log('Jogador desconectado');
+    socket.on("moverToken", (data) => {
+        socket.to(data.mapKey).emit("tokenMovido", data);
+    });
+
+    socket.on("passarTurno", (data) => {
+        io.to(data.mapKey).emit("turnoPassado", data);
+    });
+
+    socket.on("attackEvent", (data) => {
+        io.to(data.mapKey).emit("receberAtaque", data);
+    });
+
+    socket.on("clashEvent", (data) => {
+        io.to(data.mapKey).emit("receberClash", data);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("🔴 Player saiu:", socket.id);
     });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Servidor de Voz rodando na porta ${PORT}`);
+server.listen(3000, () => {
+    console.log("🔥 Servidor e Site rodando na porta 3000");
 });
