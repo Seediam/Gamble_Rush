@@ -49,6 +49,40 @@ window.socket.on("receberClash", (data) => {
     window.clashQueue.push(data.clashData);
     if(typeof window.processClashQueue === "function") window.processClashQueue();
 });
+// =========================================================
+// SENSOR DE QUEDA DO SERVIDOR (SOCKET.IO)
+// =========================================================
+
+// Quando o servidor cai ou a internet do jogador desconecta do Radmin
+window.socket.on("disconnect", () => {
+    window.showNeonToast("⚠️ SINAL PERDIDO: O Mapa VTT está fora de área!");
+    console.warn("Conexão com o servidor VTT perdida.");
+    
+    // Opcional: Escurece o tabuleiro para mostrar que caiu
+    let vttWrapper = document.getElementById("vttWorldWrapper");
+    if (vttWrapper) vttWrapper.style.filter = "grayscale(100%) brightness(0.5)";
+});
+
+// Quando o servidor volta online
+window.socket.on("connect", () => {
+    // Se ele já estava logado antes de cair, avisa que voltou e reconecta ele nos lugares certos
+    if (window.jogadorAtual) {
+        window.showNeonToast("✅ SINAL RESTABELECIDO: VTT Online!");
+        
+        // Devolve a cor ao tabuleiro
+        let vttWrapper = document.getElementById("vttWorldWrapper");
+        if (vttWrapper) vttWrapper.style.filter = "none";
+
+        // Re-registra o nome no servidor Node
+        window.socket.emit("registrarJogador", window.jogadorAtual);
+        
+        // Se ele estava no meio de uma luta/mapa, coloca ele de volta na sala invisível do Socket
+        if (window.currentSubMapKey) {
+            window.socket.emit("joinMap", window.currentSubMapKey, window.jogadorAtual);
+        }
+    }
+});
+// =========================================================
 // === VARIÁVEIS DE COMBATE VTT E FILA DE ANIMAÇÕES ===
 window.combatState = { active: false, weapon: null };
 window.currentCombatListener = null; window.currentCombatChange = null; window._lastCombatMap = null; window.pendingAttack = null; window.clashQueue = []; window.isClashing = false; window.lastClashTs = 0;
